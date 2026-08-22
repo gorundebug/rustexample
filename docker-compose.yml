@@ -10,6 +10,8 @@ services:
       args:
         CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
         SERVICEGEN_MAVEN_CENTRAL_URL: ${SERVICEGEN_MAVEN_CENTRAL_URL:-https://repo1.maven.org/maven2}
+        SERVICEGEN_APT_DEBIAN_URL: ${SERVICEGEN_APT_DEBIAN_URL:-}
+        SERVICEGEN_APT_DEBIAN_SECURITY_URL: ${SERVICEGEN_APT_DEBIAN_SECURITY_URL:-}
       additional_contexts:
         rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.5}"
     restart: unless-stopped
@@ -39,6 +41,8 @@ services:
       args:
         CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
         SERVICEGEN_MAVEN_CENTRAL_URL: ${SERVICEGEN_MAVEN_CENTRAL_URL:-https://repo1.maven.org/maven2}
+        SERVICEGEN_APT_DEBIAN_URL: ${SERVICEGEN_APT_DEBIAN_URL:-}
+        SERVICEGEN_APT_DEBIAN_SECURITY_URL: ${SERVICEGEN_APT_DEBIAN_SECURITY_URL:-}
       additional_contexts:
         rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.5}"
     restart: unless-stopped
@@ -68,6 +72,8 @@ services:
       args:
         CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
         SERVICEGEN_MAVEN_CENTRAL_URL: ${SERVICEGEN_MAVEN_CENTRAL_URL:-https://repo1.maven.org/maven2}
+        SERVICEGEN_APT_DEBIAN_URL: ${SERVICEGEN_APT_DEBIAN_URL:-}
+        SERVICEGEN_APT_DEBIAN_SECURITY_URL: ${SERVICEGEN_APT_DEBIAN_SECURITY_URL:-}
       additional_contexts:
         rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.5}"
     restart: unless-stopped

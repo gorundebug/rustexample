@@ -4,6 +4,13 @@ FROM rust:1.97-bookworm AS build
 ARG OPENAPI_GENERATOR_VERSION=7.24.0
 ARG CARGO_REGISTRIES_CRATES_IO_INDEX=https://github.com/rust-lang/crates.io-index
 ARG SERVICEGEN_MAVEN_CENTRAL_URL=https://repo1.maven.org/maven2
+ARG SERVICEGEN_APT_DEBIAN_URL=
+ARG SERVICEGEN_APT_DEBIAN_SECURITY_URL=
+RUN if [ -n "$SERVICEGEN_APT_DEBIAN_URL$SERVICEGEN_APT_DEBIAN_SECURITY_URL" ]; then \
+      find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i \
+        -e "s|http://deb.debian.org/debian-security|$SERVICEGEN_APT_DEBIAN_SECURITY_URL|g" \
+        -e "s|http://deb.debian.org/debian|$SERVICEGEN_APT_DEBIAN_URL|g" {} +; \
+    fi
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
        ca-certificates cmake curl default-jre-headless \
@@ -23,7 +30,20 @@ ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
 
 WORKDIR /workspace
 COPY . /workspace/rustexample
-COPY --from=rustservicelib-source . /workspace/rustservicelib
+COPY --from=rustservicelib-source . /tmp/rustservicelib-source
+RUN source_dir=/tmp/rustservicelib-source; \
+    if [ -f "$source_dir/context" ]; then \
+      mkdir -p /tmp/rustservicelib-archive; \
+      tar -xf "$source_dir/context" -C /tmp/rustservicelib-archive; \
+      source_dir=/tmp/rustservicelib-archive; \
+    fi; \
+    if [ ! -f "$source_dir/Cargo.toml" ]; then \
+      source_dir=$(find "$source_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1); \
+    fi; \
+    test -n "$source_dir" && test -f "$source_dir/Cargo.toml"; \
+    mkdir -p /workspace/rustservicelib; \
+    cp -a "$source_dir/." /workspace/rustservicelib/; \
+    rm -rf /tmp/rustservicelib-source
 WORKDIR /workspace/rustexample
 # HTTP bindings are language-tool outputs, so a clean Docker build must create
 # them before Cargo resolves the workspace. The pinned CLI download is cached
