@@ -2512,8 +2512,8 @@ dependencies = [
 
 [[package]]
 name = "servicelib-gorundebug"
-version = "0.2.5"
-source = "git+https://github.com/gorundebug/rustservicelib.git?tag=v0.2.5#4be5458317bdd36c60d9dc0a637529a1088691e3"
+version = "0.2.6"
+source = "git+https://github.com/gorundebug/rustservicelib.git?tag=v0.2.6#33de736b3bb380d3ee7abf26462390a567c05902"
 dependencies = [
  "arc-swap",
  "async-trait",
