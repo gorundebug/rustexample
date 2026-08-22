@@ -1,0 +1,5 @@
+httpHost: 0.0.0.0
+httpPort: 9091
+inventoryAddress: http://127.0.0.1:9202
+requestTimeoutMs: 5000
+softDeadlineMarginMs: 1000

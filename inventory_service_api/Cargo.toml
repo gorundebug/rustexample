@@ -1,0 +1,19 @@
+[package]
+name = "inventory-service-api"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+build = "build.rs"
+
+[lib]
+name = "inventory_service_api"
+
+
+[dependencies]
+serde.workspace = true
+prost = "0.13"
+tonic.workspace = true
+
+[build-dependencies]
+protoc-bin-vendored = "3"
+tonic-build = "0.12"

@@ -1,0 +1,67 @@
+openapi: "3.0.3"
+info:
+  title: ProcessOrder
+  version: "0.0.1"
+components:
+  schemas:
+    ProcessOrderRequest:
+      type: object
+      required:
+        - items
+      properties:
+        customer_id:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessOrderRequestItem'
+    ProcessOrderRequestItem:
+      type: object
+      required:
+        - item_id
+        - sku
+        - quantity
+      properties:
+        item_id:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        unit_price:
+          type: number
+          format: double
+    ProcessOrderResponse:
+      type: object
+      properties:
+        order_id:
+          type: string
+        status:
+          type: string
+        confirmed_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessOrderResponseItem'
+        total_amount:
+          type: number
+          format: double
+        processed_at:
+          type: string
+          format: date-time
+    ProcessOrderResponseItem:
+      type: object
+      properties:
+        item_id:
+          type: string
+        sku:
+          type: string
+        available_qty:
+          type: integer
+          format: int32
+        reserved:
+          type: boolean
+        status:
+          type: string
+        error:
+          type: string

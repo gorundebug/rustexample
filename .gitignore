@@ -1,0 +1,47 @@
+# Build artifacts
+bin/
+generated/
+build/
+dist/
+/target/
+compile_commands.json
+.ccache/
+.cppservicelib/
+.pyservicelib/
+.servicegen/
+
+# Go
+*.test
+*.out
+coverage.out
+
+# Tools (downloaded binaries)
+tools/
+
+# Proto descriptors (binary, regenerated)
+descriptors/
+
+# Go workspace sum (regenerated)
+go.work.sum
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Services and modules restored separately
+/inventoryservice/
+/orderservice/
+/inventory_service_api/
+/model/
+/order_service_api/
