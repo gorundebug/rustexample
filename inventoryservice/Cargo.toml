@@ -12,7 +12,7 @@ inventory-service-api = { path = "../inventory_service_api" }
 mimalloc.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.5" }
+servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.6" }
 tokio.workspace = true
 tonic.workspace = true
 tracing.workspace = true

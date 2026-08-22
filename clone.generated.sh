@@ -19,13 +19,13 @@ clone_if_missing() {
 }
 
 echo "==> Cloning services..."
-clone_if_missing "analyticsservice" "https://github.com/gorundebug/rustexample-analyticsservice.git" "v0.2.5"
-clone_if_missing "inventoryservice" "https://github.com/gorundebug/rustexample-inventoryservice.git" "v0.2.5"
-clone_if_missing "orderservice" "https://github.com/gorundebug/rustexample-orderservice.git" "v0.2.5"
+clone_if_missing "analyticsservice" "https://github.com/gorundebug/rustexample-analyticsservice.git" "v0.2.6"
+clone_if_missing "inventoryservice" "https://github.com/gorundebug/rustexample-inventoryservice.git" "v0.2.6"
+clone_if_missing "orderservice" "https://github.com/gorundebug/rustexample-orderservice.git" "v0.2.6"
 
 echo "==> Cloning modules..."
-clone_if_missing "inventory_service_api" "https://github.com/gorundebug/rustexample-inventory-service-api.git" "v0.2.5"
-clone_if_missing "model" "https://github.com/gorundebug/rustexample-model.git" "v0.2.5"
-clone_if_missing "order_service_api" "https://github.com/gorundebug/rustexample-order-service-api.git" "v0.2.5"
+clone_if_missing "inventory_service_api" "https://github.com/gorundebug/rustexample-inventory-service-api.git" "v0.2.6"
+clone_if_missing "model" "https://github.com/gorundebug/rustexample-model.git" "v0.2.6"
+clone_if_missing "order_service_api" "https://github.com/gorundebug/rustexample-order-service-api.git" "v0.2.6"
 
 echo "==> Done."
