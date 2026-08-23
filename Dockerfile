@@ -31,16 +31,18 @@ ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
 WORKDIR /workspace
 COPY . /workspace/rustexample
 COPY --from=rustservicelib-source . /tmp/rustservicelib-source
-RUN source_dir=/tmp/rustservicelib-source; \
-    if [ -f "$source_dir/context" ]; then \
+RUN set -eu; \
+    source_dir=/tmp/rustservicelib-source; \
+    archive=$(find "$source_dir" -mindepth 1 -maxdepth 1 -type f \( -name context -o -name '*.tar' -o -name '*.tar.gz' -o -name '*.tgz' -o -name '*.tar.xz' \) -print -quit); \
+    if [ -n "$archive" ]; then \
       mkdir -p /tmp/rustservicelib-archive; \
-      tar -xf "$source_dir/context" -C /tmp/rustservicelib-archive; \
+      tar -xf "$archive" -C /tmp/rustservicelib-archive; \
       source_dir=/tmp/rustservicelib-archive; \
     fi; \
-    if [ ! -f "$source_dir/Cargo.toml" ]; then \
-      source_dir=$(find "$source_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1); \
-    fi; \
-    test -n "$source_dir" && test -f "$source_dir/Cargo.toml"; \
+    manifest=$(find "$source_dir" -mindepth 1 -maxdepth 2 -type f -name Cargo.toml -print -quit); \
+    if [ -z "$manifest" ]; then echo "rustservicelib source context has no Cargo.toml" >&2; exit 1; fi; \
+    source_dir=${manifest%/Cargo.toml}; \
+    if [ -z "$source_dir" ] || [ "$source_dir" = "/" ]; then echo "unsafe rustservicelib source directory" >&2; exit 1; fi; \
     mkdir -p /workspace/rustservicelib; \
     cp -a "$source_dir/." /workspace/rustservicelib/; \
     rm -rf /tmp/rustservicelib-source
