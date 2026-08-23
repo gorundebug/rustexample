@@ -39,7 +39,8 @@ RUN set -eu; \
       tar -xf "$archive" -C /tmp/rustservicelib-archive; \
       source_dir=/tmp/rustservicelib-archive; \
     fi; \
-    manifest=$(find "$source_dir" -mindepth 1 -maxdepth 2 -type f -name Cargo.toml -print -quit); \
+    manifest="$source_dir/Cargo.toml"; \
+    if [ ! -f "$manifest" ]; then manifest=$(find "$source_dir" -mindepth 2 -maxdepth 2 -type f -name Cargo.toml -print -quit); fi; \
     if [ -z "$manifest" ]; then echo "rustservicelib source context has no Cargo.toml" >&2; exit 1; fi; \
     source_dir=${manifest%/Cargo.toml}; \
     if [ -z "$source_dir" ] || [ "$source_dir" = "/" ]; then echo "unsafe rustservicelib source directory" >&2; exit 1; fi; \
