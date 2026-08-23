@@ -8,6 +8,7 @@ LANG_FMT_TARGETS += rust-format
 LANG_GEN_TARGETS += rust-gen
 LANG_CLEAN_TARGETS += rust-clean
 LANG_DOCKER_BUILD_TARGETS += rust-docker-build
+LANG_HOST_PREP_TARGETS += rust-gen
 
 RUST_SERVICE_DIRS := analyticsservice inventoryservice orderservice
 
