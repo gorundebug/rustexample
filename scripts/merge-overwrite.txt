@@ -19,6 +19,7 @@ go.work
 Dockerfile
 inventory_service_api/Cargo.toml
 order_service_api/Cargo.toml
+analyticsservice/grafana/Dockerfile
 analyticsservice/grafana/dashboards/_lib.libsonnet
 analyticsservice/helm/Chart.yaml
 analyticsservice/helm/values.schema.json
@@ -34,6 +35,7 @@ analyticsservice/config/config_vars.integration.yaml
 analyticsservice/src/internal/config/mod.rs
 analyticsservice/src/internal/mod.rs
 analyticsservice/src/lib.rs
+automationservice/grafana/Dockerfile
 automationservice/grafana/dashboards/_lib.libsonnet
 automationservice/helm/Chart.yaml
 automationservice/helm/values.schema.json
@@ -46,6 +48,7 @@ automationservice/static_config.yaml
 automationservice/config/config.yaml
 automationservice/config/config_vars.yaml
 automationservice/config/config_vars.integration.yaml
+inventoryservice/grafana/Dockerfile
 inventoryservice/grafana/dashboards/_lib.libsonnet
 inventoryservice/helm/Chart.yaml
 inventoryservice/helm/values.schema.json
@@ -61,6 +64,7 @@ inventoryservice/config/config_vars.integration.yaml
 inventoryservice/src/internal/config/mod.rs
 inventoryservice/src/internal/mod.rs
 inventoryservice/src/lib.rs
+orderservice/grafana/Dockerfile
 orderservice/grafana/dashboards/_lib.libsonnet
 orderservice/helm/Chart.yaml
 orderservice/helm/values.schema.json
