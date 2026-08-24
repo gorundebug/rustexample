@@ -20,7 +20,6 @@ Calculate the total from processed item prices, falling back to the submitted to
 
 
 
-
 ## External contract
 
 | Field | Value |
@@ -29,6 +28,7 @@ Calculate the total from processed item prices, falling back to the submitted to
 | Source | `order_service_api/openapi/orderserviceapi/processorder/processorder.yaml` |
 | Request | `ProcessOrderRequest` |
 | Response | `ProcessOrderResponse` |
+
 
 ## Stream types
 - Input: `Order` — `orderservice/src/internal/types/order.rs`

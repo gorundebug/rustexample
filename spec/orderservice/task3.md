@@ -19,7 +19,6 @@ If the inventory call fails, the caller returns a non-reserved PROCESSING_ERROR 
 
 
 
-
 ## External contract
 
 | Field | Value |
@@ -28,6 +27,7 @@ If the inventory call fails, the caller returns a non-reserved PROCESSING_ERROR 
 | Source | `inventory_service_api/proto/inventoryserviceapi/processorderitem/processorderitem.proto` |
 | Request | `ProcessOrderItemRequest` |
 | Response | `ProcessOrderItemResponse` |
+
 
 ## Stream types
 - Input: `OrderItem` — `model/src/types/order_item.rs`
