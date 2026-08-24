@@ -12,22 +12,27 @@ LANG_HOST_PREP_TARGETS += rust-gen
 
 RUST_SERVICE_DIRS := analyticsservice inventoryservice orderservice
 
+SERVICEGEN_CARGO_CONFIG_ARGS :=
+ifneq ($(strip $(SERVICEGEN_DEPENDENCY_PROXY_DIR)),)
+SERVICEGEN_CARGO_CONFIG_ARGS := --config 'source.crates-io.replace-with="servicegen"' --config 'source.servicegen.registry="$(CARGO_REGISTRIES_CRATES_IO_INDEX)"'
+endif
+
 .PHONY: rust-build rust-test rust-lint rust-format rust-gen rust-clean \
 	rust-docker-build \
 	rust-package
 
 rust-build: rust-gen ## Build the Rust workspace
-	@cargo build --workspace
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) build --workspace
 
 rust-test: rust-gen ## Test the Rust workspace
-	@cargo test --workspace --all-targets
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) test --workspace --all-targets
 
 rust-lint: ## Check Rust formatting and Clippy warnings
-	@cargo fmt --all -- --check
-	@cargo clippy --workspace --all-targets -- -D warnings
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) fmt --all -- --check
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) clippy --workspace --all-targets -- -D warnings
 
 rust-format: ## Format Rust sources
-	@cargo fmt --all
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) fmt --all
 
 rust-gen: ## Generate Rust HTTP transport sources
 	@find . -name 'generate-openapi.generated.sh' -exec {} \;
@@ -47,7 +52,7 @@ rust-package-%: ## Package one Rust service (for example: make rust-package-orde
 	@./scripts/package-rust-service.generated.sh "$*" "dist/$*"
 
 rust-clean: ## Remove Rust build artifacts
-	@cargo clean
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) clean
 
 rust-docker-build: ## Build independent Rust service images in Docker
 	@$(DOCKER_COMPOSE) build analyticsservice inventoryservice orderservice

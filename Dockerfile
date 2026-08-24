@@ -22,6 +22,20 @@ RUN apt-get update \
     && chmod 0755 /usr/local/bin/openapi-generator \
     && rm -rf /var/lib/apt/lists/*
 
+# Cargo's crates.io source is special: changing only
+# CARGO_REGISTRIES_CRATES_IO_INDEX does not reliably redirect crate downloads.
+# Install an explicit source replacement only when the opt-in proxy URL was
+# supplied; ordinary builds retain Cargo's default crates.io behaviour.
+RUN if [ "$CARGO_REGISTRIES_CRATES_IO_INDEX" != "https://github.com/rust-lang/crates.io-index" ]; then \
+      mkdir -p /usr/local/cargo; \
+      printf '%s\n' \
+        '[source.crates-io]' \
+        'replace-with = "servicegen"' \
+        '[source.servicegen]' \
+        "registry = \"$CARGO_REGISTRIES_CRATES_IO_INDEX\"" \
+        > /usr/local/cargo/config.toml; \
+    fi
+
 ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
     CARGO_REGISTRIES_CRATES_IO_INDEX=${CARGO_REGISTRIES_CRATES_IO_INDEX} \
     CARGO_HTTP_MULTIPLEXING=false \

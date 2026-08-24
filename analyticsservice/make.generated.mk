@@ -8,6 +8,7 @@ SERVICEGEN_DEPENDENCY_PROXY_PORT ?= 18081
 SERVICEGEN_DEPENDENCY_PROXY_BASE := http://$(SERVICEGEN_DEPENDENCY_PROXY_HOST):$(SERVICEGEN_DEPENDENCY_PROXY_PORT)/repository
 export CARGO_REGISTRIES_CRATES_IO_INDEX := sparse+$(SERVICEGEN_DEPENDENCY_PROXY_BASE)/cargo-proxy/
 export SERVICEGEN_MAVEN_CENTRAL_URL := $(SERVICEGEN_DEPENDENCY_PROXY_BASE)/maven-central
+SERVICEGEN_CARGO_CONFIG_ARGS := --config 'source.crates-io.replace-with="servicegen"' --config 'source.servicegen.registry="$(CARGO_REGISTRIES_CRATES_IO_INDEX)"'
 endif
 
 .PHONY: generate build test lint fmt clean help
@@ -18,20 +19,20 @@ generate: ## Generate transport bindings when this package owns a schema
 	fi
 
 build: generate ## Build this standalone Rust package
-	@cargo build
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) build
 
 test: generate ## Test this standalone Rust package
-	@cargo test --all-targets
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) test --all-targets
 
 lint: ## Check formatting and Clippy warnings
-	@cargo fmt -- --check
-	@cargo clippy --all-targets -- -D warnings
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) fmt -- --check
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) clippy --all-targets -- -D warnings
 
 fmt: ## Format Rust sources
-	@cargo fmt
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) fmt
 
 clean: ## Remove Rust build artifacts
-	@cargo clean
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
