@@ -15,6 +15,7 @@ docker-compose.yml
 docker-compose.kubernetes.yml
 docker-compose.dependency-cache.generated.yml
 pyproject.toml
+go.work
 Dockerfile
 inventory_service_api/Cargo.toml
 order_service_api/Cargo.toml
@@ -33,6 +34,18 @@ analyticsservice/config/config_vars.integration.yaml
 analyticsservice/src/internal/config/mod.rs
 analyticsservice/src/internal/mod.rs
 analyticsservice/src/lib.rs
+automationservice/grafana/dashboards/_lib.libsonnet
+automationservice/helm/Chart.yaml
+automationservice/helm/values.schema.json
+automationservice/helm/templates/NOTES.txt
+automationservice/Dockerfile
+automationservice/pyproject.toml
+automationservice/src/automation_service/internal/functions/__init__.py
+automationservice/cmd/service/main.cpp
+automationservice/static_config.yaml
+automationservice/config/config.yaml
+automationservice/config/config_vars.yaml
+automationservice/config/config_vars.integration.yaml
 inventoryservice/grafana/dashboards/_lib.libsonnet
 inventoryservice/helm/Chart.yaml
 inventoryservice/helm/values.schema.json

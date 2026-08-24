@@ -20,6 +20,7 @@ clone_if_missing() {
 
 echo "==> Cloning services..."
 clone_if_missing "analyticsservice" "https://github.com/gorundebug/rustexample-analyticsservice.git" "v0.2.12"
+clone_if_missing "automationservice" "https://github.com/gorundebug/rustexample-automationservice.git" "v0.2.12"
 clone_if_missing "inventoryservice" "https://github.com/gorundebug/rustexample-inventoryservice.git" "v0.2.12"
 clone_if_missing "orderservice" "https://github.com/gorundebug/rustexample-orderservice.git" "v0.2.12"
 

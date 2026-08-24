@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use super::custom::CustomConfig;
-use servicelib::api::{DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType, KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, TypeDefinitionFormat};
+use servicelib::api::{DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType, KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy, ScheduleOverlapPolicy, TypeDefinitionFormat};
 use servicelib::runtime::config::{
     CallSemantics, Config as ServiceConfigContract, CycleLinkStreamConfig,
     DelayStreamConfig, FilterStreamConfig, FlatMapIterableStreamConfig,
@@ -16,17 +16,18 @@ use servicelib::runtime::config::{
     RuntimeEndpointConfig, RuntimeStreamConfig, ServiceConfig, SinkStreamConfig,
     SplitStreamConfig, StreamConfig, WhenStreamConfig, CaseStreamConfig,
     TypeConfig, HttpDataConnectorConfig, GrpcDataConnectorConfig, KafkaDataConnectorConfig,
+    CronDataConnectorConfig,
     CustomDataConnectorConfig, HttpEndpointConfig, GrpcEndpointConfig, KafkaEndpointConfig,
-    CustomEndpointConfig,
+    CustomEndpointConfig, CronEndpointConfig,
 };
 
 pub const ANALYTICS_SERVICE_ID: i32 = 1;
 pub const CONSUME_ORDER_PROCESSED_STREAM_ID: i32 = 1;
 pub const COUNT_ORDER_PROCESSED_STREAM_ID: i32 = 2;
 
-pub const ORDER_EVENTS_CONNECTOR_ID: i32 = 2;
+pub const ORDER_EVENTS_CONNECTOR_ID: i32 = 3;
 
-pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 2;
+pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 3;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -239,6 +240,22 @@ impl ServiceConfigContract for Config {
 fn apply_string(name: &str, target: &mut String) {
     if let Ok(value) = std::env::var(name) {
         *target = value;
+    }
+}
+
+fn parse_schedule_overlap_policy(value: &str) -> Result<ScheduleOverlapPolicy, String> {
+    match value {
+        "Allow" => Ok(ScheduleOverlapPolicy::Allow),
+        "Skip" => Ok(ScheduleOverlapPolicy::Skip),
+        _ => Err(format!("invalid schedule overlap policy: {value}")),
+    }
+}
+
+fn parse_schedule_missed_run_policy(value: &str) -> Result<ScheduleMissedRunPolicy, String> {
+    match value {
+        "Skip" => Ok(ScheduleMissedRunPolicy::Skip),
+        "FireOnce" => Ok(ScheduleMissedRunPolicy::FireOnce),
+        _ => Err(format!("invalid schedule missed-run policy: {value}")),
     }
 }
 

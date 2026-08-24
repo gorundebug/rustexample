@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use super::custom::CustomConfig;
-use servicelib::api::{DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType, KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, TypeDefinitionFormat};
+use servicelib::api::{DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType, KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy, ScheduleOverlapPolicy, TypeDefinitionFormat};
 use servicelib::runtime::config::{
     CallSemantics, Config as ServiceConfigContract, CycleLinkStreamConfig,
     DelayStreamConfig, FilterStreamConfig, FlatMapIterableStreamConfig,
@@ -16,30 +16,31 @@ use servicelib::runtime::config::{
     RuntimeEndpointConfig, RuntimeStreamConfig, ServiceConfig, SinkStreamConfig,
     SplitStreamConfig, StreamConfig, WhenStreamConfig, CaseStreamConfig,
     TypeConfig, HttpDataConnectorConfig, GrpcDataConnectorConfig, KafkaDataConnectorConfig,
+    CronDataConnectorConfig,
     CustomDataConnectorConfig, HttpEndpointConfig, GrpcEndpointConfig, KafkaEndpointConfig,
-    CustomEndpointConfig,
+    CustomEndpointConfig, CronEndpointConfig,
 };
 
-pub const ORDER_SERVICE_ID: i32 = 3;
-pub const MAP_ORDER_ITEM_RESULT_TO_ORDER_STATE_STREAM_ID: i32 = 8;
-pub const MAP_TO_ORDER_PROCESSED_STREAM_ID: i32 = 9;
-pub const MAP_TO_ORDER_STATE_STREAM_ID: i32 = 10;
-pub const MERGE_RESULTS_STREAM_ID: i32 = 11;
-pub const PROCESS_ORDER_STREAM_ID: i32 = 12;
-pub const PROCESS_ORDER_ITEM_STREAM_ID: i32 = 13;
-pub const PROCESS_ORDER_ITEMS_STREAM_ID: i32 = 14;
-pub const PUBLISH_ORDER_PROCESSED_STREAM_ID: i32 = 15;
-pub const SOFT_DEADLINE_STREAM_ID: i32 = 16;
-pub const SPLIT_ORDER_RESULT_STREAM_ID: i32 = 17;
-pub const SPLIT_PIPELINE_STREAM_ID: i32 = 18;
+pub const ORDER_SERVICE_ID: i32 = 4;
+pub const MAP_ORDER_ITEM_RESULT_TO_ORDER_STATE_STREAM_ID: i32 = 16;
+pub const MAP_TO_ORDER_PROCESSED_STREAM_ID: i32 = 17;
+pub const MAP_TO_ORDER_STATE_STREAM_ID: i32 = 18;
+pub const MERGE_RESULTS_STREAM_ID: i32 = 19;
+pub const PROCESS_ORDER_STREAM_ID: i32 = 20;
+pub const PROCESS_ORDER_ITEM_STREAM_ID: i32 = 21;
+pub const PROCESS_ORDER_ITEMS_STREAM_ID: i32 = 22;
+pub const PUBLISH_ORDER_PROCESSED_STREAM_ID: i32 = 23;
+pub const SOFT_DEADLINE_STREAM_ID: i32 = 24;
+pub const SPLIT_ORDER_RESULT_STREAM_ID: i32 = 25;
+pub const SPLIT_PIPELINE_STREAM_ID: i32 = 26;
 
 pub const INVENTORY_SERVICE_API_CONNECTOR_ID: i32 = 1;
-pub const ORDER_EVENTS_CONNECTOR_ID: i32 = 2;
-pub const ORDER_SERVICE_API_CONNECTOR_ID: i32 = 3;
+pub const ORDER_EVENTS_CONNECTOR_ID: i32 = 3;
+pub const ORDER_SERVICE_API_CONNECTOR_ID: i32 = 4;
 
 pub const PROCESS_ORDER_ITEM_ENDPOINT_ID: i32 = 1;
-pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 2;
-pub const PROCESS_ORDER_ENDPOINT_ID: i32 = 3;
+pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 3;
+pub const PROCESS_ORDER_ENDPOINT_ID: i32 = 4;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -419,6 +420,22 @@ impl ServiceConfigContract for Config {
 fn apply_string(name: &str, target: &mut String) {
     if let Ok(value) = std::env::var(name) {
         *target = value;
+    }
+}
+
+fn parse_schedule_overlap_policy(value: &str) -> Result<ScheduleOverlapPolicy, String> {
+    match value {
+        "Allow" => Ok(ScheduleOverlapPolicy::Allow),
+        "Skip" => Ok(ScheduleOverlapPolicy::Skip),
+        _ => Err(format!("invalid schedule overlap policy: {value}")),
+    }
+}
+
+fn parse_schedule_missed_run_policy(value: &str) -> Result<ScheduleMissedRunPolicy, String> {
+    match value {
+        "Skip" => Ok(ScheduleMissedRunPolicy::Skip),
+        "FireOnce" => Ok(ScheduleMissedRunPolicy::FireOnce),
+        _ => Err(format!("invalid schedule missed-run policy: {value}")),
     }
 }
 
