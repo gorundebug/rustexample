@@ -75,6 +75,7 @@ impl Default for Endpoints {
         Self {
             order_processed: KafkaEndpointConfig {
                 id: ORDER_PROCESSED_ENDPOINT_ID, name: "Order Processed".to_owned(), id_data_connector: ORDER_EVENTS_CONNECTOR_ID,
+                tracing_enabled: false,
                 enabled: true, create_topic: true, topic: "order-processed".to_owned(),
                 partitions: 1, consumer_group: "analytics-service".to_owned(),
                 replication_factor: 1,

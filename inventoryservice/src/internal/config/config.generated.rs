@@ -84,6 +84,7 @@ impl Default for Endpoints {
         Self {
             process_order_item: GrpcEndpointConfig {
                 id: PROCESS_ORDER_ITEM_ENDPOINT_ID, name: "Process Order Item".to_owned(), id_data_connector: INVENTORY_SERVICE_API_CONNECTOR_ID,
+                tracing_enabled: false,
                 grpc_method_type: GrpcMethodType::NoStreaming,
             },
         }

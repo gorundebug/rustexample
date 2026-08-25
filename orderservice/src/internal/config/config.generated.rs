@@ -162,16 +162,19 @@ impl Default for Endpoints {
         Self {
             process_order_item: GrpcEndpointConfig {
                 id: PROCESS_ORDER_ITEM_ENDPOINT_ID, name: "Process Order Item".to_owned(), id_data_connector: INVENTORY_SERVICE_API_CONNECTOR_ID,
+                tracing_enabled: false,
                 grpc_method_type: GrpcMethodType::NoStreaming,
             },
             order_processed: KafkaEndpointConfig {
                 id: ORDER_PROCESSED_ENDPOINT_ID, name: "Order Processed".to_owned(), id_data_connector: ORDER_EVENTS_CONNECTOR_ID,
+                tracing_enabled: false,
                 enabled: true, create_topic: true, topic: "order-processed".to_owned(),
                 partitions: 1, consumer_group: "analytics-service".to_owned(),
                 replication_factor: 1,
             },
             process_order: HttpEndpointConfig {
                 id: PROCESS_ORDER_ENDPOINT_ID, name: "Process Order".to_owned(), id_data_connector: ORDER_SERVICE_API_CONNECTOR_ID,
+                tracing_enabled: false,
                 http_method_type: HTTPMethodType::POST, path: "/v1/processorder".to_owned(),
             },
         }
