@@ -198,7 +198,7 @@ impl ServiceConfigContract for Config {
             KafkaDataConnectorConfig {
                 id: ORDER_EVENTS_CONNECTOR_ID, name: "Order Events".to_owned(),
                 brokers: self.order_events_brokers.clone(), version: "2.8.0".to_owned(),
-                dial_timeout: 0.0, use_partitioner: false, r#async: false,
+                dial_timeout: 5000, use_partitioner: false, r#async: false,
                 security_protocol: parse_kafka_security_protocol(&self.order_events_security_protocol).expect("Kafka security protocol was validated"),
                 sasl_mechanism: parse_kafka_sasl_mechanism(&self.order_events_sasl_mechanism).expect("Kafka SASL mechanism was validated"),
                 username: self.order_events_username.clone(),
