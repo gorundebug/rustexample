@@ -22,14 +22,14 @@ endif
 	rust-package
 
 rust-build: rust-gen ## Build the Rust workspace
-	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) build --workspace
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) build --locked --workspace
 
 rust-test: rust-gen ## Test the Rust workspace
-	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) test --workspace --all-targets
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) test --locked --workspace --all-targets
 
 rust-lint: ## Check Rust formatting and Clippy warnings
 	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) fmt --all -- --check
-	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) clippy --workspace --all-targets -- -D warnings
+	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) clippy --locked --workspace --all-targets -- -D warnings
 
 rust-format: ## Format Rust sources
 	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) fmt --all
