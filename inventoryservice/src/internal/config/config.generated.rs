@@ -212,12 +212,12 @@ impl ServiceConfigContract for Config {
         vec![
             LinkConfig {
                 from: GET_INVENTORY_ITEM_DATA_STREAM_ID, to: MERGE_INVENTORY_RESULT_STREAM_ID,
-                call_semantics: CallSemantics::FunctionCall,
+                call_semantics: CallSemantics::ParallelCall,
                 r#async: false,
             },
             LinkConfig {
                 from: PROCESS_INVENTORY_ITEM_STREAM_ID, to: GET_INVENTORY_ITEM_DATA_STREAM_ID,
-                call_semantics: CallSemantics::FunctionCall,
+                call_semantics: CallSemantics::TaskPool { pool_name: "Inventory Priority Workers".to_owned() },
                 r#async: false,
             },
         ]
