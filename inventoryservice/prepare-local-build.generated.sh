@@ -16,3 +16,8 @@ sed -i -E 's|^example-model[[:space:]]*=.*$|example-model = { path = "/workspace
 grep -F 'example-model = { path = "/workspace/modules/model" }' "$manifest" >/dev/null
 sed -i -E 's|^inventory-service-api[[:space:]]*=.*$|inventory-service-api = { path = "/workspace/modules/inventory_service_api" }|' "$manifest"
 grep -F 'inventory-service-api = { path = "/workspace/modules/inventory_service_api" }' "$manifest" >/dev/null
+
+# Local module sources are copied into the development image, so generated
+# transport bindings must also be produced in that writable container layer.
+# Never run generators against the read-only service checkout.
+find /workspace/modules -name 'generate-openapi.generated.sh' -exec {} \; 2>/dev/null || true
