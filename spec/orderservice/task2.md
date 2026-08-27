@@ -6,7 +6,7 @@
 |-------|-------|
 | Language | `Rust` |
 | Kind | `flatMap` |
-| File | `orderservice/src/internal/functions/process_order_items.rs` |
+| File | `orderservice/src/internal/functions/order/process_order_items.rs` |
 | Service | `Order Service` |
 
 
@@ -26,7 +26,7 @@ Preserve each item's data and assign the parent order ID.
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
-- [ ] Open `orderservice/src/internal/functions/process_order_items.rs` and preserve its generated contract
+- [ ] Open `orderservice/src/internal/functions/order/process_order_items.rs` and preserve its generated contract
 - [ ] Inspect input type `Order` in `orderservice/src/internal/types/order.rs`
 - [ ] Inspect output type `OrderItem` in `model/src/types/order_item.rs`
 - [ ] Implement the Rust function without changing its generated trait contract

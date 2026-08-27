@@ -6,7 +6,7 @@
 |-------|-------|
 | Language | `Rust` |
 | Kind | `map` |
-| File | `orderservice/src/internal/functions/map_to_order_processed.rs` |
+| File | `orderservice/src/internal/functions/order/map_to_order_processed.rs` |
 | Service | `Order Service` |
 
 
@@ -26,7 +26,7 @@ Preserve the order ID, status, and processing time. Count all item results and r
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
-- [ ] Open `orderservice/src/internal/functions/map_to_order_processed.rs` and preserve its generated contract
+- [ ] Open `orderservice/src/internal/functions/order/map_to_order_processed.rs` and preserve its generated contract
 - [ ] Inspect input type `OrderState` in `orderservice/src/internal/types/order_state.rs`
 - [ ] Inspect output type `OrderProcessed` in `model/src/types/order_processed.rs`
 - [ ] Implement the Rust function without changing its generated trait contract

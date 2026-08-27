@@ -6,7 +6,7 @@
 |-------|-------|
 | Language | `Rust` |
 | Kind | `process` |
-| File | `inventoryservice/src/internal/functions/get_inventory_item_data.rs` |
+| File | `inventoryservice/src/internal/functions/inventory_item/get_inventory_item_data.rs` |
 | Service | `Inventory Service` |
 
 
@@ -28,7 +28,7 @@ The example starts with SKU-001: 100, SKU-002: 50, and SKU-003: 25.
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
-- [ ] Open `inventoryservice/src/internal/functions/get_inventory_item_data.rs` and preserve its generated contract
+- [ ] Open `inventoryservice/src/internal/functions/inventory_item/get_inventory_item_data.rs` and preserve its generated contract
 - [ ] Inspect input type `OrderItem` in `model/src/types/order_item.rs`
 - [ ] Inspect output type `OrderItemResult` in `model/src/types/order_item_result.rs`
 - [ ] Implement the Rust function without changing its generated trait contract

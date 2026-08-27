@@ -2,14 +2,15 @@
 
 #![allow(dead_code, unused_imports)]
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock, Weak};
 
 use servicelib::{
     MessageContext, Stream,
     operators::{InputStream, SinkStream, SinkStreamWithResult},
     runtime::{
-        config::{ DelayStreamConfig, FlatMapStreamConfig, GrpcEndpointConfig, HttpEndpointConfig, KafkaEndpointConfig, MapStreamConfig,  },
+        config::{ConfigLoader, DelayStreamConfig, FlatMapStreamConfig, GrpcEndpointConfig, HttpEndpointConfig, KafkaEndpointConfig, MapStreamConfig,  },
         environment::{RuntimeEnvironment, RuntimeResult},
+        serviceapp::ServiceApp,
     },
 };
 use example_model::types::*;
@@ -24,6 +25,12 @@ use servicelib::{
     datasink::kafka::{RdkafkaKafkaDataSink, make_rdkafka_kafka_endpoint_consumer},
 };
 
+
+
+use servicelib::{
+    datasource::http::{AxumDataSource, EndpointHandler as _},
+    runtime::config::HttpDataConnectorConfig,
+};
 
 
 use crate::internal::{config::Config, functions::*, types::*};
@@ -44,7 +51,7 @@ pub struct ServiceStreams {
 }
 
 pub struct ServiceHandlers {
-    pub process_order: ProcessOrder,
+    pub process_order_source: ProcessOrderSource,
 }
 
 pub struct ServiceDataConnectors {
@@ -58,13 +65,18 @@ pub struct ServiceRuntime {
     pub data_connectors: ServiceDataConnectors,
 }
 
+struct GeneratedServiceInner {
+    runtime: ServiceRuntime,
+    app: OnceLock<Arc<ServiceApp>>,
+}
+
+#[derive(Clone)]
+pub struct GeneratedService {
+    inner: Arc<GeneratedServiceInner>,
+}
+
 #[derive(Clone)]
 pub struct ServiceMakers {
-    pub inventory_sink: Arc<dyn Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &GrpcEndpointConfig,
-    ) -> RuntimeResult<InventorySink> + Send + Sync>,
     pub map_order_item_result_to_order_state: Arc<dyn Fn(
         MessageContext,
         RuntimeEnvironment,
@@ -80,21 +92,26 @@ pub struct ServiceMakers {
         RuntimeEnvironment,
         &MapStreamConfig,
     ) -> RuntimeResult<MapToOrderState> + Send + Sync>,
-    pub order_processed_endpoint: Arc<dyn Fn(
+    pub order_processed_endpoint_sink: Arc<dyn Fn(
         MessageContext,
         RuntimeEnvironment,
         &KafkaEndpointConfig,
-    ) -> RuntimeResult<OrderProcessedEndpoint> + Send + Sync>,
-    pub process_order: Arc<dyn Fn(
+    ) -> RuntimeResult<OrderProcessedEndpointSink> + Send + Sync>,
+    pub process_order_item_sink: Arc<dyn Fn(
         MessageContext,
         RuntimeEnvironment,
-        &HttpEndpointConfig,
-    ) -> RuntimeResult<ProcessOrder> + Send + Sync>,
+        &GrpcEndpointConfig,
+    ) -> RuntimeResult<ProcessOrderItemSink> + Send + Sync>,
     pub process_order_items: Arc<dyn Fn(
         MessageContext,
         RuntimeEnvironment,
         &FlatMapStreamConfig,
     ) -> RuntimeResult<ProcessOrderItems> + Send + Sync>,
+    pub process_order_source: Arc<dyn Fn(
+        MessageContext,
+        RuntimeEnvironment,
+        &HttpEndpointConfig,
+    ) -> RuntimeResult<ProcessOrderSource> + Send + Sync>,
     pub soft_deadline: Arc<dyn Fn(
         MessageContext,
         RuntimeEnvironment,
@@ -105,26 +122,26 @@ pub struct ServiceMakers {
 impl Default for ServiceMakers {
     fn default() -> Self {
         Self {
-            inventory_sink: Arc::new(make_inventory_sink),
             map_order_item_result_to_order_state: Arc::new(make_map_order_item_result_to_order_state),
             map_to_order_processed: Arc::new(make_map_to_order_processed),
             map_to_order_state: Arc::new(make_map_to_order_state),
-            order_processed_endpoint: Arc::new(make_order_processed_endpoint),
-            process_order: Arc::new(make_process_order),
+            order_processed_endpoint_sink: Arc::new(make_order_processed_endpoint_sink),
+            process_order_item_sink: Arc::new(make_process_order_item_sink),
             process_order_items: Arc::new(make_process_order_items),
+            process_order_source: Arc::new(make_process_order_source),
             soft_deadline: Arc::new(make_soft_deadline),
         }
     }
 }
 
 pub struct ServiceFunctions {
-    pub inventory_sink: InventorySink,
     pub map_order_item_result_to_order_state: MapOrderItemResultToOrderState,
     pub map_to_order_processed: MapToOrderProcessed,
     pub map_to_order_state: MapToOrderState,
-    pub order_processed_endpoint: OrderProcessedEndpoint,
-    pub process_order: ProcessOrder,
+    pub order_processed_endpoint_sink: OrderProcessedEndpointSink,
+    pub process_order_item_sink: ProcessOrderItemSink,
     pub process_order_items: ProcessOrderItems,
+    pub process_order_source: ProcessOrderSource,
     pub soft_deadline: SoftDeadline,
 }
 
@@ -135,13 +152,13 @@ pub fn init_functions(
     makers: &ServiceMakers,
 ) -> RuntimeResult<ServiceFunctions> {
     Ok(ServiceFunctions {
-        inventory_sink: (makers.inventory_sink)(context.clone(), environment.clone(), &config.endpoints.process_order_item)?,
         map_order_item_result_to_order_state: (makers.map_order_item_result_to_order_state)(context.clone(), environment.clone(), &config.streams.map_order_item_result_to_order_state)?,
         map_to_order_processed: (makers.map_to_order_processed)(context.clone(), environment.clone(), &config.streams.map_to_order_processed)?,
         map_to_order_state: (makers.map_to_order_state)(context.clone(), environment.clone(), &config.streams.map_to_order_state)?,
-        order_processed_endpoint: (makers.order_processed_endpoint)(context.clone(), environment.clone(), &config.endpoints.order_processed)?,
-        process_order: (makers.process_order)(context.clone(), environment.clone(), &config.endpoints.process_order)?,
+        order_processed_endpoint_sink: (makers.order_processed_endpoint_sink)(context.clone(), environment.clone(), &config.endpoints.order_processed)?,
+        process_order_item_sink: (makers.process_order_item_sink)(context.clone(), environment.clone(), &config.endpoints.process_order_item)?,
         process_order_items: (makers.process_order_items)(context.clone(), environment.clone(), &config.streams.process_order_items)?,
+        process_order_source: (makers.process_order_source)(context.clone(), environment.clone(), &config.endpoints.process_order)?,
         soft_deadline: (makers.soft_deadline)(context.clone(), environment.clone(), &config.streams.soft_deadline)?,
     })
 }
@@ -180,12 +197,12 @@ pub async fn init_runtime(
     });
     make_grpc_no_streaming_endpoint_consumer(
         &process_order_item,
-        functions.inventory_sink,
+        functions.process_order_item_sink,
         client,
     )?;
     make_rdkafka_kafka_endpoint_consumer(
         &publish_order_processed, Arc::clone(&order_events_data_sink), None,
-        functions.order_processed_endpoint,
+        functions.order_processed_endpoint_sink,
     )?;
     Ok(ServiceRuntime {
       streams: ServiceStreams {
@@ -203,11 +220,99 @@ pub async fn init_runtime(
         publish_order_processed,
       },
       handlers: ServiceHandlers {
-        process_order: functions.process_order,
+        process_order_source: functions.process_order_source,
       },
       data_connectors: ServiceDataConnectors {
         order_events_data_sink: order_events_data_sink,
         inventory_data_sink: inventory_data_sink,
       },
     })
+}
+
+impl GeneratedService {
+    pub async fn new(
+        config: &Config,
+        environment: RuntimeEnvironment,
+        config_loader: ConfigLoader<Config>,
+        custom_makers_init: fn(MessageContext, &mut ServiceMakers) -> RuntimeResult<()>,
+        custom_functions_init: fn(MessageContext, &mut ServiceFunctions) -> RuntimeResult<()>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let mut app = ServiceApp::new(environment, config.service())?;
+        let context = MessageContext::new();
+        let mut makers = ServiceMakers::default();
+        custom_makers_init(context.clone(), &mut makers)?;
+        let mut functions = init_functions(
+            context.clone(), config, app.environment().clone(), &makers,
+        )?;
+        custom_functions_init(context, &mut functions)?;
+        let runtime = init_runtime(
+            config, app.environment().clone(), functions,
+        ).await?;
+        let order_service_api_data_source = AxumDataSource::new(
+            app.environment().clone(),
+            &HttpDataConnectorConfig {
+                id: config.endpoints.process_order.id_data_connector,
+                name: "Order Service API".to_owned(),
+                host: config.http_host.clone(),
+                port: config.http_port,
+                address: String::new(),
+                use_dedicated_listener: false,
+            },
+        );
+        runtime.handlers.process_order_source.reload(
+            &config.endpoints.process_order, config.request_timeout_ms,
+        );
+        order_service_api_data_source.add_endpoint(
+            runtime.streams.process_order.as_ref().clone(),
+            config.endpoints.process_order.clone(),
+            runtime.handlers.process_order_source.clone(),
+        )?;
+        app.add_http_router(order_service_api_data_source.router())?;
+        app.register_data_source(order_service_api_data_source)?;
+        app.register_data_sink(Arc::clone(&runtime.data_connectors.order_events_data_sink))?;
+        app.register_data_sink(Arc::clone(&runtime.data_connectors.inventory_data_sink))?;
+
+        let service = Self {
+            inner: Arc::new(GeneratedServiceInner {
+                runtime,
+                app: OnceLock::new(),
+            }),
+        };
+
+        let weak: Weak<GeneratedServiceInner> = Arc::downgrade(&service.inner);
+        config_loader.set_reload_handler(move |config, runtime_config| {
+            let Some(inner) = weak.upgrade() else {
+                return Ok(());
+            };
+            let app = inner.app.get().ok_or_else(||
+                "service application is not initialized".to_owned()
+            )?;
+            app.validate_reload(&config.service())
+                .map_err(|error| error.to_string())?;
+            inner.runtime.data_connectors.inventory_data_sink
+                .reload_address(config.inventory_address.clone())
+                .map_err(|error| error.to_string())?;
+            inner.runtime.handlers.process_order_source.reload(
+                &config.endpoints.process_order, config.request_timeout_ms,
+            );
+            app.environment().publish_runtime_config(runtime_config);
+            Ok(())
+        });
+        app.add_component(Arc::new(config_loader))?;
+        let app = Arc::new(app);
+        service.inner.app.set(app).map_err(|_| {
+            "service application initialized twice".to_owned()
+        })?;
+        Ok(service)
+    }
+
+    pub async fn run(self) -> Result<(), Box<dyn std::error::Error>> {
+        let app = self.inner.app.get().ok_or_else(||
+            "service application is not initialized".to_owned()
+        )?;
+        app.start(MessageContext::new()).await?;
+        tokio::signal::ctrl_c().await?;
+        app.stop(MessageContext::new()).await?;
+        Ok(())
+    }
 }

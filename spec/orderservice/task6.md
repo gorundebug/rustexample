@@ -6,7 +6,7 @@
 |-------|-------|
 | Language | `Rust` |
 | Kind | `map` |
-| File | `orderservice/src/internal/functions/map_to_order_state.rs` |
+| File | `orderservice/src/internal/functions/order/map_to_order_state.rs` |
 | Service | `Order Service` |
 
 
@@ -26,7 +26,7 @@ Do not add item results at this stage; results received before the timeout are i
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
-- [ ] Open `orderservice/src/internal/functions/map_to_order_state.rs` and preserve its generated contract
+- [ ] Open `orderservice/src/internal/functions/order/map_to_order_state.rs` and preserve its generated contract
 - [ ] Inspect input type `Order` in `orderservice/src/internal/types/order.rs`
 - [ ] Inspect output type `OrderState` in `orderservice/src/internal/types/order_state.rs`
 - [ ] Implement the Rust function without changing its generated trait contract

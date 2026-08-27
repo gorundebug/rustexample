@@ -1,4 +1,4 @@
-# Task 1/2: `ProcessOrderItem`
+# Task 1/2: `ProcessOrderItemSource`
 
 > Rules: [`spec/rules.md`](../rules.md)
 
@@ -6,7 +6,7 @@
 |-------|-------|
 | Language | `Rust` |
 | Kind | `grpc-source` |
-| File | `inventoryservice/src/internal/functions/process_order_item.rs` |
+| File | `inventoryservice/src/internal/functions/endpoint/process_order_item_source.rs` |
 | Service | `Inventory Service` |
 
 
@@ -36,7 +36,7 @@ If the inventory call fails, the caller returns a non-reserved PROCESSING_ERROR 
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
-- [ ] Open `inventoryservice/src/internal/functions/process_order_item.rs` and preserve its generated contract
+- [ ] Open `inventoryservice/src/internal/functions/endpoint/process_order_item_source.rs` and preserve its generated contract
 - [ ] Read `inventory_service_api/proto/inventoryserviceapi/processorderitem/processorderitem.proto`; change the source contract rather than generated bindings
 - [ ] Inspect input type `OrderItem` in `model/src/types/order_item.rs`
 - [ ] Inspect output type `OrderItemResult` in `model/src/types/order_item_result.rs`
@@ -46,4 +46,4 @@ If the inventory call fails, the caller returns a non-reserved PROCESSING_ERROR 
 - [ ] Run `cargo test --workspace --all-targets`
 - [ ] Verify the endpoint/result lifecycle, including completion and error paths
 - [ ] Re-read this checklist
-- [ ] Append to `spec/progress.md`: `- [x] inventoryservice/task1.md — ProcessOrderItem — Rust — done`
+- [ ] Append to `spec/progress.md`: `- [x] inventoryservice/task1.md — ProcessOrderItemSource — Rust — done`

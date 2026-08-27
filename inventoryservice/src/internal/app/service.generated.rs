@@ -2,14 +2,15 @@
 
 #![allow(dead_code, unused_imports)]
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock, Weak};
 
 use servicelib::{
     MessageContext, Stream,
     operators::{InputStream, SinkStream, SinkStreamWithResult},
     runtime::{
-        config::{ GrpcEndpointConfig, ProcessStreamConfig,  },
+        config::{ConfigLoader, GrpcEndpointConfig, ProcessStreamConfig,  },
         environment::{RuntimeEnvironment, RuntimeResult},
+        serviceapp::ServiceApp,
     },
 };
 use example_model::types::*;
@@ -17,6 +18,20 @@ use example_model::types::*;
 
 
 
+
+
+use servicelib::datasource::grpc::{
+    NoStreamingEndpointConsumer, TonicDataSource,
+    make_grpc_no_streaming_endpoint_consumer as make_grpc_source_endpoint_consumer,
+};
+use tonic::{Request, Response, Status};
+use inventory_service_api::inventoryserviceapi::inventory_service_api_server::{
+    InventoryServiceApi, InventoryServiceApiServer,
+};
+
+use inventory_service_api::processorderitem::{
+    ProcessOrderItemRequest, ProcessOrderItemResponse,
+};
 
 use crate::internal::{config::Config, functions::*};
 
@@ -28,7 +43,7 @@ pub struct ServiceStreams {
 }
 
 pub struct ServiceHandlers {
-    pub process_order_item: ProcessOrderItem,
+    pub process_order_item_source: ProcessOrderItemSource,
 }
 
 pub struct ServiceDataConnectors {
@@ -40,6 +55,20 @@ pub struct ServiceRuntime {
     pub data_connectors: ServiceDataConnectors,
 }
 
+struct GeneratedServiceInner {
+    runtime: ServiceRuntime,
+    process_order_item_endpoint: Arc<NoStreamingEndpointConsumer<
+        (), ProcessOrderItemRequest, ProcessOrderItemResponse,
+        OrderItem, OrderItemResult, OrderItemResult, ProcessOrderItemSource
+    >>,
+    app: OnceLock<Arc<ServiceApp>>,
+}
+
+#[derive(Clone)]
+pub struct GeneratedService {
+    inner: Arc<GeneratedServiceInner>,
+}
+
 #[derive(Clone)]
 pub struct ServiceMakers {
     pub get_inventory_item_data: Arc<dyn Fn(
@@ -47,25 +76,25 @@ pub struct ServiceMakers {
         RuntimeEnvironment,
         &ProcessStreamConfig,
     ) -> RuntimeResult<GetInventoryItemData> + Send + Sync>,
-    pub process_order_item: Arc<dyn Fn(
+    pub process_order_item_source: Arc<dyn Fn(
         MessageContext,
         RuntimeEnvironment,
         &GrpcEndpointConfig,
-    ) -> RuntimeResult<ProcessOrderItem> + Send + Sync>,
+    ) -> RuntimeResult<ProcessOrderItemSource> + Send + Sync>,
 }
 
 impl Default for ServiceMakers {
     fn default() -> Self {
         Self {
             get_inventory_item_data: Arc::new(make_get_inventory_item_data),
-            process_order_item: Arc::new(make_process_order_item),
+            process_order_item_source: Arc::new(make_process_order_item_source),
         }
     }
 }
 
 pub struct ServiceFunctions {
     pub get_inventory_item_data: GetInventoryItemData,
-    pub process_order_item: ProcessOrderItem,
+    pub process_order_item_source: ProcessOrderItemSource,
 }
 
 pub fn init_functions(
@@ -76,7 +105,7 @@ pub fn init_functions(
 ) -> RuntimeResult<ServiceFunctions> {
     Ok(ServiceFunctions {
         get_inventory_item_data: (makers.get_inventory_item_data)(context.clone(), environment.clone(), &config.streams.get_inventory_item_data)?,
-        process_order_item: (makers.process_order_item)(context.clone(), environment.clone(), &config.endpoints.process_order_item)?,
+        process_order_item_source: (makers.process_order_item_source)(context.clone(), environment.clone(), &config.endpoints.process_order_item)?,
     })
 }
 
@@ -98,9 +127,94 @@ pub fn init_runtime(
         merge_inventory_result,
       },
       handlers: ServiceHandlers {
-        process_order_item: functions.process_order_item,
+        process_order_item_source: functions.process_order_item_source,
       },
       data_connectors: ServiceDataConnectors {
       },
     })
+}
+
+impl GeneratedService {
+    pub async fn new(
+        config: &Config,
+        environment: RuntimeEnvironment,
+        config_loader: ConfigLoader<Config>,
+        custom_makers_init: fn(MessageContext, &mut ServiceMakers) -> RuntimeResult<()>,
+        custom_functions_init: fn(MessageContext, &mut ServiceFunctions) -> RuntimeResult<()>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let mut app = ServiceApp::new(environment, config.service())?;
+        let context = MessageContext::new();
+        let mut makers = ServiceMakers::default();
+        custom_makers_init(context.clone(), &mut makers)?;
+        let mut functions = init_functions(
+            context.clone(), config, app.environment().clone(), &makers,
+        )?;
+        custom_functions_init(context, &mut functions)?;
+        let runtime = init_runtime(
+            config, app.environment().clone(), functions,
+        )?;
+        let process_order_item_endpoint = make_grpc_source_endpoint_consumer(
+            runtime.streams.process_order_item.as_ref().clone(),
+            runtime.handlers.process_order_item_source.clone(),
+        )?;
+
+        let service = Self {
+            inner: Arc::new(GeneratedServiceInner {
+                runtime,
+                process_order_item_endpoint,
+                app: OnceLock::new(),
+            }),
+        };
+        let grpc = TonicDataSource::from_input(
+            &service.inner.runtime.streams.process_order_item,
+        )?;
+        app.register_data_source(grpc)?;
+
+        let weak: Weak<GeneratedServiceInner> = Arc::downgrade(&service.inner);
+        config_loader.set_reload_handler(move |config, runtime_config| {
+            let Some(inner) = weak.upgrade() else {
+                return Ok(());
+            };
+            let app = inner.app.get().ok_or_else(||
+                "service application is not initialized".to_owned()
+            )?;
+            app.validate_reload(&config.service())
+                .map_err(|error| error.to_string())?;
+            app.environment().publish_runtime_config(runtime_config);
+            Ok(())
+        });
+        app.add_component(Arc::new(config_loader))?;
+        app.add_grpc_service(InventoryServiceApiServer::new(service.clone()))?;
+        let app = Arc::new(app);
+        service.inner.app.set(app).map_err(|_| {
+            "service application initialized twice".to_owned()
+        })?;
+        Ok(service)
+    }
+
+    pub async fn run(self) -> Result<(), Box<dyn std::error::Error>> {
+        let app = self.inner.app.get().ok_or_else(||
+            "service application is not initialized".to_owned()
+        )?;
+        app.start(MessageContext::new()).await?;
+        tokio::signal::ctrl_c().await?;
+        app.stop(MessageContext::new()).await?;
+        Ok(())
+    }
+}
+
+
+#[tonic::async_trait]
+impl InventoryServiceApi for GeneratedService {
+    async fn process_order_item(
+        &self,
+        request: Request<ProcessOrderItemRequest>,
+    ) -> Result<Response<ProcessOrderItemResponse>, Status> {
+        let context = MessageContext::from_tonic_request(&request);
+        let response = self.inner.process_order_item_endpoint
+            .handle(context, request.into_inner())
+            .await
+            .map_err(|error| Status::internal(error.to_string()))?;
+        Ok(Response::new(response))
+    }
 }

@@ -2,14 +2,15 @@
 
 #![allow(dead_code, unused_imports)]
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock, Weak};
 
 use servicelib::{
     MessageContext, Stream,
     operators::{InputStream, SinkStream, SinkStreamWithResult},
     runtime::{
-        config::{ KafkaEndpointConfig, ProcessStreamConfig,  },
+        config::{ConfigLoader, KafkaEndpointConfig, ProcessStreamConfig,  },
         environment::{RuntimeEnvironment, RuntimeResult},
+        serviceapp::ServiceApp,
     },
 };
 use example_model::types::*;
@@ -17,6 +18,8 @@ use example_model::types::*;
 
 
 use servicelib::datasource::kafka::RdkafkaKafkaDataSource;
+
+
 
 
 use crate::internal::{config::Config, functions::*};
@@ -39,6 +42,16 @@ pub struct ServiceRuntime {
     pub data_connectors: ServiceDataConnectors,
 }
 
+struct GeneratedServiceInner {
+    runtime: ServiceRuntime,
+    app: OnceLock<Arc<ServiceApp>>,
+}
+
+#[derive(Clone)]
+pub struct GeneratedService {
+    inner: Arc<GeneratedServiceInner>,
+}
+
 #[derive(Clone)]
 pub struct ServiceMakers {
     pub count_order_processed: Arc<dyn Fn(
@@ -46,25 +59,25 @@ pub struct ServiceMakers {
         RuntimeEnvironment,
         &ProcessStreamConfig,
     ) -> RuntimeResult<CountOrderProcessed> + Send + Sync>,
-    pub order_processed_endpoint: Arc<dyn Fn(
+    pub order_processed_endpoint_source: Arc<dyn Fn(
         MessageContext,
         RuntimeEnvironment,
         &KafkaEndpointConfig,
-    ) -> RuntimeResult<OrderProcessedEndpoint> + Send + Sync>,
+    ) -> RuntimeResult<OrderProcessedEndpointSource> + Send + Sync>,
 }
 
 impl Default for ServiceMakers {
     fn default() -> Self {
         Self {
             count_order_processed: Arc::new(make_count_order_processed),
-            order_processed_endpoint: Arc::new(make_order_processed_endpoint),
+            order_processed_endpoint_source: Arc::new(make_order_processed_endpoint_source),
         }
     }
 }
 
 pub struct ServiceFunctions {
     pub count_order_processed: CountOrderProcessed,
-    pub order_processed_endpoint: OrderProcessedEndpoint,
+    pub order_processed_endpoint_source: OrderProcessedEndpointSource,
 }
 
 pub fn init_functions(
@@ -75,7 +88,7 @@ pub fn init_functions(
 ) -> RuntimeResult<ServiceFunctions> {
     Ok(ServiceFunctions {
         count_order_processed: (makers.count_order_processed)(context.clone(), environment.clone(), &config.streams.count_order_processed)?,
-        order_processed_endpoint: (makers.order_processed_endpoint)(context.clone(), environment.clone(), &config.endpoints.order_processed)?,
+        order_processed_endpoint_source: (makers.order_processed_endpoint_source)(context.clone(), environment.clone(), &config.endpoints.order_processed)?,
     })
 }
 
@@ -91,7 +104,7 @@ pub fn init_runtime(
     let order_events_data_source = RdkafkaKafkaDataSource::from_input(&consume_order_processed)?;
     order_events_data_source.add_endpoint(
         consume_order_processed.as_ref().clone(),
-        functions.order_processed_endpoint,
+        functions.order_processed_endpoint_source,
     )?;
     Ok(ServiceRuntime {
       streams: ServiceStreams {
@@ -104,4 +117,64 @@ pub fn init_runtime(
         order_events_data_source: order_events_data_source,
       },
     })
+}
+
+impl GeneratedService {
+    pub async fn new(
+        config: &Config,
+        environment: RuntimeEnvironment,
+        config_loader: ConfigLoader<Config>,
+        custom_makers_init: fn(MessageContext, &mut ServiceMakers) -> RuntimeResult<()>,
+        custom_functions_init: fn(MessageContext, &mut ServiceFunctions) -> RuntimeResult<()>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let mut app = ServiceApp::new(environment, config.service())?;
+        let context = MessageContext::new();
+        let mut makers = ServiceMakers::default();
+        custom_makers_init(context.clone(), &mut makers)?;
+        let mut functions = init_functions(
+            context.clone(), config, app.environment().clone(), &makers,
+        )?;
+        custom_functions_init(context, &mut functions)?;
+        let runtime = init_runtime(
+            config, app.environment().clone(), functions,
+        )?;
+        app.register_data_source(Arc::clone(&runtime.data_connectors.order_events_data_source))?;
+
+        let service = Self {
+            inner: Arc::new(GeneratedServiceInner {
+                runtime,
+                app: OnceLock::new(),
+            }),
+        };
+
+        let weak: Weak<GeneratedServiceInner> = Arc::downgrade(&service.inner);
+        config_loader.set_reload_handler(move |config, runtime_config| {
+            let Some(inner) = weak.upgrade() else {
+                return Ok(());
+            };
+            let app = inner.app.get().ok_or_else(||
+                "service application is not initialized".to_owned()
+            )?;
+            app.validate_reload(&config.service())
+                .map_err(|error| error.to_string())?;
+            app.environment().publish_runtime_config(runtime_config);
+            Ok(())
+        });
+        app.add_component(Arc::new(config_loader))?;
+        let app = Arc::new(app);
+        service.inner.app.set(app).map_err(|_| {
+            "service application initialized twice".to_owned()
+        })?;
+        Ok(service)
+    }
+
+    pub async fn run(self) -> Result<(), Box<dyn std::error::Error>> {
+        let app = self.inner.app.get().ok_or_else(||
+            "service application is not initialized".to_owned()
+        )?;
+        app.start(MessageContext::new()).await?;
+        tokio::signal::ctrl_c().await?;
+        app.stop(MessageContext::new()).await?;
+        Ok(())
+    }
 }

@@ -6,7 +6,7 @@
 |-------|-------|
 | Language | `Rust` |
 | Kind | `delay` |
-| File | `orderservice/src/internal/functions/soft_deadline.rs` |
+| File | `orderservice/src/internal/functions/order/soft_deadline.rs` |
 | Service | `Order Service` |
 
 
@@ -26,7 +26,7 @@ When no request deadline exists, use the configured duration itself. Never wait 
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
-- [ ] Open `orderservice/src/internal/functions/soft_deadline.rs` and preserve its generated contract
+- [ ] Open `orderservice/src/internal/functions/order/soft_deadline.rs` and preserve its generated contract
 - [ ] Inspect input type `Order` in `orderservice/src/internal/types/order.rs`
 - [ ] Inspect output type `Order` in `orderservice/src/internal/types/order.rs`
 - [ ] Implement the Rust function without changing its generated trait contract

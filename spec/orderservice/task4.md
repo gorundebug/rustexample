@@ -6,7 +6,7 @@
 |-------|-------|
 | Language | `Rust` |
 | Kind | `map` |
-| File | `orderservice/src/internal/functions/map_order_item_result_to_order_state.rs` |
+| File | `orderservice/src/internal/functions/order/map_order_item_result_to_order_state.rs` |
 | Service | `Order Service` |
 
 
@@ -27,7 +27,7 @@ Record the time when this result is produced.
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
-- [ ] Open `orderservice/src/internal/functions/map_order_item_result_to_order_state.rs` and preserve its generated contract
+- [ ] Open `orderservice/src/internal/functions/order/map_order_item_result_to_order_state.rs` and preserve its generated contract
 - [ ] Inspect input type `OrderItemResult` in `model/src/types/order_item_result.rs`
 - [ ] Inspect output type `OrderState` in `orderservice/src/internal/types/order_state.rs`
 - [ ] Implement the Rust function without changing its generated trait contract

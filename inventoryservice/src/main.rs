@@ -72,7 +72,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
     };
     environment.publish_runtime_config(loader.runtime_config());
-    Service::new(&config, environment, loader)?.run().await
+    Service::new(&config, environment, loader)
+        .await?
+        .run()
+        .await
 }
 
 fn config_paths(default_config: &str, default_values: &str) -> (String, String) {

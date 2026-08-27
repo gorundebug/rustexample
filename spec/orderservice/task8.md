@@ -1,4 +1,4 @@
-# Task 8/8: `OrderProcessedEndpoint`
+# Task 8/8: `OrderProcessedEndpointSink`
 
 > Rules: [`spec/rules.md`](../rules.md)
 
@@ -6,7 +6,7 @@
 |-------|-------|
 | Language | `Rust` |
 | Kind | `kafka-sink` |
-| File | `orderservice/src/internal/functions/order_processed_endpoint.rs` |
+| File | `orderservice/src/internal/functions/endpoint/order_processed_endpoint_sink.rs` |
 | Service | `Order Service` |
 
 
@@ -27,7 +27,7 @@ Consumers decode the event and mark its Kafka message processed only after the p
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
-- [ ] Open `orderservice/src/internal/functions/order_processed_endpoint.rs` and preserve its generated contract
+- [ ] Open `orderservice/src/internal/functions/endpoint/order_processed_endpoint_sink.rs` and preserve its generated contract
 - [ ] Inspect input type `OrderProcessed` in `model/src/types/order_processed.rs`
 - [ ] Inspect output type `OrderProcessed` in `model/src/types/order_processed.rs`
 - [ ] Implement the Rust function without changing its generated trait contract
@@ -35,4 +35,4 @@ Consumers decode the event and mark its Kafka message processed only after the p
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
 - [ ] Run `cargo test --workspace --all-targets`
 - [ ] Re-read this checklist
-- [ ] Append to `spec/progress.md`: `- [x] orderservice/task8.md — OrderProcessedEndpoint — Rust — done`
+- [ ] Append to `spec/progress.md`: `- [x] orderservice/task8.md — OrderProcessedEndpointSink — Rust — done`

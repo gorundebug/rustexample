@@ -1,4 +1,4 @@
-# Task 1/8: `ProcessOrder`
+# Task 1/8: `ProcessOrderSource`
 
 > Rules: [`spec/rules.md`](../rules.md)
 
@@ -6,7 +6,7 @@
 |-------|-------|
 | Language | `Rust` |
 | Kind | `http-source` |
-| File | `orderservice/src/internal/functions/process_order.rs` |
+| File | `orderservice/src/internal/functions/endpoint/process_order_source.rs` |
 | Service | `Order Service` |
 
 
@@ -37,7 +37,7 @@ Calculate the total from processed item prices, falling back to the submitted to
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
-- [ ] Open `orderservice/src/internal/functions/process_order.rs` and preserve its generated contract
+- [ ] Open `orderservice/src/internal/functions/endpoint/process_order_source.rs` and preserve its generated contract
 - [ ] Read `order_service_api/openapi/orderserviceapi/processorder/processorder.yaml`; change the source contract rather than generated bindings
 - [ ] Inspect input type `Order` in `orderservice/src/internal/types/order.rs`
 - [ ] Inspect output type `OrderState` in `orderservice/src/internal/types/order_state.rs`
@@ -47,4 +47,4 @@ Calculate the total from processed item prices, falling back to the submitted to
 - [ ] Run `cargo test --workspace --all-targets`
 - [ ] Verify the endpoint/result lifecycle, including completion and error paths
 - [ ] Re-read this checklist
-- [ ] Append to `spec/progress.md`: `- [x] orderservice/task1.md — ProcessOrder — Rust — done`
+- [ ] Append to `spec/progress.md`: `- [x] orderservice/task1.md — ProcessOrderSource — Rust — done`
