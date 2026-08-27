@@ -20,20 +20,19 @@ endif
 
 .PHONY: rust-build rust-test rust-lint rust-format rust-gen rust-clean \
 	rust-docker-build rust-docker-dev-build \
-	rust-package
+	rust-workspace-build rust-workspace-test rust-package
 
-rust-build: rust-gen ## Build the Rust workspace
-	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) build --locked --workspace
+rust-build: ## Build every autonomous Rust service
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" build USE_LOCAL_MODULES=1 || exit $$?; done
 
-rust-test: rust-gen ## Test the Rust workspace
-	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) test --locked --workspace --all-targets
+rust-test: ## Test every autonomous Rust service
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" test USE_LOCAL_MODULES=1 || exit $$?; done
 
 rust-lint: ## Check Rust formatting and Clippy warnings
-	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) fmt --all -- --check
-	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) clippy --locked --workspace --all-targets -- -D warnings
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" lint USE_LOCAL_MODULES=1 || exit $$?; done
 
 rust-format: ## Format Rust sources
-	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) fmt --all
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" fmt USE_LOCAL_MODULES=1 || exit $$?; done
 
 rust-gen: ## Generate Rust HTTP transport sources
 	@find . -name 'generate-openapi.generated.sh' -exec {} \;
@@ -53,10 +52,16 @@ rust-package-%: ## Package one Rust service (for example: make rust-package-orde
 	@./scripts/package-rust-service.generated.sh "$*" "dist/$*"
 
 rust-clean: ## Remove Rust build artifacts
-	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) clean
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" clean USE_LOCAL_MODULES=1 || exit $$?; done
 
 rust-docker-build: ## Build independent Rust service images in Docker
-	@$(DOCKER_COMPOSE) build $(RUST_SERVICE_DIRS)
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" docker-build USE_LOCAL_MODULES=1 || exit $$?; done
 
 rust-docker-dev-build: ## Build the source-mounted Rust development image
-	@SERVICEGEN_DOCKER_TARGET=development $(DOCKER_COMPOSE_DEV) build $(RUST_SERVICE_DIRS)
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" docker-build-dev USE_LOCAL_MODULES=1 || exit $$?; done
+
+rust-workspace-build: rust-gen ## Verify the combined Rust workspace build
+	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) build --locked --workspace
+
+rust-workspace-test: rust-gen ## Verify the combined Rust workspace tests
+	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) test --locked --workspace --all-targets
