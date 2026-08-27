@@ -1,0 +1,24 @@
+services:
+  inventoryservice:
+    image: inventoryservice-rust:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+      args:
+        CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
+        DEPENDENCY_MAVEN_CENTRAL_URL: ${DEPENDENCY_MAVEN_CENTRAL_URL:-https://repo1.maven.org/maven2}
+        DEPENDENCY_APT_DEBIAN_URL: ${DEPENDENCY_APT_DEBIAN_URL:-}
+        DEPENDENCY_APT_DEBIAN_SECURITY_URL: ${DEPENDENCY_APT_DEBIAN_SECURITY_URL:-}
+      additional_contexts:
+        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.24}"
+        module-model-source: "${EXAMPLE_MODEL_SOURCE_CONTEXT:-https://github.com/gorundebug/rustexample-model.git#v0.2.14}"
+        module-inventory_service_api-source: "${INVENTORY_SERVICE_API_SOURCE_CONTEXT:-https://github.com/gorundebug/rustexample-inventory-service-api.git#v0.2.14}"
+    environment:
+      - DEBUG=${DEBUG:-0}
+    ports:
+      - "9092:9092"
+      - "9202:9202"
+      - "2345:2345"
