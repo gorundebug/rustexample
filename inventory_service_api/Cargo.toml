@@ -1,8 +1,8 @@
 [package]
 name = "inventory-service-api"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
 build = "build.rs"
 
 [lib]
@@ -10,9 +10,9 @@ name = "inventory_service_api"
 
 
 [dependencies]
-serde.workspace = true
+serde = { version = "1", features = ["derive"] }
 prost = "0.13"
-tonic.workspace = true
+tonic = "0.12"
 
 [build-dependencies]
 protoc-bin-vendored = "3"

@@ -1,8 +1,8 @@
 [package]
 name = "order-service-api"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
 
 [lib]
 name = "order_service_api"
@@ -14,9 +14,9 @@ conversion = []
 
 
 [dependencies]
-serde.workspace = true
+serde = { version = "1", features = ["derive"] }
 ammonia = "4"
-async-trait.workspace = true
+async-trait = "0.1"
 axum = { version = "0.8", features = ["multipart"] }
 axum-extra = { version = "0.12", features = ["cookie", "query", "typed-header"] }
 base64 = "0.22"
@@ -29,7 +29,7 @@ lazy_static = "1"
 regex = "1"
 serde_html_form = "0.2"
 serde_json = { version = "1", features = ["raw_value"] }
-tokio.workspace = true
-tracing.workspace = true
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+tracing = "0.1"
 uuid = { version = "1", features = ["serde"] }
 validator = { version = "0.20", features = ["derive"] }
