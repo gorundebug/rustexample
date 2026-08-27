@@ -3,7 +3,7 @@ module github.com/gorundebug/rustexample-automationservice
 go 1.25.4
 
 require (
-	github.com/gorundebug/servicelib v0.2.21
+	github.com/gorundebug/servicelib v0.2.22
 	github.com/stretchr/testify v1.12.1
 	go.temporal.io/sdk v1.48.0
 	golang.org/x/sync v0.22.0

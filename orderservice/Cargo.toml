@@ -18,7 +18,7 @@ opentelemetry.workspace = true
 order-service-api = { path = "../order_service_api" }
 serde.workspace = true
 serde_json.workspace = true
-servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.21" }
+servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.22" }
 tokio.workspace = true
 tonic.workspace = true
 tracing.workspace = true
