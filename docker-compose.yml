@@ -13,7 +13,7 @@ services:
         SERVICEGEN_APT_DEBIAN_URL: ${SERVICEGEN_APT_DEBIAN_URL:-}
         SERVICEGEN_APT_DEBIAN_SECURITY_URL: ${SERVICEGEN_APT_DEBIAN_SECURITY_URL:-}
       additional_contexts:
-        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.14}"
+        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.17}"
     restart: unless-stopped
     environment:
       - DEBUG=${ANALYTICS_SERVICE_DEBUG:-0}
@@ -66,7 +66,7 @@ services:
         SERVICEGEN_APT_DEBIAN_URL: ${SERVICEGEN_APT_DEBIAN_URL:-}
         SERVICEGEN_APT_DEBIAN_SECURITY_URL: ${SERVICEGEN_APT_DEBIAN_SECURITY_URL:-}
       additional_contexts:
-        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.14}"
+        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.17}"
     restart: unless-stopped
     environment:
       - DEBUG=${INVENTORY_SERVICE_DEBUG:-0}
@@ -97,7 +97,7 @@ services:
         SERVICEGEN_APT_DEBIAN_URL: ${SERVICEGEN_APT_DEBIAN_URL:-}
         SERVICEGEN_APT_DEBIAN_SECURITY_URL: ${SERVICEGEN_APT_DEBIAN_SECURITY_URL:-}
       additional_contexts:
-        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.14}"
+        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.17}"
     restart: unless-stopped
     environment:
       - DEBUG=${ORDER_SERVICE_DEBUG:-0}
