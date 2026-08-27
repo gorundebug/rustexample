@@ -75,6 +75,18 @@ WORKDIR /workspace/rustexample
 FROM development-base AS build
 COPY . /workspace/rustexample
 WORKDIR /workspace/rustexample
+# Component manifests remain independently publishable and therefore pin their
+# modules and framework by repository.  The copied workspace build must select
+# the sibling sources explicitly instead of asking Cargo to resolve those Git
+# sources before applying a patch.
+RUN set -eu; \
+    for manifest in */Cargo.toml; do \
+      sed -i -E 's|^servicelib-gorundebug[[:space:]]*=.*$|servicelib-gorundebug = { path = "/workspace/rustservicelib" }|' "$manifest"; \
+      sed -i -E 's|^inventory-service-api[[:space:]]*=.*$|inventory-service-api = { path = "/workspace/rustexample/inventory_service_api" }|' "$manifest"; \
+      sed -i -E 's|^example-model[[:space:]]*=.*$|example-model = { path = "/workspace/rustexample/model" }|' "$manifest"; \
+      sed -i -E 's|^order-service-api[[:space:]]*=.*$|order-service-api = { path = "/workspace/rustexample/order_service_api" }|' "$manifest"; \
+    done; \
+    ! grep -E '^(servicelib-gorundebug|inventory-service-api|example-model|order-service-api)[[:space:]]*=.*git[[:space:]]*=' */Cargo.toml
 # HTTP bindings are language-tool outputs, so a clean Docker build must create
 # them before Cargo resolves the workspace. The pinned CLI download is cached
 # in the immutable tool layer and is not repeated for source-only changes.
@@ -93,8 +105,7 @@ RUN --mount=type=cache,id=rustexample-cargo-registry,target=/usr/local/cargo/reg
     && test -n "$inventoryservice_binary" \
     && orderservice_binary="$(sed -n '/^\[package\]/,/^\[/s/^name = "\([^"]*\)"/\1/p' orderservice/Cargo.toml | head -n 1)" \
     && test -n "$orderservice_binary" \
-    && cargo --config 'patch."https://github.com/gorundebug/rustservicelib.git".servicelib-gorundebug.path="/workspace/rustservicelib"' \
-        build --locked --release --workspace --bins \
+    && cargo build --locked --release --workspace --bins \
     && cp "target/release/$analyticsservice_binary" /workspace/analyticsservice \
     && cp "target/release/$inventoryservice_binary" /workspace/inventoryservice \
     && cp "target/release/$orderservice_binary" /workspace/orderservice \
