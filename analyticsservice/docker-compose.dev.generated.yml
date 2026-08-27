@@ -8,13 +8,13 @@ services:
       - /bin/sh
       - -lc
       - |
-        cargo $${DOCKER_LOCAL_MODULE_ARGS:-} build
+        cargo $${DOCKER_LOCAL_MODULE_ARGS:-} build --locked
         if [ "$${DEBUG:-0}" = "1" ]; then
           exec gdbserver :2345 target/debug/analytics_service --config config/config.yaml --values config/overrides.yaml
         fi
         exec target/debug/analytics_service --config config/config.yaml --values config/overrides.yaml
     volumes:
-      - .:/workspace/service
+      - .:/workspace/service:ro
       - rust-cargo-registry:/usr/local/cargo/registry
       - rust-cargo-git:/usr/local/cargo/git
       - rust-target:/workspace/service/target
