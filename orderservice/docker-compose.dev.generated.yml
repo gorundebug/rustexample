@@ -8,18 +8,21 @@ services:
       - /bin/sh
       - -lc
       - |
-        cargo $${DOCKER_LOCAL_MODULE_ARGS:-} build --locked
+        prepare-local-build /workspace/source /workspace/service
+        cargo build
         if [ "$${DEBUG:-0}" = "1" ]; then
           exec gdbserver :2345 target/debug/order_service --config config/config.yaml --values config/overrides.yaml
         fi
         exec target/debug/order_service --config config/config.yaml --values config/overrides.yaml
     volumes:
-      - .:/workspace/service:ro
+      - .:/workspace/source:ro
+      - rust-worktree:/workspace/service
       - rust-cargo-registry:/usr/local/cargo/registry
       - rust-cargo-git:/usr/local/cargo/git
       - rust-target:/workspace/service/target
 
 volumes:
+  rust-worktree:
   rust-cargo-registry:
   rust-cargo-git:
   rust-target:

@@ -105,7 +105,7 @@ RUN --mount=type=cache,id=rustexample-cargo-registry,target=/usr/local/cargo/reg
     && test -n "$inventoryservice_binary" \
     && orderservice_binary="$(sed -n '/^\[package\]/,/^\[/s/^name = "\([^"]*\)"/\1/p' orderservice/Cargo.toml | head -n 1)" \
     && test -n "$orderservice_binary" \
-    && cargo build --locked --release --workspace --bins \
+    && cargo build --release --workspace --bins \
     && cp "target/release/$analyticsservice_binary" /workspace/analyticsservice \
     && cp "target/release/$inventoryservice_binary" /workspace/inventoryservice \
     && cp "target/release/$orderservice_binary" /workspace/orderservice \

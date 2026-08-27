@@ -10,7 +10,8 @@ services:
       - /bin/sh
       - -lc
       - >-
-        cargo $${DOCKER_LOCAL_MODULE_ARGS:-} build --locked
+        prepare-local-build /workspace/source /workspace/service
+        && cargo build
         && if [ "$${DEBUG:-0}" = "1" ]; then
           exec gdbserver :2345 /workspace/service/target/debug/analyticsservice
           --config /workspace/service/config/config.yaml
@@ -28,7 +29,8 @@ services:
       GIT_CONFIG_KEY_1: ${GIT_CONFIG_KEY_1:-}
       GIT_CONFIG_VALUE_1: ${GIT_CONFIG_VALUE_1:-}
     volumes:
-      - ./analyticsservice:/workspace/service:ro
+      - ./analyticsservice:/workspace/source:ro
+      - rust-dev-worktree-analyticsservice:/workspace/service
       - rust-dev-cargo-registry:/usr/local/cargo/registry
       - rust-dev-cargo-git:/usr/local/cargo/git
       - rust-dev-target-analyticsservice:/workspace/service/target
@@ -76,7 +78,8 @@ services:
       - /bin/sh
       - -lc
       - >-
-        cargo $${DOCKER_LOCAL_MODULE_ARGS:-} build --locked
+        prepare-local-build /workspace/source /workspace/service
+        && cargo build
         && if [ "$${DEBUG:-0}" = "1" ]; then
           exec gdbserver :2345 /workspace/service/target/debug/inventoryservice
           --config /workspace/service/config/config.yaml
@@ -94,7 +97,8 @@ services:
       GIT_CONFIG_KEY_1: ${GIT_CONFIG_KEY_1:-}
       GIT_CONFIG_VALUE_1: ${GIT_CONFIG_VALUE_1:-}
     volumes:
-      - ./inventoryservice:/workspace/service:ro
+      - ./inventoryservice:/workspace/source:ro
+      - rust-dev-worktree-inventoryservice:/workspace/service
       - rust-dev-cargo-registry:/usr/local/cargo/registry
       - rust-dev-cargo-git:/usr/local/cargo/git
       - rust-dev-target-inventoryservice:/workspace/service/target
@@ -110,7 +114,8 @@ services:
       - /bin/sh
       - -lc
       - >-
-        cargo $${DOCKER_LOCAL_MODULE_ARGS:-} build --locked
+        prepare-local-build /workspace/source /workspace/service
+        && cargo build
         && if [ "$${DEBUG:-0}" = "1" ]; then
           exec gdbserver :2345 /workspace/service/target/debug/orderservice
           --config /workspace/service/config/config.yaml
@@ -128,7 +133,8 @@ services:
       GIT_CONFIG_KEY_1: ${GIT_CONFIG_KEY_1:-}
       GIT_CONFIG_VALUE_1: ${GIT_CONFIG_VALUE_1:-}
     volumes:
-      - ./orderservice:/workspace/service:ro
+      - ./orderservice:/workspace/source:ro
+      - rust-dev-worktree-orderservice:/workspace/service
       - rust-dev-cargo-registry:/usr/local/cargo/registry
       - rust-dev-cargo-git:/usr/local/cargo/git
       - rust-dev-target-orderservice:/workspace/service/target
@@ -142,6 +148,9 @@ volumes:
   go-dev-build-cache:
   rust-dev-cargo-registry:
   rust-dev-cargo-git:
+  rust-dev-worktree-analyticsservice:
   rust-dev-target-analyticsservice:
+  rust-dev-worktree-inventoryservice:
   rust-dev-target-inventoryservice:
+  rust-dev-worktree-orderservice:
   rust-dev-target-orderservice:
