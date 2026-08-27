@@ -19,7 +19,7 @@ RUN if [ -n "$DEPENDENCY_APT_DEBIAN_URL$DEPENDENCY_APT_DEBIAN_SECURITY_URL" ]; t
         -e "s|http://deb.debian.org/debian|$DEPENDENCY_APT_DEBIAN_URL|g" {} +; \
     fi
 RUN apt-get update && apt-get install --yes --no-install-recommends \
-      ca-certificates curl default-jre-headless gdbserver \
+      ca-certificates cmake curl default-jre-headless gdbserver \
     && curl --fail --location --show-error \
       "${DEPENDENCY_MAVEN_CENTRAL_URL}/org/openapitools/openapi-generator-cli/${OPENAPI_GENERATOR_VERSION}/openapi-generator-cli-${OPENAPI_GENERATOR_VERSION}.jar" \
       --output /opt/openapi-generator-cli.jar \
