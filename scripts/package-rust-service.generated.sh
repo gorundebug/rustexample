@@ -32,31 +32,31 @@ rm -f "${output_dir}/Cargo.lock"
 case "${service_name}" in
   "analyticsservice")
     sed -i.bak \
-      's|^example-model = { path = "../model" }$|example-model = { git = "https://github.com/gorundebug/rustexample-model.git", tag = "v0.2.13" }|' \
+      's|^example-model = { path = "../model" }$|example-model = { git = "https://github.com/gorundebug/rustexample-model.git", tag = "v0.2.14" }|' \
       "${output_dir}/Cargo.toml"
     rm -f "${output_dir}/Cargo.toml.bak"
     ;;
   "inventoryservice")
     sed -i.bak \
-      's|^example-model = { path = "../model" }$|example-model = { git = "https://github.com/gorundebug/rustexample-model.git", tag = "v0.2.13" }|' \
+      's|^example-model = { path = "../model" }$|example-model = { git = "https://github.com/gorundebug/rustexample-model.git", tag = "v0.2.14" }|' \
       "${output_dir}/Cargo.toml"
     rm -f "${output_dir}/Cargo.toml.bak"
     sed -i.bak \
-      's|^inventory-service-api = { path = "../inventory_service_api" }$|inventory-service-api = { git = "https://github.com/gorundebug/rustexample-inventory-service-api.git", tag = "v0.2.13" }|' \
+      's|^inventory-service-api = { path = "../inventory_service_api" }$|inventory-service-api = { git = "https://github.com/gorundebug/rustexample-inventory-service-api.git", tag = "v0.2.14" }|' \
       "${output_dir}/Cargo.toml"
     rm -f "${output_dir}/Cargo.toml.bak"
     ;;
   "orderservice")
     sed -i.bak \
-      's|^example-model = { path = "../model" }$|example-model = { git = "https://github.com/gorundebug/rustexample-model.git", tag = "v0.2.13" }|' \
+      's|^example-model = { path = "../model" }$|example-model = { git = "https://github.com/gorundebug/rustexample-model.git", tag = "v0.2.14" }|' \
       "${output_dir}/Cargo.toml"
     rm -f "${output_dir}/Cargo.toml.bak"
     sed -i.bak \
-      's|^order-service-api = { path = "../order_service_api" }$|order-service-api = { git = "https://github.com/gorundebug/rustexample-order-service-api.git", tag = "v0.2.13" }|' \
+      's|^order-service-api = { path = "../order_service_api" }$|order-service-api = { git = "https://github.com/gorundebug/rustexample-order-service-api.git", tag = "v0.2.14" }|' \
       "${output_dir}/Cargo.toml"
     rm -f "${output_dir}/Cargo.toml.bak"
     sed -i.bak \
-      's|^inventory-service-api = { path = "../inventory_service_api" }$|inventory-service-api = { git = "https://github.com/gorundebug/rustexample-inventory-service-api.git", tag = "v0.2.13" }|' \
+      's|^inventory-service-api = { path = "../inventory_service_api" }$|inventory-service-api = { git = "https://github.com/gorundebug/rustexample-inventory-service-api.git", tag = "v0.2.14" }|' \
       "${output_dir}/Cargo.toml"
     rm -f "${output_dir}/Cargo.toml.bak"
     ;;
