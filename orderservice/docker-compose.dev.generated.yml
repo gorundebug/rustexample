@@ -10,10 +10,12 @@ services:
       - |
         prepare-local-build /workspace/source /workspace/service
         cargo build
+        service_binary="$(sed -n '/^\[package\]/,/^\[/s/^name = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)"
+        test -n "$service_binary"
         if [ "$${DEBUG:-0}" = "1" ]; then
-          exec gdbserver :2345 target/debug/order_service --config config/config.yaml --values config/overrides.yaml
+          exec gdbserver :2345 "target/debug/$service_binary" --config config/config.yaml --values config/overrides.yaml
         fi
-        exec target/debug/order_service --config config/config.yaml --values config/overrides.yaml
+        exec "target/debug/$service_binary" --config config/config.yaml --values config/overrides.yaml
     volumes:
       - .:/workspace/source:ro
       - rust-worktree:/workspace/service
