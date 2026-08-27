@@ -6,7 +6,7 @@ services:
     working_dir: /workspace/service
     command:
       - /bin/sh
-      - -lc
+      - -c
       - |
         prepare-local-build /workspace/source /workspace/service
         cargo build

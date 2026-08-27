@@ -8,7 +8,7 @@ services:
     working_dir: /workspace/service
     command:
       - /bin/sh
-      - -lc
+      - -c
       - >-
         prepare-local-build /workspace/source /workspace/service
         && cargo build
@@ -44,7 +44,7 @@ services:
     working_dir: /workspace
     command:
       - /bin/sh
-      - -lc
+      - -c
       - >-
         if [ "$${DEBUG:-0}" = "1" ]; then
           exec dlv debug ./cmd/service/main.go
@@ -76,7 +76,7 @@ services:
     working_dir: /workspace/service
     command:
       - /bin/sh
-      - -lc
+      - -c
       - >-
         prepare-local-build /workspace/source /workspace/service
         && cargo build
@@ -112,7 +112,7 @@ services:
     working_dir: /workspace/service
     command:
       - /bin/sh
-      - -lc
+      - -c
       - >-
         prepare-local-build /workspace/source /workspace/service
         && cargo build
