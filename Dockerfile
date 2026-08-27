@@ -1,6 +1,12 @@
 FROM rustservicelib-source AS rustservicelib-source
 FROM rust:1.97-bookworm AS build
 
+ARG SERVICEGEN_GITHUB_RAW_URL=https://github.com
+ENV SERVICEGEN_GITHUB_RAW_URL=${SERVICEGEN_GITHUB_RAW_URL}
+COPY dependency-download-mirrors.generated.env /etc/servicegen/dependency-download-mirrors.generated.env
+COPY dependency-download-mirrors.env /etc/servicegen/dependency-download-mirrors.env
+COPY dependency-download-env.generated.sh /usr/local/bin/servicegen-download-env
+SHELL ["/usr/local/bin/servicegen-download-env", "/bin/sh", "-c"]
 ARG OPENAPI_GENERATOR_VERSION=7.24.0
 ARG CARGO_REGISTRIES_CRATES_IO_INDEX=https://github.com/rust-lang/crates.io-index
 ARG SERVICEGEN_MAVEN_CENTRAL_URL=https://repo1.maven.org/maven2
