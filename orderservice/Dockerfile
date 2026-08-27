@@ -121,8 +121,10 @@ RUN find /workspace/modules -name 'generate-openapi.generated.sh' -exec {} \;
 RUN --mount=type=cache,id=orderservice-cargo-registry,target=/usr/local/cargo/registry \
     --mount=type=cache,id=orderservice-cargo-git,target=/usr/local/cargo/git \
     --mount=type=cache,id=orderservice-target,target=/workspace/service/target \
-    cargo build --release \
-    && cp target/release/order_service /workspace/service-binary
+    service_binary="$(sed -n '/^\[package\]/,/^\[/s/^name = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)" \
+    && test -n "$service_binary" \
+    && cargo build --release \
+    && cp "target/release/$service_binary" /workspace/service-binary
 
 FROM debian:bookworm-slim AS runtime
 RUN apt-get update && apt-get install --yes --no-install-recommends ca-certificates \
