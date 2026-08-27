@@ -9,6 +9,7 @@ LANG_GEN_TARGETS += rust-gen
 LANG_CLEAN_TARGETS += rust-clean
 LANG_DOCKER_BUILD_TARGETS += rust-docker-build
 LANG_DOCKER_DEV_BUILD_TARGETS += rust-docker-dev-build
+LANG_DOCKER_VERIFY_TARGETS += rust-workspace-docker-build
 LANG_HOST_PREP_TARGETS += rust-gen
 
 RUST_SERVICE_DIRS := analyticsservice inventoryservice orderservice
@@ -20,7 +21,7 @@ endif
 
 .PHONY: rust-build rust-test rust-lint rust-format rust-gen rust-clean \
 	rust-docker-build rust-docker-dev-build \
-	rust-workspace-build rust-workspace-test rust-package
+	rust-workspace-build rust-workspace-test rust-workspace-docker-build rust-package
 
 rust-build: ## Build every autonomous Rust service
 	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" build USE_LOCAL_MODULES=1 || exit $$?; done
@@ -59,6 +60,9 @@ rust-docker-build: ## Build independent Rust service images in Docker
 
 rust-docker-dev-build: ## Build the source-mounted Rust development image
 	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" docker-build-dev USE_LOCAL_MODULES=1 || exit $$?; done
+
+rust-workspace-docker-build: rust-gen ## Verify the combined Rust workspace build in Docker
+	@$(DOCKER_COMPOSE) build $(RUST_SERVICE_DIRS)
 
 rust-workspace-build: rust-gen ## Verify the combined Rust workspace build
 	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) build --locked --workspace
