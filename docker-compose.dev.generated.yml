@@ -3,29 +3,23 @@
 # service source code. Use it through `make docker-up-dev`.
 services:
   analyticsservice:
-    image: rustexample-rust-development:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: development
-      extra_hosts:
-        - "host.docker.internal:host-gateway"
-      args:
-        SERVICEGEN_GITHUB_RAW_URL: ${SERVICEGEN_GITHUB_RAW_URL:-https://github.com}
-        CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
-        SERVICEGEN_MAVEN_CENTRAL_URL: ${SERVICEGEN_MAVEN_CENTRAL_URL:-https://repo1.maven.org/maven2}
-        SERVICEGEN_APT_DEBIAN_URL: ${SERVICEGEN_APT_DEBIAN_URL:-}
-        SERVICEGEN_APT_DEBIAN_SECURITY_URL: ${SERVICEGEN_APT_DEBIAN_SECURITY_URL:-}
-      additional_contexts:
-        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.24}"
-    working_dir: /workspace/rustexample
+    image: analyticsservice-rust-development:latest
+    build: !reset null
+    working_dir: /workspace/service
     command:
       - /bin/sh
       - -lc
       - >-
-        exec cargo run --locked -p analyticsservice --
-        --config /workspace/rustexample/analyticsservice/config/config.yaml
-        --values /workspace/rustexample/analyticsservice/config/overrides.yaml
+        cargo $${DOCKER_LOCAL_MODULE_ARGS:-} build
+        && if [ "$${DEBUG:-0}" = "1" ]; then
+          exec gdbserver :2345 /workspace/service/target/debug/analyticsservice
+          --config /workspace/service/config/config.yaml
+          --values /workspace/service/config/overrides.yaml;
+        else
+          exec /workspace/service/target/debug/analyticsservice
+          --config /workspace/service/config/config.yaml
+          --values /workspace/service/config/overrides.yaml;
+        fi
     environment:
       CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
       GIT_CONFIG_COUNT: ${GIT_CONFIG_COUNT:-0}
@@ -34,38 +28,30 @@ services:
       GIT_CONFIG_KEY_1: ${GIT_CONFIG_KEY_1:-}
       GIT_CONFIG_VALUE_1: ${GIT_CONFIG_VALUE_1:-}
     volumes:
-      - .:/workspace/rustexample
+      - ./analyticsservice:/workspace/service
       - rust-dev-cargo-registry:/usr/local/cargo/registry
       - rust-dev-cargo-git:/usr/local/cargo/git
-      - rust-dev-target:/workspace/rustexample/target
+      - rust-dev-target-analyticsservice:/workspace/service/target
     security_opt:
       - seccomp:unconfined
     cap_add:
       - SYS_PTRACE
   automationservice:
     image: automationservice-development:latest
-    build:
-      context: .
-      dockerfile: automationservice/Dockerfile
-      target: development
-      extra_hosts:
-        - "host.docker.internal:host-gateway"
-      args:
-        SERVICE_DIR: automationservice
-        GOPROXY: ${GOPROXY:-direct}
-        GOSUMDB: ${GOSUMDB:-sum.golang.org}
-        SERVICEGEN_GITHUB_RAW_URL: ${SERVICEGEN_GITHUB_RAW_URL:-https://github.com}
-      additional_contexts:
-        servicelib-source: "${GOSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/servicelib.git#v0.2.24}"
-    working_dir: /workspace/automationservice
+    build: !reset null
+    working_dir: /workspace
     command:
-      - go
-      - run
-      - ./cmd/service/main.go
-      - -config
-      - ./config/config.yaml
-      - -values
-      - ./config/overrides.yaml
+      - /bin/sh
+      - -lc
+      - >-
+        if [ "$${DEBUG:-0}" = "1" ]; then
+          exec dlv debug ./cmd/service/main.go
+          --headless --listen=:2345 --api-version=2 --accept-multiclient --continue --
+          -config ./config/config.yaml -values ./config/overrides.yaml;
+        else
+          exec go run ./cmd/service/main.go
+          -config ./config/config.yaml -values ./config/overrides.yaml;
+        fi
     environment:
       GOPROXY: ${GOPROXY:-direct}
       GOSUMDB: ${GOSUMDB:-sum.golang.org}
@@ -75,7 +61,7 @@ services:
       GIT_CONFIG_KEY_1: ${GIT_CONFIG_KEY_1:-}
       GIT_CONFIG_VALUE_1: ${GIT_CONFIG_VALUE_1:-}
     volumes:
-      - .:/workspace
+      - ./automationservice:/workspace
       - go-dev-mod-cache:/go/pkg/mod
       - go-dev-build-cache:/root/.cache/go-build
     security_opt:
@@ -83,29 +69,23 @@ services:
     cap_add:
       - SYS_PTRACE
   inventoryservice:
-    image: rustexample-rust-development:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: development
-      extra_hosts:
-        - "host.docker.internal:host-gateway"
-      args:
-        SERVICEGEN_GITHUB_RAW_URL: ${SERVICEGEN_GITHUB_RAW_URL:-https://github.com}
-        CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
-        SERVICEGEN_MAVEN_CENTRAL_URL: ${SERVICEGEN_MAVEN_CENTRAL_URL:-https://repo1.maven.org/maven2}
-        SERVICEGEN_APT_DEBIAN_URL: ${SERVICEGEN_APT_DEBIAN_URL:-}
-        SERVICEGEN_APT_DEBIAN_SECURITY_URL: ${SERVICEGEN_APT_DEBIAN_SECURITY_URL:-}
-      additional_contexts:
-        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.24}"
-    working_dir: /workspace/rustexample
+    image: inventoryservice-rust-development:latest
+    build: !reset null
+    working_dir: /workspace/service
     command:
       - /bin/sh
       - -lc
       - >-
-        exec cargo run --locked -p inventoryservice --
-        --config /workspace/rustexample/inventoryservice/config/config.yaml
-        --values /workspace/rustexample/inventoryservice/config/overrides.yaml
+        cargo $${DOCKER_LOCAL_MODULE_ARGS:-} build
+        && if [ "$${DEBUG:-0}" = "1" ]; then
+          exec gdbserver :2345 /workspace/service/target/debug/inventoryservice
+          --config /workspace/service/config/config.yaml
+          --values /workspace/service/config/overrides.yaml;
+        else
+          exec /workspace/service/target/debug/inventoryservice
+          --config /workspace/service/config/config.yaml
+          --values /workspace/service/config/overrides.yaml;
+        fi
     environment:
       CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
       GIT_CONFIG_COUNT: ${GIT_CONFIG_COUNT:-0}
@@ -114,38 +94,32 @@ services:
       GIT_CONFIG_KEY_1: ${GIT_CONFIG_KEY_1:-}
       GIT_CONFIG_VALUE_1: ${GIT_CONFIG_VALUE_1:-}
     volumes:
-      - .:/workspace/rustexample
+      - ./inventoryservice:/workspace/service
       - rust-dev-cargo-registry:/usr/local/cargo/registry
       - rust-dev-cargo-git:/usr/local/cargo/git
-      - rust-dev-target:/workspace/rustexample/target
+      - rust-dev-target-inventoryservice:/workspace/service/target
     security_opt:
       - seccomp:unconfined
     cap_add:
       - SYS_PTRACE
   orderservice:
-    image: rustexample-rust-development:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: development
-      extra_hosts:
-        - "host.docker.internal:host-gateway"
-      args:
-        SERVICEGEN_GITHUB_RAW_URL: ${SERVICEGEN_GITHUB_RAW_URL:-https://github.com}
-        CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
-        SERVICEGEN_MAVEN_CENTRAL_URL: ${SERVICEGEN_MAVEN_CENTRAL_URL:-https://repo1.maven.org/maven2}
-        SERVICEGEN_APT_DEBIAN_URL: ${SERVICEGEN_APT_DEBIAN_URL:-}
-        SERVICEGEN_APT_DEBIAN_SECURITY_URL: ${SERVICEGEN_APT_DEBIAN_SECURITY_URL:-}
-      additional_contexts:
-        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.24}"
-    working_dir: /workspace/rustexample
+    image: orderservice-rust-development:latest
+    build: !reset null
+    working_dir: /workspace/service
     command:
       - /bin/sh
       - -lc
       - >-
-        exec cargo run --locked -p orderservice --
-        --config /workspace/rustexample/orderservice/config/config.yaml
-        --values /workspace/rustexample/orderservice/config/overrides.yaml
+        cargo $${DOCKER_LOCAL_MODULE_ARGS:-} build
+        && if [ "$${DEBUG:-0}" = "1" ]; then
+          exec gdbserver :2345 /workspace/service/target/debug/orderservice
+          --config /workspace/service/config/config.yaml
+          --values /workspace/service/config/overrides.yaml;
+        else
+          exec /workspace/service/target/debug/orderservice
+          --config /workspace/service/config/config.yaml
+          --values /workspace/service/config/overrides.yaml;
+        fi
     environment:
       CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
       GIT_CONFIG_COUNT: ${GIT_CONFIG_COUNT:-0}
@@ -154,10 +128,10 @@ services:
       GIT_CONFIG_KEY_1: ${GIT_CONFIG_KEY_1:-}
       GIT_CONFIG_VALUE_1: ${GIT_CONFIG_VALUE_1:-}
     volumes:
-      - .:/workspace/rustexample
+      - ./orderservice:/workspace/service
       - rust-dev-cargo-registry:/usr/local/cargo/registry
       - rust-dev-cargo-git:/usr/local/cargo/git
-      - rust-dev-target:/workspace/rustexample/target
+      - rust-dev-target-orderservice:/workspace/service/target
     security_opt:
       - seccomp:unconfined
     cap_add:
@@ -168,5 +142,6 @@ volumes:
   go-dev-build-cache:
   rust-dev-cargo-registry:
   rust-dev-cargo-git:
-  rust-dev-target:
-  cpp-dev-cmake-build:
+  rust-dev-target-analyticsservice:
+  rust-dev-target-inventoryservice:
+  rust-dev-target-orderservice:

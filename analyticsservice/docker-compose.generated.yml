@@ -1,0 +1,23 @@
+services:
+  analyticsservice:
+    image: analyticsservice-rust:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+      args:
+        CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
+        DEPENDENCY_MAVEN_CENTRAL_URL: ${DEPENDENCY_MAVEN_CENTRAL_URL:-https://repo1.maven.org/maven2}
+        DEPENDENCY_APT_DEBIAN_URL: ${DEPENDENCY_APT_DEBIAN_URL:-}
+        DEPENDENCY_APT_DEBIAN_SECURITY_URL: ${DEPENDENCY_APT_DEBIAN_SECURITY_URL:-}
+      additional_contexts:
+        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.24}"
+        module-model-source: "${EXAMPLE_MODEL_SOURCE_CONTEXT:-https://github.com/gorundebug/rustexample-model.git#v0.2.14}"
+    environment:
+      - DEBUG=${DEBUG:-0}
+    ports:
+      - "9093:9093"
+      - "9203:9203"
+      - "2345:2345"
