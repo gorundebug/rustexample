@@ -87,14 +87,20 @@ WORKDIR /workspace/service
 
 FROM development AS build
 COPY . /workspace/service
+RUN set -eu; \
+    sed -i -E 's|^servicelib-gorundebug[[:space:]]*=.*$|servicelib-gorundebug = { path = "/workspace/rustservicelib" }|' Cargo.toml; \
+    grep -F 'servicelib-gorundebug = { path = "/workspace/rustservicelib" }' Cargo.toml >/dev/null
+RUN set -eu; \
+    sed -i -E 's|^example-model[[:space:]]*=.*$|example-model = { path = "/workspace/modules/model" }|' Cargo.toml; \
+    grep -F 'example-model = { path = "/workspace/modules/model" }' Cargo.toml >/dev/null
+RUN set -eu; \
+    sed -i -E 's|^inventory-service-api[[:space:]]*=.*$|inventory-service-api = { path = "/workspace/modules/inventory_service_api" }|' Cargo.toml; \
+    grep -F 'inventory-service-api = { path = "/workspace/modules/inventory_service_api" }' Cargo.toml >/dev/null
 RUN find /workspace/modules -name 'generate-openapi.generated.sh' -exec {} \; 2>/dev/null || true
 RUN --mount=type=cache,id=inventoryservice-cargo-registry,target=/usr/local/cargo/registry \
     --mount=type=cache,id=inventoryservice-cargo-git,target=/usr/local/cargo/git \
     --mount=type=cache,id=inventoryservice-target,target=/workspace/service/target \
-    cargo --config 'patch."https://github.com/gorundebug/rustservicelib.git".servicelib-gorundebug.path="/workspace/rustservicelib"' \
-      --config 'patch."https://github.com/gorundebug/rustexample-model.git".example-model.path="/workspace/modules/model"' \
-      --config 'patch."https://github.com/gorundebug/rustexample-inventory-service-api.git".inventory-service-api.path="/workspace/modules/inventory_service_api"' \
-      build --release \
+    cargo build --release \
     && cp target/release/inventory_service /workspace/service-binary
 
 FROM debian:bookworm-slim AS runtime

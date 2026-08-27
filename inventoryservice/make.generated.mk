@@ -14,11 +14,6 @@ export EXAMPLE_MODEL_SOURCE_CONTEXT := ../model
 export INVENTORY_SERVICE_API_SOURCE_CONTEXT := ../inventory_service_api
 endif
 
-DOCKER_LOCAL_MODULE_ARGS := --config 'patch."https://github.com/gorundebug/rustservicelib.git".servicelib-gorundebug.path="/workspace/rustservicelib"'
-DOCKER_LOCAL_MODULE_ARGS += --config 'patch."https://github.com/gorundebug/rustexample-model.git".example-model.path="/workspace/modules/model"'
-DOCKER_LOCAL_MODULE_ARGS += --config 'patch."https://github.com/gorundebug/rustexample-inventory-service-api.git".inventory-service-api.path="/workspace/modules/inventory_service_api"'
-export DOCKER_LOCAL_MODULE_ARGS
-
 ifneq ($(strip $(DEPENDENCY_PROXY_DIR)),)
 ifeq ($(origin RUSTSERVICELIB_SOURCE_CONTEXT),undefined)
 export RUSTSERVICELIB_SOURCE_CONTEXT := $(DEPENDENCY_PROXY_DOCKER_BASE)/github-raw/gorundebug/rustservicelib/archive/refs/tags/v0.2.24.tar.gz
