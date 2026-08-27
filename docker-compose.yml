@@ -24,10 +24,6 @@ services:
       - "9093:9093"
       - "9203:9203"
       - "2345:2345"
-    security_opt:
-      - seccomp:unconfined
-    cap_add:
-      - SYS_PTRACE
     networks:
       - app_net
 
@@ -46,10 +42,6 @@ services:
     depends_on:
       temporal-create-namespace:
         condition: service_completed_successfully
-    security_opt:
-      - seccomp:unconfined
-    cap_add:
-      - SYS_PTRACE
     networks:
       - app_net
 
@@ -78,10 +70,6 @@ services:
       - "9092:9092"
       - "9202:9202"
       - "2347:2345"
-    security_opt:
-      - seccomp:unconfined
-    cap_add:
-      - SYS_PTRACE
     networks:
       - app_net
 
@@ -111,10 +99,6 @@ services:
       - "9091:9091"
       - "9201:9201"
       - "2348:2345"
-    security_opt:
-      - seccomp:unconfined
-    cap_add:
-      - SYS_PTRACE
     networks:
       - app_net
 

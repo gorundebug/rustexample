@@ -8,6 +8,7 @@ LANG_FMT_TARGETS += rust-format
 LANG_GEN_TARGETS += rust-gen
 LANG_CLEAN_TARGETS += rust-clean
 LANG_DOCKER_BUILD_TARGETS += rust-docker-build
+LANG_DOCKER_DEV_BUILD_TARGETS += rust-docker-dev-build
 LANG_HOST_PREP_TARGETS += rust-gen
 
 RUST_SERVICE_DIRS := analyticsservice inventoryservice orderservice
@@ -18,7 +19,7 @@ SERVICEGEN_CARGO_CONFIG_ARGS := --config 'source.crates-io.replace-with="service
 endif
 
 .PHONY: rust-build rust-test rust-lint rust-format rust-gen rust-clean \
-	rust-docker-build \
+	rust-docker-build rust-docker-dev-build \
 	rust-package
 
 rust-build: rust-gen ## Build the Rust workspace
@@ -55,4 +56,7 @@ rust-clean: ## Remove Rust build artifacts
 	@cargo $(SERVICEGEN_CARGO_CONFIG_ARGS) clean
 
 rust-docker-build: ## Build independent Rust service images in Docker
-	@$(DOCKER_COMPOSE) build analyticsservice inventoryservice orderservice
+	@$(DOCKER_COMPOSE) build $(RUST_SERVICE_DIRS)
+
+rust-docker-dev-build: ## Build the source-mounted Rust development image
+	@SERVICEGEN_DOCKER_TARGET=development $(DOCKER_COMPOSE_DEV) build $(RUST_SERVICE_DIRS)

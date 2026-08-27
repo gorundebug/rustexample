@@ -1,5 +1,5 @@
 FROM rustservicelib-source AS rustservicelib-source
-FROM rust:1.97-bookworm AS build
+FROM rust:1.97-bookworm AS development-base
 
 ARG SERVICEGEN_GITHUB_RAW_URL=https://github.com
 ENV SERVICEGEN_GITHUB_RAW_URL=${SERVICEGEN_GITHUB_RAW_URL}
@@ -49,7 +49,6 @@ ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
     CARGO_NET_RETRY=5
 
 WORKDIR /workspace
-COPY . /workspace/rustexample
 COPY --from=rustservicelib-source . /tmp/rustservicelib-source
 RUN set -eu; \
     source_dir=/tmp/rustservicelib-source; \
@@ -67,6 +66,14 @@ RUN set -eu; \
     mkdir -p /workspace/rustservicelib; \
     cp -a "$source_dir/." /workspace/rustservicelib/; \
     rm -rf /tmp/rustservicelib-source
+
+# Source-mounted local development stops before project sources are copied.
+# The ordinary Docker build continues in the isolated build stage below.
+FROM development-base AS development
+WORKDIR /workspace/rustexample
+
+FROM development-base AS build
+COPY . /workspace/rustexample
 WORKDIR /workspace/rustexample
 # HTTP bindings are language-tool outputs, so a clean Docker build must create
 # them before Cargo resolves the workspace. The pinned CLI download is cached
