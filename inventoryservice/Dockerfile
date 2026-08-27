@@ -97,7 +97,7 @@ RUN set -eu; \
 RUN set -eu; \
     sed -i -E 's|^inventory-service-api[[:space:]]*=.*$|inventory-service-api = { path = "/workspace/modules/inventory_service_api" }|' Cargo.toml; \
     grep -F 'inventory-service-api = { path = "/workspace/modules/inventory_service_api" }' Cargo.toml >/dev/null
-RUN find /workspace/modules -name 'generate-openapi.generated.sh' -exec {} \; 2>/dev/null || true
+RUN find /workspace/modules -name 'generate-openapi.generated.sh' -exec {} \;
 RUN --mount=type=cache,id=inventoryservice-cargo-registry,target=/usr/local/cargo/registry \
     --mount=type=cache,id=inventoryservice-cargo-git,target=/usr/local/cargo/git \
     --mount=type=cache,id=inventoryservice-target,target=/workspace/service/target \

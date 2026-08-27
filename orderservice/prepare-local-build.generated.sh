@@ -22,4 +22,4 @@ grep -F 'inventory-service-api = { path = "/workspace/modules/inventory_service_
 # Local module sources are copied into the development image, so generated
 # transport bindings must also be produced in that writable container layer.
 # Never run generators against the read-only service checkout.
-find /workspace/modules -name 'generate-openapi.generated.sh' -exec {} \; 2>/dev/null || true
+find /workspace/modules -name 'generate-openapi.generated.sh' -exec {} \;
