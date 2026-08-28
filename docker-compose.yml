@@ -8,6 +8,7 @@ services:
       extra_hosts:
         - "host.docker.internal:host-gateway"
       args:
+        DEPENDENCY_DOCKER_REGISTRY: ${DEPENDENCY_DOCKER_REGISTRY:-docker.io}
         DEPENDENCY_GITHUB_RAW_URL: ${DEPENDENCY_GITHUB_RAW_URL:-https://github.com}
         CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
         DEPENDENCY_MAVEN_CENTRAL_URL: ${DEPENDENCY_MAVEN_CENTRAL_URL:-https://repo1.maven.org/maven2}
@@ -54,6 +55,7 @@ services:
       extra_hosts:
         - "host.docker.internal:host-gateway"
       args:
+        DEPENDENCY_DOCKER_REGISTRY: ${DEPENDENCY_DOCKER_REGISTRY:-docker.io}
         DEPENDENCY_GITHUB_RAW_URL: ${DEPENDENCY_GITHUB_RAW_URL:-https://github.com}
         CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
         DEPENDENCY_MAVEN_CENTRAL_URL: ${DEPENDENCY_MAVEN_CENTRAL_URL:-https://repo1.maven.org/maven2}
@@ -82,6 +84,7 @@ services:
       extra_hosts:
         - "host.docker.internal:host-gateway"
       args:
+        DEPENDENCY_DOCKER_REGISTRY: ${DEPENDENCY_DOCKER_REGISTRY:-docker.io}
         DEPENDENCY_GITHUB_RAW_URL: ${DEPENDENCY_GITHUB_RAW_URL:-https://github.com}
         CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
         DEPENDENCY_MAVEN_CENTRAL_URL: ${DEPENDENCY_MAVEN_CENTRAL_URL:-https://repo1.maven.org/maven2}

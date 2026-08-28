@@ -1,6 +1,7 @@
+ARG DEPENDENCY_DOCKER_REGISTRY=docker.io
 FROM rustservicelib-source AS rustservicelib-source
 FROM module-model-source AS module-model-source
-FROM rust:1.97-bookworm AS development
+FROM ${DEPENDENCY_DOCKER_REGISTRY}/library/rust:1.97-bookworm AS development
 
 COPY dependency-download-mirrors.generated.env /etc/servicegen/dependency-download-mirrors.generated.env
 COPY dependency-download-mirrors.env /etc/servicegen/dependency-download-mirrors.env
@@ -87,7 +88,7 @@ RUN --mount=type=cache,id=analyticsservice-cargo-registry,target=/usr/local/carg
     && cargo build --release \
     && cp "target/release/$service_binary" /workspace/service-binary
 
-FROM debian:bookworm-slim AS runtime
+FROM ${DEPENDENCY_DOCKER_REGISTRY}/library/debian:bookworm-slim AS runtime
 RUN apt-get update && apt-get install --yes --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app

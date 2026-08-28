@@ -1,5 +1,6 @@
+ARG DEPENDENCY_DOCKER_REGISTRY=docker.io
 FROM rustservicelib-source AS rustservicelib-source
-FROM rust:1.97-bookworm AS development-base
+FROM ${DEPENDENCY_DOCKER_REGISTRY}/library/rust:1.97-bookworm AS development-base
 
 ARG DEPENDENCY_GITHUB_RAW_URL=https://github.com
 ENV DEPENDENCY_GITHUB_RAW_URL=${DEPENDENCY_GITHUB_RAW_URL}
@@ -111,7 +112,7 @@ RUN --mount=type=cache,id=rustexample-cargo-registry,target=/usr/local/cargo/reg
     && cp "target/release/$orderservice_binary" /workspace/orderservice \
     && true
 
-FROM debian:bookworm-slim AS runtime
+FROM ${DEPENDENCY_DOCKER_REGISTRY}/library/debian:bookworm-slim AS runtime
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
