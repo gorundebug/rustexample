@@ -6,6 +6,8 @@ COMPOSE_DEV := $(COMPOSE) -f docker-compose.dev.generated.yml
 DEPENDENCY_DOCKER_TARGETS := docker-build docker-up docker-build-dev docker-up-dev debug
 include dependency-proxy.generated.mk
 
+USE_LOCAL_MODULES ?= 0
+
 HOST_LOCAL_MODULE_ARGS :=
 ifeq ($(strip $(USE_LOCAL_MODULES)),1)
 HOST_LOCAL_MODULE_ARGS += --config 'patch."https://github.com/gorundebug/rustexample.git".example-model.path="../model_rust"'
