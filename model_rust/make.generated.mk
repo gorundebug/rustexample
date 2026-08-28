@@ -17,14 +17,14 @@ generate: ## Generate transport bindings when this package owns a schema
 	fi
 
 build: generate ## [host] Build this standalone Rust package
-	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) build --locked
+	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) build
 
 test: generate ## [host] Test this standalone Rust package
-	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) test --locked --all-targets
+	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) test --all-targets
 
 lint: ## Check formatting and Clippy warnings
 	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) fmt -- --check
-	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) clippy --locked --all-targets -- -D warnings
+	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) clippy --all-targets -- -D warnings
 
 fmt: ## Format Rust sources
 	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) fmt
