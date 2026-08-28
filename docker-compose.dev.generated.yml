@@ -11,15 +11,13 @@ services:
       - -c
       - >-
         prepare-local-build /workspace/source /workspace/service
+        && service_binary="$$(sed -n '/^\[package\]/,/^\[/s/^name = "\([^"]*\)"/\1/p' /workspace/service/Cargo.toml | head -n 1)"
+        && test -n "$$service_binary"
         && cargo build
         && if [ "$${DEBUG:-0}" = "1" ]; then
-          exec gdbserver :2345 /workspace/service/target/debug/analyticsservice
-          --config /workspace/service/config/config.yaml
-          --values /workspace/service/config/overrides.yaml;
+          exec gdbserver :2345 "/workspace/service/target/debug/$$service_binary" --config /workspace/service/config/config.yaml --values /workspace/service/config/overrides.yaml;
         else
-          exec /workspace/service/target/debug/analyticsservice
-          --config /workspace/service/config/config.yaml
-          --values /workspace/service/config/overrides.yaml;
+          exec "/workspace/service/target/debug/$$service_binary" --config /workspace/service/config/config.yaml --values /workspace/service/config/overrides.yaml;
         fi
     environment:
       CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
@@ -48,12 +46,9 @@ services:
       - >-
         prepare-local-build /workspace/source /workspace/service
         && if [ "$${DEBUG:-0}" = "1" ]; then
-          exec dlv debug ./cmd/service/main.go
-          --headless --listen=:2345 --api-version=2 --accept-multiclient --continue --
-          -config ./config/config.yaml -values ./config/overrides.yaml;
+          exec dlv debug ./cmd/service/main.go --headless --listen=:2345 --api-version=2 --accept-multiclient --allow-non-terminal-interactive=true --continue -- -config ./config/config.yaml -values ./config/overrides.yaml;
         else
-          exec go run ./cmd/service/main.go
-          -config ./config/config.yaml -values ./config/overrides.yaml;
+          exec go run ./cmd/service/main.go -config ./config/config.yaml -values ./config/overrides.yaml;
         fi
     environment:
       GOPROXY: ${GOPROXY:-direct}
@@ -81,15 +76,13 @@ services:
       - -c
       - >-
         prepare-local-build /workspace/source /workspace/service
+        && service_binary="$$(sed -n '/^\[package\]/,/^\[/s/^name = "\([^"]*\)"/\1/p' /workspace/service/Cargo.toml | head -n 1)"
+        && test -n "$$service_binary"
         && cargo build
         && if [ "$${DEBUG:-0}" = "1" ]; then
-          exec gdbserver :2345 /workspace/service/target/debug/inventoryservice
-          --config /workspace/service/config/config.yaml
-          --values /workspace/service/config/overrides.yaml;
+          exec gdbserver :2345 "/workspace/service/target/debug/$$service_binary" --config /workspace/service/config/config.yaml --values /workspace/service/config/overrides.yaml;
         else
-          exec /workspace/service/target/debug/inventoryservice
-          --config /workspace/service/config/config.yaml
-          --values /workspace/service/config/overrides.yaml;
+          exec "/workspace/service/target/debug/$$service_binary" --config /workspace/service/config/config.yaml --values /workspace/service/config/overrides.yaml;
         fi
     environment:
       CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
@@ -117,15 +110,13 @@ services:
       - -c
       - >-
         prepare-local-build /workspace/source /workspace/service
+        && service_binary="$$(sed -n '/^\[package\]/,/^\[/s/^name = "\([^"]*\)"/\1/p' /workspace/service/Cargo.toml | head -n 1)"
+        && test -n "$$service_binary"
         && cargo build
         && if [ "$${DEBUG:-0}" = "1" ]; then
-          exec gdbserver :2345 /workspace/service/target/debug/orderservice
-          --config /workspace/service/config/config.yaml
-          --values /workspace/service/config/overrides.yaml;
+          exec gdbserver :2345 "/workspace/service/target/debug/$$service_binary" --config /workspace/service/config/config.yaml --values /workspace/service/config/overrides.yaml;
         else
-          exec /workspace/service/target/debug/orderservice
-          --config /workspace/service/config/config.yaml
-          --values /workspace/service/config/overrides.yaml;
+          exec "/workspace/service/target/debug/$$service_binary" --config /workspace/service/config/config.yaml --values /workspace/service/config/overrides.yaml;
         fi
     environment:
       CARGO_REGISTRIES_CRATES_IO_INDEX: ${CARGO_REGISTRIES_CRATES_IO_INDEX:-https://github.com/rust-lang/crates.io-index}
