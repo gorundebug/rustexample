@@ -124,22 +124,22 @@ docker-up: docker-build grafana-dashboards ## Start all services through Docker 
 docker-up-dev: docker-build-dev grafana-dashboards ## Start source-mounted development services
 	@$(DOCKER_COMPOSE_DEV) up -d --no-build
 
-debug-analyticsservice: ## Debug Analytics Service on $$(ANALYTICS_SERVICE_DEBUG_PORT)
+debug-analyticsservice: ## Debug Analytics Service; set ANALYTICS_SERVICE_DEBUG_PORT (default 2345)
 	@ANALYTICS_SERVICE_DEBUG=1 \
 		DOCKER_TARGET=development $(DOCKER_COMPOSE_DEV) \
 		up -d --no-deps --build --force-recreate analyticsservice
 
-debug-automationservice: ## Debug Automation Service on $$(AUTOMATION_SERVICE_DEBUG_PORT)
+debug-automationservice: ## Debug Automation Service; set AUTOMATION_SERVICE_DEBUG_PORT (default 2346)
 	@AUTOMATION_SERVICE_DEBUG=1 \
 		DOCKER_TARGET=development $(DOCKER_COMPOSE_DEV) \
 		up -d --no-deps --build --force-recreate automationservice
 
-debug-inventoryservice: ## Debug Inventory Service on $$(INVENTORY_SERVICE_DEBUG_PORT)
+debug-inventoryservice: ## Debug Inventory Service; set INVENTORY_SERVICE_DEBUG_PORT (default 2347)
 	@INVENTORY_SERVICE_DEBUG=1 \
 		DOCKER_TARGET=development $(DOCKER_COMPOSE_DEV) \
 		up -d --no-deps --build --force-recreate inventoryservice
 
-debug-orderservice: ## Debug Order Service on $$(ORDER_SERVICE_DEBUG_PORT)
+debug-orderservice: ## Debug Order Service; set ORDER_SERVICE_DEBUG_PORT (default 2348)
 	@ORDER_SERVICE_DEBUG=1 \
 		DOCKER_TARGET=development $(DOCKER_COMPOSE_DEV) \
 		up -d --no-deps --build --force-recreate orderservice
