@@ -24,16 +24,16 @@ endif
 	rust-workspace-build rust-workspace-test rust-workspace-docker-build rust-package
 
 rust-build: ## Build every autonomous Rust service
-	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" build USE_LOCAL_MODULES=1 || exit $$?; done
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" build USE_LOCAL_MODULES="$(USE_LOCAL_MODULES)" || exit $$?; done
 
 rust-test: ## Test every autonomous Rust service
-	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" test USE_LOCAL_MODULES=1 || exit $$?; done
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" test USE_LOCAL_MODULES="$(USE_LOCAL_MODULES)" || exit $$?; done
 
 rust-lint: ## Check Rust formatting and Clippy warnings
-	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" lint USE_LOCAL_MODULES=1 || exit $$?; done
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" lint USE_LOCAL_MODULES="$(USE_LOCAL_MODULES)" || exit $$?; done
 
 rust-format: ## Format Rust sources
-	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" fmt USE_LOCAL_MODULES=1 || exit $$?; done
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" fmt USE_LOCAL_MODULES="$(USE_LOCAL_MODULES)" || exit $$?; done
 
 rust-gen: ## Generate Rust HTTP transport sources
 	@find . -name 'generate-openapi.generated.sh' -exec {} \;
@@ -53,13 +53,13 @@ rust-package-%: ## Package one Rust service (for example: make rust-package-orde
 	@./scripts/package-rust-service.generated.sh "$*" "dist/$*"
 
 rust-clean: ## Remove Rust build artifacts
-	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" clean USE_LOCAL_MODULES=1 || exit $$?; done
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" clean USE_LOCAL_MODULES="$(USE_LOCAL_MODULES)" || exit $$?; done
 
 rust-docker-build: ## Build independent Rust service images in Docker
-	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" docker-build USE_LOCAL_MODULES=1 || exit $$?; done
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" docker-build USE_LOCAL_MODULES="$(USE_LOCAL_MODULES)" || exit $$?; done
 
 rust-docker-dev-build: ## Build the source-mounted Rust development image
-	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" docker-build-dev USE_LOCAL_MODULES=1 || exit $$?; done
+	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" docker-build-dev USE_LOCAL_MODULES="$(USE_LOCAL_MODULES)" || exit $$?; done
 
 rust-workspace-docker-build: rust-gen ## Verify the combined Rust workspace build in Docker
 	@$(DOCKER_COMPOSE) build $(RUST_SERVICE_DIRS)
