@@ -5,6 +5,6 @@ Go module path: `github.com/gorundebug/rustexample/model_go`
 ## Make commands
 
 ```bash
-make gen-proto           # generate protobuf code
-make fmt-proto           # format .proto files
+make gen-proto           # [host] generate protobuf code
+make fmt-proto           # [host] format .proto files
 ```

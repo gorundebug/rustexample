@@ -23,10 +23,10 @@ endif
 	rust-docker-build rust-docker-dev-build \
 	rust-workspace-build rust-workspace-test rust-workspace-docker-build rust-package
 
-rust-build: ## Build every autonomous Rust service
+rust-build: ## [host] Build every autonomous Rust service
 	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" build USE_LOCAL_MODULES="$(USE_LOCAL_MODULES)" || exit $$?; done
 
-rust-test: ## Test every autonomous Rust service
+rust-test: ## [host] Test every autonomous Rust service
 	@for service in $(RUST_SERVICE_DIRS); do $(MAKE) -C "$$service" test USE_LOCAL_MODULES="$(USE_LOCAL_MODULES)" || exit $$?; done
 
 rust-lint: ## Check Rust formatting and Clippy warnings

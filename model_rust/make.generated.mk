@@ -16,10 +16,10 @@ generate: ## Generate transport bindings when this package owns a schema
 	  ./generate-openapi.generated.sh; \
 	fi
 
-build: generate ## Build this standalone Rust package
+build: generate ## [host] Build this standalone Rust package
 	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) build --locked
 
-test: generate ## Test this standalone Rust package
+test: generate ## [host] Test this standalone Rust package
 	@cargo $(DEPENDENCY_CARGO_CONFIG_ARGS) test --locked --all-targets
 
 lint: ## Check formatting and Clippy warnings

@@ -3,20 +3,20 @@
 Standalone generated Rust service.
 
 ```bash
-make generate         # generate owned transport bindings
-make build            # build this package
-make test             # test this package
-make lint             # rustfmt check and Clippy with warnings denied
-make fmt              # format Rust sources
-make clean            # remove Rust build artifacts
-make docker-build     # build the autonomous runtime image from copied sources
-make docker-up        # build and start only this service
-make docker-up-dev    # start with this directory mounted read-only
-make debug DEBUG_PORT=2345 # start gdbserver using this host port
-make docker-down
-make docker-down-dev
-make docker-clean     # stop and remove standalone volumes
-make help
+make generate         # [host] generate owned transport bindings
+make build            # [host] build this package
+make test             # [host] test this package
+make lint             # [host] rustfmt check and Clippy with warnings denied
+make fmt              # [host] format Rust sources
+make clean            # [host] remove Rust build artifacts
+make docker-build     # [Docker] build the autonomous runtime image from copied sources
+make docker-up        # [Docker] build and start only this service
+make docker-up-dev    # [Docker] start with this directory mounted read-only
+make debug DEBUG_PORT=2345 # [Docker] start gdbserver using this host port
+make docker-down      # [Docker] stop the standalone runtime stack
+make docker-down-dev  # [Docker] stop the standalone development stack
+make docker-clean     # [Docker] stop and remove standalone volumes
+make help             # [host] list generated targets
 ```
 The service defaults to pinned repository crates (`USE_LOCAL_MODULES=0`). A
 project workspace passes `USE_LOCAL_MODULES=1`. The same explicit local mode is

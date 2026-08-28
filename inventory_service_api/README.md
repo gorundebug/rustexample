@@ -1,9 +1,10 @@
 # inventory_service_api
 
-Standalone generated Rust contract/model package.
+Go module path: `github.com/gorundebug/rustexample-inventory-service-api`
+
+## Make commands
 
 ```bash
-make build
-make test
-make lint
+make gen-proto           # [host] generate protobuf code
+make fmt-proto           # [host] format .proto files
 ```

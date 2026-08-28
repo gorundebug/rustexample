@@ -33,10 +33,10 @@ endif
 generate: ## Generate transport bindings when this service owns a schema
 	@if [ -x ./generate-openapi.generated.sh ]; then ./generate-openapi.generated.sh; fi
 
-build: generate ## Build this service (set USE_LOCAL_MODULES=1 for sibling modules)
+build: generate ## [host] Build this service (set USE_LOCAL_MODULES=1 for sibling modules)
 	@cargo $(HOST_LOCAL_MODULE_ARGS) build
 
-test: generate ## Test this service
+test: generate ## [host] Test this service
 	@cargo $(HOST_LOCAL_MODULE_ARGS) test --all-targets
 
 lint: ## Check formatting and Clippy warnings
@@ -49,7 +49,7 @@ fmt: ## Format sources
 clean: ## Remove Rust artifacts
 	@cargo clean
 
-docker-build: ## Build the autonomous runtime image
+docker-build: ## [Docker] Build the autonomous copied-source runtime image
 	@$(COMPOSE) build inventoryservice
 
 docker-build-dev: ## Build the source-mounted development image
