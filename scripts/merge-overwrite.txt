@@ -18,6 +18,7 @@ docker-compose.dependency-cache.generated.yml
 pyproject.toml
 go.work
 Dockerfile
+Cargo.toml
 inventory_service_api/Cargo.toml
 order_service_api/Cargo.toml
 analyticsservice/grafana/Dockerfile
