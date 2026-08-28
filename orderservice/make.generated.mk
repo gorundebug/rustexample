@@ -3,6 +3,9 @@
 .DEFAULT_GOAL := build
 COMPOSE := docker compose -f $(if $(wildcard docker-compose.yml),docker-compose.yml,docker-compose.generated.yml)
 COMPOSE_DEV := $(COMPOSE) -f docker-compose.dev.generated.yml
+DEPENDENCY_DOWNLOAD_ENV := $(or $(wildcard $(abspath ./dependency-download-env.generated.sh)),$(wildcard $(abspath ../dependency-download-env.generated.sh)),/bin/sh)
+SHELL := $(DEPENDENCY_DOWNLOAD_ENV)
+.SHELLFLAGS := -c
 DEPENDENCY_DOCKER_TARGETS := docker-build docker-up docker-build-dev docker-up-dev debug
 include dependency-proxy.generated.mk
 
