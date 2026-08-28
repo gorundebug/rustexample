@@ -1,20 +1,18 @@
-# Task 2/3: `OrderProcessedEndpointSource`
+# Task 3/3: `CountOrderProcessed`
 
 > Rules: [`spec/rules.md`](../rules.md)
 
 | Field | Value |
 |-------|-------|
 | Language | `Rust` |
-| Kind | `kafka-source` |
-| File | `analyticsservice/src/internal/functions/endpoint/order_processed_endpoint_source.rs` |
+| Kind | `process` |
+| File | `analyticsservice/src/internal/functions/analytics/count_order_processed.rs` |
 | Service | `Analytics Service` |
 
 
 ## Behaviour
 
-Exchange OrderProcessed events keyed by order ID.
-Producers include the final status, processing time, total and confirmed item counts, and a failure reason for unsuccessful orders.
-Consumers decode the event and mark its Kafka message processed only after the pipeline handles it successfully.
+Count successful and unsuccessful orders independently, then return the event unchanged.
 
 
 
@@ -27,7 +25,7 @@ Consumers decode the event and mark its Kafka message processed only after the p
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
-- [ ] Open `analyticsservice/src/internal/functions/endpoint/order_processed_endpoint_source.rs` and preserve its generated contract
+- [ ] Open `analyticsservice/src/internal/functions/analytics/count_order_processed.rs` and preserve its generated contract
 - [ ] Inspect input type `OrderProcessed` in `model_rust/src/types/order_processed.rs`
 - [ ] Inspect output type `OrderProcessed` in `model_rust/src/types/order_processed.rs`
 - [ ] Implement the Rust function without changing its generated trait contract
@@ -35,4 +33,4 @@ Consumers decode the event and mark its Kafka message processed only after the p
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
 - [ ] Run `cargo test --workspace --all-targets`
 - [ ] Re-read this checklist
-- [ ] Append to `spec/progress.md`: `- [x] analyticsservice/task2.md — OrderProcessedEndpointSource — Rust — done`
+- [ ] Append to `spec/progress.md`: `- [x] analyticsservice/task3.md — CountOrderProcessed — Rust — done`

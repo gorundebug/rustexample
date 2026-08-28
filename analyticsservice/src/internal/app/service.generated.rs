@@ -8,7 +8,7 @@ use servicelib::{
     MessageContext, Stream,
     operators::{InputStream, SinkStream, SinkStreamWithResult},
     runtime::{
-        config::{ConfigLoader, KafkaEndpointConfig, ProcessStreamConfig,  },
+        config::{ConfigLoader, CronEndpointConfig, KafkaEndpointConfig, ProcessStreamConfig,  },
         environment::{RuntimeEnvironment, RuntimeResult},
         serviceapp::ServiceApp,
     },
@@ -19,12 +19,14 @@ use example_model::types::*;
 
 use servicelib::datasource::kafka::RdkafkaKafkaDataSource;
 
+use servicelib::datasource::cron::{CronDataSource, make_croner_endpoint_consumer};
 
 
 
 use crate::internal::{config::Config, functions::*};
 
 pub struct ServiceStreams {
+    pub analytics_schedule: Arc<InputStream<String, (), String>>,
     pub order_processed: Arc<InputStream<OrderProcessed, OrderProcessed, String>>,
     pub count_order_processed: Stream<OrderProcessed>,
 }
@@ -34,6 +36,7 @@ pub struct ServiceHandlers {
 
 pub struct ServiceDataConnectors {
     pub order_events_data_source: Arc<RdkafkaKafkaDataSource>,
+    pub local_cron_data_source: Arc<CronDataSource>,
 }
 
 pub struct ServiceRuntime {
@@ -54,6 +57,11 @@ pub struct GeneratedService {
 
 #[derive(Clone)]
 pub struct ServiceMakers {
+    pub analytics_schedule_source: Arc<dyn Fn(
+        MessageContext,
+        RuntimeEnvironment,
+        &CronEndpointConfig,
+    ) -> RuntimeResult<AnalyticsScheduleSource> + Send + Sync>,
     pub count_order_processed: Arc<dyn Fn(
         MessageContext,
         RuntimeEnvironment,
@@ -69,6 +77,7 @@ pub struct ServiceMakers {
 impl Default for ServiceMakers {
     fn default() -> Self {
         Self {
+            analytics_schedule_source: Arc::new(make_analytics_schedule_source),
             count_order_processed: Arc::new(make_count_order_processed),
             order_processed_endpoint_source: Arc::new(make_order_processed_endpoint_source),
         }
@@ -76,6 +85,7 @@ impl Default for ServiceMakers {
 }
 
 pub struct ServiceFunctions {
+    pub analytics_schedule_source: AnalyticsScheduleSource,
     pub count_order_processed: CountOrderProcessed,
     pub order_processed_endpoint_source: OrderProcessedEndpointSource,
 }
@@ -87,6 +97,7 @@ pub fn init_functions(
     makers: &ServiceMakers,
 ) -> RuntimeResult<ServiceFunctions> {
     Ok(ServiceFunctions {
+        analytics_schedule_source: (makers.analytics_schedule_source)(context.clone(), environment.clone(), &config.endpoints.analytics_schedule)?,
         count_order_processed: (makers.count_order_processed)(context.clone(), environment.clone(), &config.streams.count_order_processed)?,
         order_processed_endpoint_source: (makers.order_processed_endpoint_source)(context.clone(), environment.clone(), &config.endpoints.order_processed)?,
     })
@@ -97,17 +108,23 @@ pub fn init_runtime(
     environment: RuntimeEnvironment,
     functions: ServiceFunctions,
 ) -> RuntimeResult<ServiceRuntime>  {
+    let analytics_schedule = Arc::new(InputStream::<String, (), String>::new(&config.streams.analytics_schedule, environment.clone()));
     let consume_order_processed = Arc::new(InputStream::<OrderProcessed, OrderProcessed, String>::new(&config.streams.consume_order_processed, environment.clone()));
     let (count_order_processed, count_order_processed_error) = consume_order_processed.stream().process(&config.streams.count_order_processed, functions.count_order_processed)?;
     let _ = &count_order_processed_error;
     consume_order_processed.set_source(&count_order_processed)?;
     let order_events_data_source = RdkafkaKafkaDataSource::from_input(&consume_order_processed)?;
+    let local_cron_data_source = CronDataSource::new(crate::internal::config::LOCAL_CRON_CONNECTOR_ID, environment.clone())?;
     order_events_data_source.add_endpoint(
         consume_order_processed.as_ref().clone(),
         functions.order_processed_endpoint_source,
     )?;
+    make_croner_endpoint_consumer(
+        &local_cron_data_source, &analytics_schedule, functions.analytics_schedule_source,
+    )?;
     Ok(ServiceRuntime {
       streams: ServiceStreams {
+        analytics_schedule: analytics_schedule.clone(),
         order_processed: consume_order_processed.clone(),
         count_order_processed,
       },
@@ -115,6 +132,7 @@ pub fn init_runtime(
       },
       data_connectors: ServiceDataConnectors {
         order_events_data_source: order_events_data_source,
+        local_cron_data_source: local_cron_data_source,
       },
     })
 }
@@ -139,6 +157,7 @@ impl GeneratedService {
             config, app.environment().clone(), functions,
         )?;
         app.register_data_source(Arc::clone(&runtime.data_connectors.order_events_data_source))?;
+        app.register_data_source(Arc::clone(&runtime.data_connectors.local_cron_data_source))?;
 
         let service = Self {
             inner: Arc::new(GeneratedServiceInner {

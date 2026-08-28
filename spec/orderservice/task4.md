@@ -21,14 +21,14 @@ Record the time when this result is produced.
 
 
 ## Stream types
-- Input: `OrderItemResult` — `model/src/types/order_item_result.rs`
+- Input: `OrderItemResult` — `model_rust/src/types/order_item_result.rs`
 - Output: `OrderState` — `orderservice/src/internal/types/order_state.rs`
 
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
 - [ ] Open `orderservice/src/internal/functions/order/map_order_item_result_to_order_state.rs` and preserve its generated contract
-- [ ] Inspect input type `OrderItemResult` in `model/src/types/order_item_result.rs`
+- [ ] Inspect input type `OrderItemResult` in `model_rust/src/types/order_item_result.rs`
 - [ ] Inspect output type `OrderState` in `orderservice/src/internal/types/order_state.rs`
 - [ ] Implement the Rust function without changing its generated trait contract
 - [ ] Preserve `MessageContext` and await collector, sender and result operations

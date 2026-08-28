@@ -21,14 +21,14 @@ Preserve each item's data and assign the parent order ID.
 
 ## Stream types
 - Input: `Order` — `orderservice/src/internal/types/order.rs`
-- Output: `OrderItem` — `model/src/types/order_item.rs`
+- Output: `OrderItem` — `model_rust/src/types/order_item.rs`
 
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
 - [ ] Open `orderservice/src/internal/functions/order/process_order_items.rs` and preserve its generated contract
 - [ ] Inspect input type `Order` in `orderservice/src/internal/types/order.rs`
-- [ ] Inspect output type `OrderItem` in `model/src/types/order_item.rs`
+- [ ] Inspect output type `OrderItem` in `model_rust/src/types/order_item.rs`
 - [ ] Implement the Rust function without changing its generated trait contract
 - [ ] Preserve `MessageContext` and await collector, sender and result operations
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module

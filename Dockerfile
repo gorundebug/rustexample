@@ -37,8 +37,8 @@ RUN if [ "$CARGO_REGISTRIES_CRATES_IO_INDEX" != "https://github.com/rust-lang/cr
       mkdir -p /usr/local/cargo; \
       printf '%s\n' \
         '[source.crates-io]' \
-        'replace-with = "servicegen"' \
-        '[source.servicegen]' \
+        'replace-with = "dependency-proxy"' \
+        '[source.dependency-proxy]' \
         "registry = \"$CARGO_REGISTRIES_CRATES_IO_INDEX\"" \
         > /usr/local/cargo/config.toml; \
     fi
@@ -84,7 +84,7 @@ RUN set -eu; \
     for manifest in */Cargo.toml; do \
       sed -i -E 's|^servicelib-gorundebug[[:space:]]*=.*$|servicelib-gorundebug = { path = "/workspace/rustservicelib" }|' "$manifest"; \
       sed -i -E 's|^inventory-service-api[[:space:]]*=.*$|inventory-service-api = { path = "/workspace/rustexample/inventory_service_api" }|' "$manifest"; \
-      sed -i -E 's|^example-model[[:space:]]*=.*$|example-model = { path = "/workspace/rustexample/model" }|' "$manifest"; \
+      sed -i -E 's|^example-model[[:space:]]*=.*$|example-model = { path = "/workspace/rustexample/model_rust" }|' "$manifest"; \
       sed -i -E 's|^order-service-api[[:space:]]*=.*$|order-service-api = { path = "/workspace/rustexample/order_service_api" }|' "$manifest"; \
     done; \
     ! grep -E '^(servicelib-gorundebug|inventory-service-api|example-model|order-service-api)[[:space:]]*=.*git[[:space:]]*=' */Cargo.toml
@@ -113,6 +113,17 @@ RUN --mount=type=cache,id=rustexample-cargo-registry,target=/usr/local/cargo/reg
     && true
 
 FROM ${DEPENDENCY_DOCKER_REGISTRY}/library/debian:bookworm-slim AS runtime
+COPY dependency-download-mirrors.generated.env /etc/servicegen/dependency-download-mirrors.generated.env
+COPY dependency-download-mirrors.env /etc/servicegen/dependency-download-mirrors.env
+COPY dependency-download-env.generated.sh /usr/local/bin/servicegen-download-env
+SHELL ["/usr/local/bin/servicegen-download-env", "/bin/sh", "-c"]
+ARG DEPENDENCY_APT_DEBIAN_URL=
+ARG DEPENDENCY_APT_DEBIAN_SECURITY_URL=
+RUN if [ -n "$DEPENDENCY_APT_DEBIAN_URL$DEPENDENCY_APT_DEBIAN_SECURITY_URL" ]; then \
+      find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i \
+        -e "s|http://deb.debian.org/debian-security|$DEPENDENCY_APT_DEBIAN_SECURITY_URL|g" \
+        -e "s|http://deb.debian.org/debian|$DEPENDENCY_APT_DEBIAN_URL|g" {} +; \
+    fi
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -121,17 +132,14 @@ WORKDIR /app
 FROM runtime AS analyticsservice
 COPY --from=build /workspace/analyticsservice /usr/local/bin/service
 COPY analyticsservice/config /app/config
-EXPOSE 9093 9203
 ENTRYPOINT ["/usr/local/bin/service"]
 
 FROM runtime AS inventoryservice
 COPY --from=build /workspace/inventoryservice /usr/local/bin/service
 COPY inventoryservice/config /app/config
-EXPOSE 9092 9202
 ENTRYPOINT ["/usr/local/bin/service"]
 
 FROM runtime AS orderservice
 COPY --from=build /workspace/orderservice /usr/local/bin/service
 COPY orderservice/config /app/config
-EXPOSE 9091 9201
 ENTRYPOINT ["/usr/local/bin/service"]

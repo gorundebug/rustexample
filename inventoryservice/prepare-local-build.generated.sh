@@ -12,8 +12,8 @@ cp -a "$source_dir/." "$work_dir/"
 manifest="$work_dir/Cargo.toml"
 sed -i -E 's|^servicelib-gorundebug[[:space:]]*=.*$|servicelib-gorundebug = { path = "/workspace/rustservicelib" }|' "$manifest"
 grep -F 'servicelib-gorundebug = { path = "/workspace/rustservicelib" }' "$manifest" >/dev/null
-sed -i -E 's|^example-model[[:space:]]*=.*$|example-model = { path = "/workspace/modules/model" }|' "$manifest"
-grep -F 'example-model = { path = "/workspace/modules/model" }' "$manifest" >/dev/null
+sed -i -E 's|^example-model[[:space:]]*=.*$|example-model = { path = "/workspace/modules/model_rust" }|' "$manifest"
+grep -F 'example-model = { path = "/workspace/modules/model_rust" }' "$manifest" >/dev/null
 sed -i -E 's|^inventory-service-api[[:space:]]*=.*$|inventory-service-api = { path = "/workspace/modules/inventory_service_api" }|' "$manifest"
 grep -F 'inventory-service-api = { path = "/workspace/modules/inventory_service_api" }' "$manifest" >/dev/null
 

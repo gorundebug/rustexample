@@ -12,8 +12,8 @@ cp -a "$source_dir/." "$work_dir/"
 manifest="$work_dir/Cargo.toml"
 sed -i -E 's|^servicelib-gorundebug[[:space:]]*=.*$|servicelib-gorundebug = { path = "/workspace/rustservicelib" }|' "$manifest"
 grep -F 'servicelib-gorundebug = { path = "/workspace/rustservicelib" }' "$manifest" >/dev/null
-sed -i -E 's|^example-model[[:space:]]*=.*$|example-model = { path = "/workspace/modules/model" }|' "$manifest"
-grep -F 'example-model = { path = "/workspace/modules/model" }' "$manifest" >/dev/null
+sed -i -E 's|^example-model[[:space:]]*=.*$|example-model = { path = "/workspace/modules/model_rust" }|' "$manifest"
+grep -F 'example-model = { path = "/workspace/modules/model_rust" }' "$manifest" >/dev/null
 
 # Local module sources are copied into the development image, so generated
 # transport bindings must also be produced in that writable container layer.

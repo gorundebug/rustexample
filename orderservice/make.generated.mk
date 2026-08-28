@@ -8,17 +8,17 @@ include dependency-proxy.generated.mk
 
 HOST_LOCAL_MODULE_ARGS :=
 ifeq ($(strip $(USE_LOCAL_MODULES)),1)
-HOST_LOCAL_MODULE_ARGS += --config 'patch."https://github.com/gorundebug/rustexample.git".example-model.path="../model"'
+HOST_LOCAL_MODULE_ARGS += --config 'patch."https://github.com/gorundebug/rustexample.git".example-model.path="../model_rust"'
 HOST_LOCAL_MODULE_ARGS += --config 'patch."https://github.com/gorundebug/rustexample.git".order-service-api.path="../order_service_api"'
 HOST_LOCAL_MODULE_ARGS += --config 'patch."https://github.com/gorundebug/rustexample.git".inventory-service-api.path="../inventory_service_api"'
-export EXAMPLE_MODEL_SOURCE_CONTEXT := ../model
+export EXAMPLE_MODEL_SOURCE_CONTEXT := ../model_rust
 export ORDER_SERVICE_API_SOURCE_CONTEXT := ../order_service_api
 export INVENTORY_SERVICE_API_SOURCE_CONTEXT := ../inventory_service_api
 endif
 
 ifneq ($(strip $(DEPENDENCY_PROXY_DIR)),)
 ifeq ($(origin RUSTSERVICELIB_SOURCE_CONTEXT),undefined)
-export RUSTSERVICELIB_SOURCE_CONTEXT := $(DEPENDENCY_PROXY_DOCKER_BASE)/github-raw/gorundebug/rustservicelib/archive/refs/tags/v0.2.25.tar.gz
+export RUSTSERVICELIB_SOURCE_CONTEXT := $(DEPENDENCY_PROXY_DOCKER_BASE)/github-raw/gorundebug/rustservicelib/archive/refs/tags/v0.2.27.tar.gz
 endif
 ifneq ($(strip $(USE_LOCAL_MODULES)),1)
 export EXAMPLE_MODEL_SOURCE_CONTEXT := $(DEPENDENCY_GIT_MIRROR_DOCKER_BASE)/github.com/gorundebug/rustexample.git\#v0.2.14

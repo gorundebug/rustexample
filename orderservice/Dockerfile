@@ -1,6 +1,6 @@
 ARG DEPENDENCY_DOCKER_REGISTRY=docker.io
 FROM rustservicelib-source AS rustservicelib-source
-FROM module-model-source AS module-model-source
+FROM module-model_rust-source AS module-model_rust-source
 FROM module-order_service_api-source AS module-order_service_api-source
 FROM module-inventory_service_api-source AS module-inventory_service_api-source
 FROM ${DEPENDENCY_DOCKER_REGISTRY}/library/rust:1.97-bookworm AS development
@@ -52,23 +52,23 @@ RUN set -eu; \
     mkdir -p /workspace/rustservicelib; \
     cp -a "$source_dir/." /workspace/rustservicelib/; \
     rm -rf /tmp/rustservicelib-source /tmp/rustservicelib-archive
-COPY --from=module-model-source / /tmp/module-model-source
+COPY --from=module-model_rust-source / /tmp/module-model_rust-source
 RUN set -eu; \
-    source_dir=/tmp/module-model-source; \
+    source_dir=/tmp/module-model_rust-source; \
     archive=$(find "$source_dir" -mindepth 1 -maxdepth 1 -type f \( -name context -o -name '*.tar' -o -name '*.tar.gz' -o -name '*.tgz' -o -name '*.tar.xz' \) -print -quit); \
     if [ -n "$archive" ]; then \
-      mkdir -p /tmp/module-model-archive; \
-      tar -xf "$archive" -C /tmp/module-model-archive; \
-      source_dir=/tmp/module-model-archive; \
+      mkdir -p /tmp/module-model_rust-archive; \
+      tar -xf "$archive" -C /tmp/module-model_rust-archive; \
+      source_dir=/tmp/module-model_rust-archive; \
     fi; \
-    manifest=$(find "$source_dir" -type f -path '*/model/Cargo.toml' -print -quit); \
+    manifest=$(find "$source_dir" -type f -path '*/model_rust/Cargo.toml' -print -quit); \
     if [ -z "$manifest" ]; then manifest="$source_dir/Cargo.toml"; fi; \
     if [ ! -f "$manifest" ]; then manifest=$(find "$source_dir" -mindepth 2 -maxdepth 2 -type f -name Cargo.toml -print -quit); fi; \
-    if [ -z "$manifest" ] || [ ! -f "$manifest" ]; then echo "module model source context has no Cargo.toml" >&2; exit 1; fi; \
+    if [ -z "$manifest" ] || [ ! -f "$manifest" ]; then echo "module model_rust source context has no Cargo.toml" >&2; exit 1; fi; \
     source_dir=${manifest%/Cargo.toml}; \
-    mkdir -p /workspace/modules/model; \
-    cp -a "$source_dir/." /workspace/modules/model/; \
-    rm -rf /tmp/module-model-source /tmp/module-model-archive
+    mkdir -p /workspace/modules/model_rust; \
+    cp -a "$source_dir/." /workspace/modules/model_rust/; \
+    rm -rf /tmp/module-model_rust-source /tmp/module-model_rust-archive
 COPY --from=module-order_service_api-source / /tmp/module-order_service_api-source
 RUN set -eu; \
     source_dir=/tmp/module-order_service_api-source; \
@@ -113,8 +113,8 @@ RUN set -eu; \
     sed -i -E 's|^servicelib-gorundebug[[:space:]]*=.*$|servicelib-gorundebug = { path = "/workspace/rustservicelib" }|' Cargo.toml; \
     grep -F 'servicelib-gorundebug = { path = "/workspace/rustservicelib" }' Cargo.toml >/dev/null
 RUN set -eu; \
-    sed -i -E 's|^example-model[[:space:]]*=.*$|example-model = { path = "/workspace/modules/model" }|' Cargo.toml; \
-    grep -F 'example-model = { path = "/workspace/modules/model" }' Cargo.toml >/dev/null
+    sed -i -E 's|^example-model[[:space:]]*=.*$|example-model = { path = "/workspace/modules/model_rust" }|' Cargo.toml; \
+    grep -F 'example-model = { path = "/workspace/modules/model_rust" }' Cargo.toml >/dev/null
 RUN set -eu; \
     sed -i -E 's|^order-service-api[[:space:]]*=.*$|order-service-api = { path = "/workspace/modules/order_service_api" }|' Cargo.toml; \
     grep -F 'order-service-api = { path = "/workspace/modules/order_service_api" }' Cargo.toml >/dev/null
@@ -131,10 +131,20 @@ RUN --mount=type=cache,id=orderservice-cargo-registry,target=/usr/local/cargo/re
     && cp "target/release/$service_binary" /workspace/service-binary
 
 FROM ${DEPENDENCY_DOCKER_REGISTRY}/library/debian:bookworm-slim AS runtime
+COPY dependency-download-mirrors.generated.env /etc/servicegen/dependency-download-mirrors.generated.env
+COPY dependency-download-mirrors.env /etc/servicegen/dependency-download-mirrors.env
+COPY dependency-download-env.generated.sh /usr/local/bin/dependency-download-env
+SHELL ["/usr/local/bin/dependency-download-env", "/bin/sh", "-c"]
+ARG DEPENDENCY_APT_DEBIAN_URL=
+ARG DEPENDENCY_APT_DEBIAN_SECURITY_URL=
+RUN if [ -n "$DEPENDENCY_APT_DEBIAN_URL$DEPENDENCY_APT_DEBIAN_SECURITY_URL" ]; then \
+      find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i \
+        -e "s|http://deb.debian.org/debian-security|$DEPENDENCY_APT_DEBIAN_SECURITY_URL|g" \
+        -e "s|http://deb.debian.org/debian|$DEPENDENCY_APT_DEBIAN_URL|g" {} +; \
+    fi
 RUN apt-get update && apt-get install --yes --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /workspace/service-binary /usr/local/bin/service
 COPY config /app/config
-EXPOSE 9091 9201
 ENTRYPOINT ["/usr/local/bin/service", "--config", "/app/config/config.yaml", "--values", "/app/config/overrides.yaml"]

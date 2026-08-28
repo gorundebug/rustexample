@@ -22,16 +22,20 @@ use servicelib::runtime::config::{
 };
 
 pub const ANALYTICS_SERVICE_ID: i32 = 1;
-pub const CONSUME_ORDER_PROCESSED_STREAM_ID: i32 = 1;
-pub const COUNT_ORDER_PROCESSED_STREAM_ID: i32 = 2;
+pub const ANALYTICS_SCHEDULE_STREAM_ID: i32 = 1;
+pub const CONSUME_ORDER_PROCESSED_STREAM_ID: i32 = 2;
+pub const COUNT_ORDER_PROCESSED_STREAM_ID: i32 = 3;
 
+pub const LOCAL_CRON_CONNECTOR_ID: i32 = 2;
 pub const ORDER_EVENTS_CONNECTOR_ID: i32 = 3;
 
-pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 3;
+pub const ANALYTICS_SCHEDULE_ENDPOINT_ID: i32 = 2;
+pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 4;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Streams {
+    pub analytics_schedule: InputStreamConfig,
     pub consume_order_processed: InputStreamConfig,
     pub count_order_processed: ProcessStreamConfig,
 }
@@ -39,6 +43,12 @@ pub struct Streams {
 impl Default for Streams {
     fn default() -> Self {
         Self {
+            analytics_schedule: InputStreamConfig { stream: StreamConfig::new(ANALYTICS_SCHEDULE_STREAM_ID, "Analytics Schedule").with_graph(
+    ANALYTICS_SERVICE_ID, 0, [],
+    Some("AutomationJob"),
+    None::<String>,
+    -1600_f64, -205_f64,
+).with_pipeline("analytics"), endpoint_id: ANALYTICS_SCHEDULE_ENDPOINT_ID },
             consume_order_processed: InputStreamConfig { stream: StreamConfig::new(CONSUME_ORDER_PROCESSED_STREAM_ID, "Consume Order Processed").with_graph(
     ANALYTICS_SERVICE_ID, COUNT_ORDER_PROCESSED_STREAM_ID, [],
     Some("OrderProcessed"),
@@ -58,6 +68,7 @@ impl Default for Streams {
 impl Streams {
     fn runtime_configs(&self) -> Vec<RuntimeStreamConfig> {
         vec![
+            self.analytics_schedule.clone().into(),
             self.consume_order_processed.clone().into(),
             self.count_order_processed.clone().into(),
         ]
@@ -67,12 +78,21 @@ impl Streams {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Endpoints {
+    pub analytics_schedule: CronEndpointConfig,
     pub order_processed: KafkaEndpointConfig,
 }
 
 impl Default for Endpoints {
     fn default() -> Self {
         Self {
+            analytics_schedule: CronEndpointConfig {
+                id: ANALYTICS_SCHEDULE_ENDPOINT_ID, name: "Analytics Schedule".to_owned(), id_data_connector: LOCAL_CRON_CONNECTOR_ID,
+                tracing_enabled: false,
+                enabled: true, schedule: "*/5 * * * *".to_owned(),
+                timezone: "UTC".to_owned(),
+                overlap_policy: ScheduleOverlapPolicy::Skip,
+                missed_run_policy: ScheduleMissedRunPolicy::FireOnce,
+            },
             order_processed: KafkaEndpointConfig {
                 id: ORDER_PROCESSED_ENDPOINT_ID, name: "Order Processed".to_owned(), id_data_connector: ORDER_EVENTS_CONNECTOR_ID,
                 tracing_enabled: false,
@@ -87,6 +107,7 @@ impl Default for Endpoints {
 impl Endpoints {
     fn runtime_configs(&self) -> Vec<RuntimeEndpointConfig> {
         vec![
+            self.analytics_schedule.clone().into(),
             self.order_processed.clone().into(),
         ]
     }
@@ -95,6 +116,8 @@ impl Endpoints {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Config {
+    pub analytics_schedule_enabled: bool,
+    pub analytics_schedule_tracing_enabled: bool,
     pub request_timeout_ms: u64,
     pub environment: String,
     pub grpc_host: String,
@@ -116,6 +139,8 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            analytics_schedule_enabled: true,
+            analytics_schedule_tracing_enabled: false,
             request_timeout_ms: 0,
             environment: "".to_owned(),
             grpc_host: "0.0.0.0".to_owned(),
@@ -165,6 +190,10 @@ impl Config {
 
 impl ServiceConfigContract for Config {
     fn apply_environment(&mut self) -> Result<(), String> {
+        apply_bool("ANALYTICS_SCHEDULE_ENABLED", &mut self.analytics_schedule_enabled)?;
+        self.endpoints.analytics_schedule.enabled = self.analytics_schedule_enabled;
+        apply_bool("ANALYTICS_SCHEDULE_TRACING_ENABLED", &mut self.analytics_schedule_tracing_enabled)?;
+        self.endpoints.analytics_schedule.tracing_enabled = self.analytics_schedule_tracing_enabled;
         apply_u64("ANALYTICS_SERVICE_DEFAULT_GRPC_TIMEOUT", &mut self.request_timeout_ms)?;
         apply_string("ANALYTICS_SERVICE_ENVIRONMENT", &mut self.environment);
         apply_string("ANALYTICS_SERVICE_GRPC_HOST", &mut self.grpc_host);
@@ -195,6 +224,9 @@ impl ServiceConfigContract for Config {
     fn streams(&self) -> Vec<RuntimeStreamConfig> { self.streams.runtime_configs() }
     fn data_connectors(&self) -> Vec<RuntimeDataConnectorConfig> {
         vec![
+            CronDataConnectorConfig {
+                id: LOCAL_CRON_CONNECTOR_ID, name: "Local Cron".to_owned(),
+            }.into(),
             KafkaDataConnectorConfig {
                 id: ORDER_EVENTS_CONNECTOR_ID, name: "Order Events".to_owned(),
                 brokers: self.order_events_brokers.clone(), version: "2.8.0".to_owned(),
@@ -226,6 +258,14 @@ impl ServiceConfigContract for Config {
     }
     fn types(&self) -> Vec<TypeConfig> {
         vec![
+            TypeConfig {
+                name: "AutomationJob".to_owned(), data_type: DataType::String,
+                type_definition: "String".to_owned(), type_import: "example_model::types::automation_job".to_owned(),
+                value_type: "".to_owned(), key_type: "".to_owned(),
+                package: "".to_owned(), module: "model".to_owned(),
+                definition_format: TypeDefinitionFormat::Undefined, public_type: true,
+                transfer_by_value: false, use_alias: false, properties: Default::default(),
+            },
             TypeConfig {
                 name: "OrderProcessed".to_owned(), data_type: DataType::Struct,
                 type_definition: "OrderProcessed".to_owned(), type_import: "example_model::types::order_processed".to_owned(),

@@ -4,7 +4,7 @@ members = [
     "analyticsservice",
     "inventory_service_api",
     "inventoryservice",
-    "model",
+    "model_rust",
     "order_service_api",
     "orderservice",
 ]
@@ -23,5 +23,5 @@ tonic = "0.12"
 tracing = "0.1"
 [patch."https://github.com/gorundebug/rustexample.git"]
 inventory-service-api = { path = "inventory_service_api" }
-example-model = { path = "model" }
+example-model = { path = "model_rust" }
 order-service-api = { path = "order_service_api" }

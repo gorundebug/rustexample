@@ -14,11 +14,13 @@ services:
         DEPENDENCY_APT_DEBIAN_URL: ${DEPENDENCY_APT_DEBIAN_URL:-}
         DEPENDENCY_APT_DEBIAN_SECURITY_URL: ${DEPENDENCY_APT_DEBIAN_SECURITY_URL:-}
       additional_contexts:
-        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.25}"
-        module-model-source: "${EXAMPLE_MODEL_SOURCE_CONTEXT:-https://github.com/gorundebug/rustexample.git#v0.2.14}"
+        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.27}"
+        module-model_rust-source: "${EXAMPLE_MODEL_SOURCE_CONTEXT:-https://github.com/gorundebug/rustexample.git#v0.2.14}"
     environment:
       - DEBUG=${DEBUG:-0}
+      - ANALYTICS_SERVICE_HTTP_PORT
+      - ANALYTICS_SERVICE_GRPC_PORT
     ports:
-      - "9093:9093"
-      - "9203:9203"
+      - "${ANALYTICS_SERVICE_HTTP_PORT:-9093}:${ANALYTICS_SERVICE_HTTP_PORT:-9093}"
+      - "${ANALYTICS_SERVICE_GRPC_PORT:-9203}:${ANALYTICS_SERVICE_GRPC_PORT:-9203}"
       - "2345:2345"

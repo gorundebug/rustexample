@@ -1,0 +1,12 @@
+#[path = "automation_job.generated.rs"]
+pub mod automation_job;
+pub use automation_job::AutomationJob;
+#[path = "order_item.rs"]
+pub mod order_item;
+pub use order_item::OrderItem;
+#[path = "order_item_result.rs"]
+pub mod order_item_result;
+pub use order_item_result::OrderItemResult;
+#[path = "order_processed.rs"]
+pub mod order_processed;
+pub use order_processed::OrderProcessed;

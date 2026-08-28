@@ -21,14 +21,14 @@ Preserve the order ID, status, and processing time. Count all item results and r
 
 ## Stream types
 - Input: `OrderState` — `orderservice/src/internal/types/order_state.rs`
-- Output: `OrderProcessed` — `model/src/types/order_processed.rs`
+- Output: `OrderProcessed` — `model_rust/src/types/order_processed.rs`
 
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
 - [ ] Open `orderservice/src/internal/functions/order/map_to_order_processed.rs` and preserve its generated contract
 - [ ] Inspect input type `OrderState` in `orderservice/src/internal/types/order_state.rs`
-- [ ] Inspect output type `OrderProcessed` in `model/src/types/order_processed.rs`
+- [ ] Inspect output type `OrderProcessed` in `model_rust/src/types/order_processed.rs`
 - [ ] Implement the Rust function without changing its generated trait contract
 - [ ] Preserve `MessageContext` and await collector, sender and result operations
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
