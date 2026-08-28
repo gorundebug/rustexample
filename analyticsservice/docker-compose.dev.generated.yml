@@ -16,6 +16,8 @@ services:
           exec gdbserver :2345 "target/debug/$$service_binary" --config config/config.yaml --values config/overrides.yaml
         fi
         exec "target/debug/$$service_binary" --config config/config.yaml --values config/overrides.yaml
+    ports:
+      - "${DEBUG_PORT:-2345}:2345"
     volumes:
       - .:/workspace/source:ro
       - rust-worktree:/workspace/service

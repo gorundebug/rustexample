@@ -7,6 +7,8 @@ DEPENDENCY_DOCKER_TARGETS := docker-build docker-up docker-build-dev docker-up-d
 include dependency-proxy.generated.mk
 
 USE_LOCAL_MODULES ?= 0
+DEBUG_PORT ?= 2345
+export DEBUG_PORT
 
 HOST_LOCAL_MODULE_ARGS :=
 ifeq ($(strip $(USE_LOCAL_MODULES)),1)
@@ -59,7 +61,7 @@ docker-up: docker-build ## Start the autonomous runtime image
 docker-up-dev: docker-build-dev ## Start with service sources mounted
 	@DEBUG=0 $(COMPOSE_DEV) up -d --no-build --force-recreate inventoryservice
 
-debug: docker-build-dev ## Start this service under gdbserver on localhost:2345
+debug: docker-build-dev ## Start gdbserver on host port $(DEBUG_PORT), container port 2345
 	@DEBUG=1 $(COMPOSE_DEV) up -d --no-build --force-recreate inventoryservice
 
 docker-down: ## Stop this service
