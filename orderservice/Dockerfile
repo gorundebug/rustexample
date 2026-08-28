@@ -60,9 +60,10 @@ RUN set -eu; \
       tar -xf "$archive" -C /tmp/module-model-archive; \
       source_dir=/tmp/module-model-archive; \
     fi; \
-    manifest="$source_dir/Cargo.toml"; \
+    manifest=$(find "$source_dir" -type f -path '*/model/Cargo.toml' -print -quit); \
+    if [ -z "$manifest" ]; then manifest="$source_dir/Cargo.toml"; fi; \
     if [ ! -f "$manifest" ]; then manifest=$(find "$source_dir" -mindepth 2 -maxdepth 2 -type f -name Cargo.toml -print -quit); fi; \
-    if [ -z "$manifest" ]; then echo "module model source context has no Cargo.toml" >&2; exit 1; fi; \
+    if [ -z "$manifest" ] || [ ! -f "$manifest" ]; then echo "module model source context has no Cargo.toml" >&2; exit 1; fi; \
     source_dir=${manifest%/Cargo.toml}; \
     mkdir -p /workspace/modules/model; \
     cp -a "$source_dir/." /workspace/modules/model/; \
@@ -76,9 +77,10 @@ RUN set -eu; \
       tar -xf "$archive" -C /tmp/module-order_service_api-archive; \
       source_dir=/tmp/module-order_service_api-archive; \
     fi; \
-    manifest="$source_dir/Cargo.toml"; \
+    manifest=$(find "$source_dir" -type f -path '*/order_service_api/Cargo.toml' -print -quit); \
+    if [ -z "$manifest" ]; then manifest="$source_dir/Cargo.toml"; fi; \
     if [ ! -f "$manifest" ]; then manifest=$(find "$source_dir" -mindepth 2 -maxdepth 2 -type f -name Cargo.toml -print -quit); fi; \
-    if [ -z "$manifest" ]; then echo "module order_service_api source context has no Cargo.toml" >&2; exit 1; fi; \
+    if [ -z "$manifest" ] || [ ! -f "$manifest" ]; then echo "module order_service_api source context has no Cargo.toml" >&2; exit 1; fi; \
     source_dir=${manifest%/Cargo.toml}; \
     mkdir -p /workspace/modules/order_service_api; \
     cp -a "$source_dir/." /workspace/modules/order_service_api/; \
@@ -92,9 +94,10 @@ RUN set -eu; \
       tar -xf "$archive" -C /tmp/module-inventory_service_api-archive; \
       source_dir=/tmp/module-inventory_service_api-archive; \
     fi; \
-    manifest="$source_dir/Cargo.toml"; \
+    manifest=$(find "$source_dir" -type f -path '*/inventory_service_api/Cargo.toml' -print -quit); \
+    if [ -z "$manifest" ]; then manifest="$source_dir/Cargo.toml"; fi; \
     if [ ! -f "$manifest" ]; then manifest=$(find "$source_dir" -mindepth 2 -maxdepth 2 -type f -name Cargo.toml -print -quit); fi; \
-    if [ -z "$manifest" ]; then echo "module inventory_service_api source context has no Cargo.toml" >&2; exit 1; fi; \
+    if [ -z "$manifest" ] || [ ! -f "$manifest" ]; then echo "module inventory_service_api source context has no Cargo.toml" >&2; exit 1; fi; \
     source_dir=${manifest%/Cargo.toml}; \
     mkdir -p /workspace/modules/inventory_service_api; \
     cp -a "$source_dir/." /workspace/modules/inventory_service_api/; \

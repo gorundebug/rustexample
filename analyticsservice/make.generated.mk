@@ -8,16 +8,16 @@ include dependency-proxy.generated.mk
 
 HOST_LOCAL_MODULE_ARGS :=
 ifeq ($(strip $(USE_LOCAL_MODULES)),1)
-HOST_LOCAL_MODULE_ARGS += --config 'patch."https://github.com/gorundebug/rustexample-model.git".example-model.path="../model"'
+HOST_LOCAL_MODULE_ARGS += --config 'patch."https://github.com/gorundebug/rustexample.git".example-model.path="../model"'
 export EXAMPLE_MODEL_SOURCE_CONTEXT := ../model
 endif
 
 ifneq ($(strip $(DEPENDENCY_PROXY_DIR)),)
 ifeq ($(origin RUSTSERVICELIB_SOURCE_CONTEXT),undefined)
-export RUSTSERVICELIB_SOURCE_CONTEXT := $(DEPENDENCY_PROXY_DOCKER_BASE)/github-raw/gorundebug/rustservicelib/archive/refs/tags/v0.2.24.tar.gz
+export RUSTSERVICELIB_SOURCE_CONTEXT := $(DEPENDENCY_PROXY_DOCKER_BASE)/github-raw/gorundebug/rustservicelib/archive/refs/tags/v0.2.25.tar.gz
 endif
 ifneq ($(strip $(USE_LOCAL_MODULES)),1)
-export EXAMPLE_MODEL_SOURCE_CONTEXT := $(DEPENDENCY_GIT_MIRROR_DOCKER_BASE)/github.com/gorundebug/rustexample-model.git\#v0.2.14
+export EXAMPLE_MODEL_SOURCE_CONTEXT := $(DEPENDENCY_GIT_MIRROR_DOCKER_BASE)/github.com/gorundebug/rustexample.git\#v0.2.14
 endif
 endif
 

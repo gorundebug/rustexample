@@ -39,8 +39,8 @@ DEPENDENCY_HOST_TARGETS := $(LANG_HOST_PREP_TARGETS)
 include dependency-proxy.generated.mk
 
 ifneq ($(strip $(DEPENDENCY_PROXY_DIR)),)
-export GOSERVICELIB_SOURCE_CONTEXT ?= $(DEPENDENCY_PROXY_DOCKER_BASE)/github-raw/gorundebug/servicelib/archive/refs/tags/v0.2.24.tar.gz
-export RUSTSERVICELIB_SOURCE_CONTEXT ?= $(DEPENDENCY_PROXY_DOCKER_BASE)/github-raw/gorundebug/rustservicelib/archive/refs/tags/v0.2.24.tar.gz
+export GOSERVICELIB_SOURCE_CONTEXT ?= $(DEPENDENCY_PROXY_DOCKER_BASE)/github-raw/gorundebug/servicelib/archive/refs/tags/v0.2.25.tar.gz
+export RUSTSERVICELIB_SOURCE_CONTEXT ?= $(DEPENDENCY_PROXY_DOCKER_BASE)/github-raw/gorundebug/rustservicelib/archive/refs/tags/v0.2.25.tar.gz
 endif
 
 export DOCKER_TARGET := runtime
@@ -66,7 +66,7 @@ GLAB := $(TOOLS_DIR)/glab
 	dependency-cache-docker-env dependency-cache-docker-build \
 	dependency-cache-down dependency-cache-clean \
 	dependency-source-cache-invalidate \
-	git-push git-delete debug-analyticsservice debug-automationservice debug-inventoryservice debug-orderservice git-push-inventory_service_api git-delete-inventory_service_api git-push-model git-delete-model git-push-order_service_api git-delete-order_service_api git-push-analyticsservice git-delete-analyticsservice git-push-automationservice git-delete-automationservice git-push-inventoryservice git-delete-inventoryservice git-push-orderservice git-delete-orderservice git-push-project git-delete-project
+	git-push git-delete debug-analyticsservice debug-automationservice debug-inventoryservice debug-orderservice git-push-project git-delete-project
 
 all: build ## Build all services (default)
 
@@ -291,55 +291,6 @@ define git-push-dir
 	git -C "$$work" push --atomic origin HEAD:main refs/tags/$(2)
 endef
 
-git-push-inventory_service_api: $(GH) ## Push module inventory_service_api to github.com/gorundebug/rustexample-inventory-service-api
-	$(call git-push-dir,inventory_service_api,$(MODULE_VERSION),github.com,gorundebug/rustexample-inventory-service-api)
-
-git-delete-inventory_service_api: $(GH) ## Delete module inventory_service_api from remote
-	@$(GH) repo delete gorundebug/rustexample-inventory-service-api --yes 2>/dev/null || true
-
-
-git-push-model: $(GH) ## Push module model to github.com/gorundebug/rustexample-model
-	$(call git-push-dir,model,$(MODULE_VERSION),github.com,gorundebug/rustexample-model)
-
-git-delete-model: $(GH) ## Delete module model from remote
-	@$(GH) repo delete gorundebug/rustexample-model --yes 2>/dev/null || true
-
-
-git-push-order_service_api: $(GH) ## Push module order_service_api to github.com/gorundebug/rustexample-order-service-api
-	$(call git-push-dir,order_service_api,$(MODULE_VERSION),github.com,gorundebug/rustexample-order-service-api)
-
-git-delete-order_service_api: $(GH) ## Delete module order_service_api from remote
-	@$(GH) repo delete gorundebug/rustexample-order-service-api --yes 2>/dev/null || true
-
-
-git-push-analyticsservice: $(GH) ## Push service Analytics Service to github.com/gorundebug/rustexample-analyticsservice
-	$(call git-push-dir,analyticsservice,$(MODULE_VERSION),github.com,gorundebug/rustexample-analyticsservice,rust-service)
-
-git-delete-analyticsservice: $(GH) ## Delete service Analytics Service from remote
-	@$(GH) repo delete gorundebug/rustexample-analyticsservice --yes 2>/dev/null || true
-
-
-git-push-automationservice: $(GH) ## Push service Automation Service to github.com/gorundebug/rustexample-automationservice
-	$(call git-push-dir,automationservice,$(MODULE_VERSION),github.com,gorundebug/rustexample-automationservice,)
-
-git-delete-automationservice: $(GH) ## Delete service Automation Service from remote
-	@$(GH) repo delete gorundebug/rustexample-automationservice --yes 2>/dev/null || true
-
-
-git-push-inventoryservice: $(GH) ## Push service Inventory Service to github.com/gorundebug/rustexample-inventoryservice
-	$(call git-push-dir,inventoryservice,$(MODULE_VERSION),github.com,gorundebug/rustexample-inventoryservice,rust-service)
-
-git-delete-inventoryservice: $(GH) ## Delete service Inventory Service from remote
-	@$(GH) repo delete gorundebug/rustexample-inventoryservice --yes 2>/dev/null || true
-
-
-git-push-orderservice: $(GH) ## Push service Order Service to github.com/gorundebug/rustexample-orderservice
-	$(call git-push-dir,orderservice,$(MODULE_VERSION),github.com,gorundebug/rustexample-orderservice,rust-service)
-
-git-delete-orderservice: $(GH) ## Delete service Order Service from remote
-	@$(GH) repo delete gorundebug/rustexample-orderservice --yes 2>/dev/null || true
-
-
 git-push-project: $(GH) ## Push project root to github.com/gorundebug/rustexample
 	$(call git-push-dir,.,$(MODULE_VERSION),github.com,gorundebug/rustexample)
 
@@ -350,10 +301,10 @@ git-delete-project: $(GH) ## Delete project repository github.com/gorundebug/rus
 git-push: gen $(GH) ## Generate and push all modules, services, and project repositories
 	@$(GH) auth status >/dev/null 2>&1 || { echo "ERROR: authenticate first with: $(GH) auth login"; exit 1; }
 
-	@$(MAKE) git-push-inventory_service_api git-push-model git-push-order_service_api git-push-analyticsservice git-push-automationservice git-push-inventoryservice git-push-orderservice git-push-project
+	@$(MAKE) git-push-project
 
 git-delete: $(GH) ## Delete all generated remote repositories
-	@$(MAKE) git-delete-inventory_service_api git-delete-model git-delete-order_service_api git-delete-analyticsservice git-delete-automationservice git-delete-inventoryservice git-delete-orderservice git-delete-project
+	@$(MAKE) git-delete-project
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-32s %s\n", $$1, $$2}'
