@@ -32,6 +32,8 @@ services:
       - rust-dev-cargo-registry:/usr/local/cargo/registry
       - rust-dev-cargo-git:/usr/local/cargo/git
       - rust-dev-target-analyticsservice:/workspace/service/target
+    ports:
+      - "${ANALYTICS_SERVICE_DEBUG_PORT:-2345}:2345"
     security_opt:
       - seccomp:unconfined
     cap_add:
@@ -63,6 +65,8 @@ services:
       - go-dev-worktree-automationservice:/workspace/service
       - go-dev-mod-cache:/go/pkg/mod
       - go-dev-build-cache:/root/.cache/go-build
+    ports:
+      - "${AUTOMATION_SERVICE_DEBUG_PORT:-2346}:2345"
     security_opt:
       - seccomp:unconfined
     cap_add:
@@ -97,6 +101,8 @@ services:
       - rust-dev-cargo-registry:/usr/local/cargo/registry
       - rust-dev-cargo-git:/usr/local/cargo/git
       - rust-dev-target-inventoryservice:/workspace/service/target
+    ports:
+      - "${INVENTORY_SERVICE_DEBUG_PORT:-2347}:2345"
     security_opt:
       - seccomp:unconfined
     cap_add:
@@ -131,6 +137,8 @@ services:
       - rust-dev-cargo-registry:/usr/local/cargo/registry
       - rust-dev-cargo-git:/usr/local/cargo/git
       - rust-dev-target-orderservice:/workspace/service/target
+    ports:
+      - "${ORDER_SERVICE_DEBUG_PORT:-2348}:2345"
     security_opt:
       - seccomp:unconfined
     cap_add:
