@@ -21,7 +21,7 @@ endif
 
 ifneq ($(strip $(DEPENDENCY_PROXY_DIR)),)
 ifeq ($(origin RUSTSERVICELIB_SOURCE_CONTEXT),undefined)
-export RUSTSERVICELIB_SOURCE_CONTEXT := $(DEPENDENCY_PROXY_DOCKER_BASE)/github-raw/gorundebug/rustservicelib/archive/refs/tags/v0.2.27.tar.gz
+export RUSTSERVICELIB_SOURCE_CONTEXT := $(DEPENDENCY_PROXY_DOCKER_BASE)/github-raw/gorundebug/rustservicelib/archive/refs/tags/v0.2.28.tar.gz
 endif
 ifneq ($(strip $(USE_LOCAL_MODULES)),1)
 export EXAMPLE_MODEL_SOURCE_CONTEXT := $(DEPENDENCY_GIT_MIRROR_DOCKER_BASE)/github.com/gorundebug/rustexample.git\#v0.2.14
