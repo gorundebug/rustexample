@@ -7,7 +7,7 @@
 #
 # Example:
 # Dockerfile
-# orderservice/config/config.yaml
+# service-name/config/config.yaml
 scripts/merge-overwrite.txt
 scripts/dependency-source-cache.generated.sh
 Makefile

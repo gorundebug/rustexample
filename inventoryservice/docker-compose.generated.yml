@@ -1,6 +1,6 @@
 services:
   inventoryservice:
-    image: inventoryservice-rust:latest
+    image: inventoryservice-rust:local
     build:
       context: .
       dockerfile: Dockerfile

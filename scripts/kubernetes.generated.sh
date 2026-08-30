@@ -160,22 +160,22 @@ build_images() {
   progress "building existing minimal runtime images"
   make docker-build
   progress "publishing analyticsservice image"
-  docker tag "rustexample-analyticsservice:latest" \
+  docker tag "rustexample-analyticsservice:local" \
     "${HOST_REGISTRY}/rustexample/analyticsservice:${IMAGE_TAG}"
   docker push \
     "${HOST_REGISTRY}/rustexample/analyticsservice:${IMAGE_TAG}"
   progress "publishing automationservice image"
-  docker tag "automationservice:latest" \
+  docker tag "automationservice:local" \
     "${HOST_REGISTRY}/rustexample/automationservice:${IMAGE_TAG}"
   docker push \
     "${HOST_REGISTRY}/rustexample/automationservice:${IMAGE_TAG}"
   progress "publishing inventoryservice image"
-  docker tag "rustexample-inventoryservice:latest" \
+  docker tag "rustexample-inventoryservice:local" \
     "${HOST_REGISTRY}/rustexample/inventoryservice:${IMAGE_TAG}"
   docker push \
     "${HOST_REGISTRY}/rustexample/inventoryservice:${IMAGE_TAG}"
   progress "publishing orderservice image"
-  docker tag "rustexample-orderservice:latest" \
+  docker tag "rustexample-orderservice:local" \
     "${HOST_REGISTRY}/rustexample/orderservice:${IMAGE_TAG}"
   docker push \
     "${HOST_REGISTRY}/rustexample/orderservice:${IMAGE_TAG}"

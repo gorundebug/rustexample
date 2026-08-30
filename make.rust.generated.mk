@@ -44,7 +44,7 @@ rust-package: ## Package all Rust services as standalone repositories
 	  ./scripts/package-rust-service.generated.sh "$$service" "dist/$$service"; \
 	done
 
-rust-package-%: ## Package one Rust service (for example: make rust-package-orderservice)
+rust-package-%: ## Package one Rust service (for example: make rust-package-myservice)
 	@case " $(RUST_SERVICE_DIRS) " in \
 	  *" $* "*) ;; \
 	  *) echo "unknown Rust service: $*" >&2; exit 2 ;; \

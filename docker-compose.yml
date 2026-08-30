@@ -1,6 +1,9 @@
 services:
   analyticsservice:
-    image: rustexample-analyticsservice:latest
+    # The project workspace and the autonomous service build must publish and
+    # run the same image. This also makes `docker-start` consume exactly what
+    # `make -C <service> docker-build` produced.
+    image: analyticsservice-rust:local
     build:
       context: .
       dockerfile: Dockerfile
@@ -30,7 +33,7 @@ services:
       - app_net
 
   automationservice:
-    image: automationservice:latest
+    image: automationservice:local
     restart: unless-stopped
     environment:
       - DEBUG=${AUTOMATION_SERVICE_DEBUG:-0}
@@ -49,7 +52,10 @@ services:
       - app_net
 
   inventoryservice:
-    image: rustexample-inventoryservice:latest
+    # The project workspace and the autonomous service build must publish and
+    # run the same image. This also makes `docker-start` consume exactly what
+    # `make -C <service> docker-build` produced.
+    image: inventoryservice-rust:local
     build:
       context: .
       dockerfile: Dockerfile
@@ -79,7 +85,10 @@ services:
       - app_net
 
   orderservice:
-    image: rustexample-orderservice:latest
+    # The project workspace and the autonomous service build must publish and
+    # run the same image. This also makes `docker-start` consume exactly what
+    # `make -C <service> docker-build` produced.
+    image: orderservice-rust:local
     build:
       context: .
       dockerfile: Dockerfile
@@ -224,7 +233,7 @@ services:
       - app_net
 
   prometheus:
-    image: ${DEPENDENCY_DOCKER_REGISTRY:-docker.io}/prom/prometheus:latest
+    image: ${DEPENDENCY_DOCKER_REGISTRY:-docker.io}/prom/prometheus:v3.14.0
     restart: unless-stopped
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
@@ -234,7 +243,7 @@ services:
       - app_net
 
   grafana:
-    image: ${DEPENDENCY_DOCKER_REGISTRY:-docker.io}/grafana/grafana:latest
+    image: ${DEPENDENCY_DOCKER_REGISTRY:-docker.io}/grafana/grafana:13.2.0
     restart: unless-stopped
     ports:
       - "${GRAFANA_PORT:-3000}:3000"

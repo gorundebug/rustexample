@@ -192,6 +192,17 @@ impl GeneratedService {
             "service application is not initialized".to_owned()
         )?;
         app.start(MessageContext::new()).await?;
+        #[cfg(unix)]
+        {
+            let mut terminate = tokio::signal::unix::signal(
+                tokio::signal::unix::SignalKind::terminate(),
+            )?;
+            tokio::select! {
+                result = tokio::signal::ctrl_c() => result?,
+                _ = terminate.recv() => {},
+            }
+        }
+        #[cfg(not(unix))]
         tokio::signal::ctrl_c().await?;
         app.stop(MessageContext::new()).await?;
         Ok(())

@@ -3,7 +3,7 @@
 # service source code. Use it through `make docker-up-dev`.
 services:
   analyticsservice:
-    image: analyticsservice-rust-development:latest
+    image: analyticsservice-rust-development:local
     build: !reset null
     working_dir: /workspace/service
     command:
@@ -39,7 +39,7 @@ services:
     cap_add:
       - SYS_PTRACE
   automationservice:
-    image: automationservice-development:latest
+    image: automationservice-development:local
     build: !reset null
     working_dir: /workspace/service
     command:
@@ -72,7 +72,7 @@ services:
     cap_add:
       - SYS_PTRACE
   inventoryservice:
-    image: inventoryservice-rust-development:latest
+    image: inventoryservice-rust-development:local
     build: !reset null
     working_dir: /workspace/service
     command:
@@ -108,7 +108,7 @@ services:
     cap_add:
       - SYS_PTRACE
   orderservice:
-    image: orderservice-rust-development:latest
+    image: orderservice-rust-development:local
     build: !reset null
     working_dir: /workspace/service
     command:

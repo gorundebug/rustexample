@@ -1,6 +1,6 @@
 services:
   orderservice:
-    image: orderservice-rust:latest
+    image: orderservice-rust:local
     build:
       context: .
       dockerfile: Dockerfile

@@ -1,6 +1,6 @@
 services:
   analyticsservice:
-    image: analyticsservice-rust:latest
+    image: analyticsservice-rust:local
     build:
       context: .
       dockerfile: Dockerfile
