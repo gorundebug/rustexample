@@ -25,12 +25,12 @@ endif
 
 ifneq ($(strip $(DEPENDENCY_PROXY_DIR)),)
 ifeq ($(origin RUSTSERVICELIB_SOURCE_CONTEXT),undefined)
-export RUSTSERVICELIB_SOURCE_CONTEXT := $(DEPENDENCY_GIT_MIRROR_DOCKER_BASE)/github.com/gorundebug/rustservicelib.git\#v0.2.40
+export RUSTSERVICELIB_SOURCE_CONTEXT := $(DEPENDENCY_GIT_MIRROR_DOCKER_BASE)/github.com/gorundebug/rustservicelib.git\#v0.2.41
 endif
 ifneq ($(strip $(USE_LOCAL_MODULES)),1)
-export EXAMPLE_MODEL_SOURCE_CONTEXT := $(DEPENDENCY_GIT_MIRROR_DOCKER_BASE)/github.com/gorundebug/rustexample.git\#v0.2.40
-export ORDER_SERVICE_API_SOURCE_CONTEXT := $(DEPENDENCY_GIT_MIRROR_DOCKER_BASE)/github.com/gorundebug/rustexample.git\#v0.2.40
-export INVENTORY_SERVICE_API_SOURCE_CONTEXT := $(DEPENDENCY_GIT_MIRROR_DOCKER_BASE)/github.com/gorundebug/rustexample.git\#v0.2.40
+export EXAMPLE_MODEL_SOURCE_CONTEXT := $(DEPENDENCY_GIT_MIRROR_DOCKER_BASE)/github.com/gorundebug/rustexample.git\#v0.2.41
+export ORDER_SERVICE_API_SOURCE_CONTEXT := $(DEPENDENCY_GIT_MIRROR_DOCKER_BASE)/github.com/gorundebug/rustexample.git\#v0.2.41
+export INVENTORY_SERVICE_API_SOURCE_CONTEXT := $(DEPENDENCY_GIT_MIRROR_DOCKER_BASE)/github.com/gorundebug/rustexample.git\#v0.2.41
 endif
 endif
 
