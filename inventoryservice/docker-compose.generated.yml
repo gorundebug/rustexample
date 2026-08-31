@@ -14,9 +14,9 @@ services:
         DEPENDENCY_APT_DEBIAN_URL: ${DEPENDENCY_APT_DEBIAN_URL:-}
         DEPENDENCY_APT_DEBIAN_SECURITY_URL: ${DEPENDENCY_APT_DEBIAN_SECURITY_URL:-}
       additional_contexts:
-        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.53}"
-        module-model_rust-source: "${EXAMPLE_MODEL_SOURCE_CONTEXT:-https://github.com/gorundebug/rustexample.git#v0.2.53}"
-        module-inventory_service_api-source: "${INVENTORY_SERVICE_API_SOURCE_CONTEXT:-https://github.com/gorundebug/rustexample.git#v0.2.53}"
+        rustservicelib-source: "${RUSTSERVICELIB_SOURCE_CONTEXT:-https://github.com/gorundebug/rustservicelib.git#v0.2.54}"
+        module-model_rust-source: "${EXAMPLE_MODEL_SOURCE_CONTEXT:-https://github.com/gorundebug/rustexample.git#v0.2.54}"
+        module-inventory_service_api-source: "${INVENTORY_SERVICE_API_SOURCE_CONTEXT:-https://github.com/gorundebug/rustexample.git#v0.2.54}"
     environment:
       - DEBUG=${DEBUG:-0}
       - INVENTORY_SERVICE_HTTP_PORT
