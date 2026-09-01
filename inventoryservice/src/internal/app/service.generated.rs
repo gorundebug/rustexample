@@ -9,7 +9,7 @@ use servicelib::{
     operators::{InputStream, SinkStream, SinkStreamWithResult},
     runtime::{
         config::{ConfigLoader, GrpcEndpointConfig, ProcessStreamConfig,  },
-        environment::{RuntimeEnvironment, RuntimeResult},
+        environment::{RuntimeEnvironment, RuntimeError, RuntimeResult},
         serviceapp::ServiceApp,
     },
 };
@@ -103,9 +103,42 @@ pub fn init_functions(
     environment: RuntimeEnvironment,
     makers: &ServiceMakers,
 ) -> RuntimeResult<ServiceFunctions> {
+    let (
+        get_inventory_item_data,
+        process_order_item_source,
+    ) = std::thread::scope(|scope| -> RuntimeResult<_> {
+        let get_inventory_item_data_maker = makers.get_inventory_item_data.clone();
+        let get_inventory_item_data_context = context.clone();
+        let get_inventory_item_data_environment = environment.clone();
+        let get_inventory_item_data_task = scope.spawn(move || {
+            (get_inventory_item_data_maker)(
+                get_inventory_item_data_context,
+                get_inventory_item_data_environment,
+                &config.streams.get_inventory_item_data,
+            )
+        });
+        let process_order_item_source_maker = makers.process_order_item_source.clone();
+        let process_order_item_source_context = context.clone();
+        let process_order_item_source_environment = environment.clone();
+        let process_order_item_source_task = scope.spawn(move || {
+            (process_order_item_source_maker)(
+                process_order_item_source_context,
+                process_order_item_source_environment,
+                &config.endpoints.process_order_item,
+            )
+        });
+        Ok((
+            get_inventory_item_data_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
+                "function maker get_inventory_item_data panicked".to_string(),
+            ))??,
+            process_order_item_source_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
+                "function maker process_order_item_source panicked".to_string(),
+            ))??,
+        ))
+    })?;
     Ok(ServiceFunctions {
-        get_inventory_item_data: (makers.get_inventory_item_data)(context.clone(), environment.clone(), &config.streams.get_inventory_item_data)?,
-        process_order_item_source: (makers.process_order_item_source)(context.clone(), environment.clone(), &config.endpoints.process_order_item)?,
+        get_inventory_item_data,
+        process_order_item_source,
     })
 }
 

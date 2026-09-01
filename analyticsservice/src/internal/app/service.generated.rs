@@ -9,7 +9,7 @@ use servicelib::{
     operators::{InputStream, SinkStream, SinkStreamWithResult},
     runtime::{
         config::{ConfigLoader, CronEndpointConfig, KafkaEndpointConfig, ProcessStreamConfig,  },
-        environment::{RuntimeEnvironment, RuntimeResult},
+        environment::{RuntimeEnvironment, RuntimeError, RuntimeResult},
         serviceapp::ServiceApp,
     },
 };
@@ -96,10 +96,57 @@ pub fn init_functions(
     environment: RuntimeEnvironment,
     makers: &ServiceMakers,
 ) -> RuntimeResult<ServiceFunctions> {
+    let (
+        analytics_schedule_source,
+        count_order_processed,
+        order_processed_endpoint_source,
+    ) = std::thread::scope(|scope| -> RuntimeResult<_> {
+        let analytics_schedule_source_maker = makers.analytics_schedule_source.clone();
+        let analytics_schedule_source_context = context.clone();
+        let analytics_schedule_source_environment = environment.clone();
+        let analytics_schedule_source_task = scope.spawn(move || {
+            (analytics_schedule_source_maker)(
+                analytics_schedule_source_context,
+                analytics_schedule_source_environment,
+                &config.endpoints.analytics_schedule,
+            )
+        });
+        let count_order_processed_maker = makers.count_order_processed.clone();
+        let count_order_processed_context = context.clone();
+        let count_order_processed_environment = environment.clone();
+        let count_order_processed_task = scope.spawn(move || {
+            (count_order_processed_maker)(
+                count_order_processed_context,
+                count_order_processed_environment,
+                &config.streams.count_order_processed,
+            )
+        });
+        let order_processed_endpoint_source_maker = makers.order_processed_endpoint_source.clone();
+        let order_processed_endpoint_source_context = context.clone();
+        let order_processed_endpoint_source_environment = environment.clone();
+        let order_processed_endpoint_source_task = scope.spawn(move || {
+            (order_processed_endpoint_source_maker)(
+                order_processed_endpoint_source_context,
+                order_processed_endpoint_source_environment,
+                &config.endpoints.order_processed,
+            )
+        });
+        Ok((
+            analytics_schedule_source_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
+                "function maker analytics_schedule_source panicked".to_string(),
+            ))??,
+            count_order_processed_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
+                "function maker count_order_processed panicked".to_string(),
+            ))??,
+            order_processed_endpoint_source_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
+                "function maker order_processed_endpoint_source panicked".to_string(),
+            ))??,
+        ))
+    })?;
     Ok(ServiceFunctions {
-        analytics_schedule_source: (makers.analytics_schedule_source)(context.clone(), environment.clone(), &config.endpoints.analytics_schedule)?,
-        count_order_processed: (makers.count_order_processed)(context.clone(), environment.clone(), &config.streams.count_order_processed)?,
-        order_processed_endpoint_source: (makers.order_processed_endpoint_source)(context.clone(), environment.clone(), &config.endpoints.order_processed)?,
+        analytics_schedule_source,
+        count_order_processed,
+        order_processed_endpoint_source,
     })
 }
 

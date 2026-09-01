@@ -9,7 +9,7 @@ use servicelib::{
     operators::{InputStream, SinkStream, SinkStreamWithResult},
     runtime::{
         config::{ConfigLoader, DelayStreamConfig, FlatMapStreamConfig, GrpcEndpointConfig, HttpEndpointConfig, KafkaEndpointConfig, MapStreamConfig,  },
-        environment::{RuntimeEnvironment, RuntimeResult},
+        environment::{RuntimeEnvironment, RuntimeError, RuntimeResult},
         serviceapp::ServiceApp,
     },
 };
@@ -151,15 +151,132 @@ pub fn init_functions(
     environment: RuntimeEnvironment,
     makers: &ServiceMakers,
 ) -> RuntimeResult<ServiceFunctions> {
+    let (
+        map_order_item_result_to_order_state,
+        map_to_order_processed,
+        map_to_order_state,
+        order_processed_endpoint_sink,
+        process_order_item_sink,
+        process_order_items,
+        process_order_source,
+        soft_deadline,
+    ) = std::thread::scope(|scope| -> RuntimeResult<_> {
+        let map_order_item_result_to_order_state_maker = makers.map_order_item_result_to_order_state.clone();
+        let map_order_item_result_to_order_state_context = context.clone();
+        let map_order_item_result_to_order_state_environment = environment.clone();
+        let map_order_item_result_to_order_state_task = scope.spawn(move || {
+            (map_order_item_result_to_order_state_maker)(
+                map_order_item_result_to_order_state_context,
+                map_order_item_result_to_order_state_environment,
+                &config.streams.map_order_item_result_to_order_state,
+            )
+        });
+        let map_to_order_processed_maker = makers.map_to_order_processed.clone();
+        let map_to_order_processed_context = context.clone();
+        let map_to_order_processed_environment = environment.clone();
+        let map_to_order_processed_task = scope.spawn(move || {
+            (map_to_order_processed_maker)(
+                map_to_order_processed_context,
+                map_to_order_processed_environment,
+                &config.streams.map_to_order_processed,
+            )
+        });
+        let map_to_order_state_maker = makers.map_to_order_state.clone();
+        let map_to_order_state_context = context.clone();
+        let map_to_order_state_environment = environment.clone();
+        let map_to_order_state_task = scope.spawn(move || {
+            (map_to_order_state_maker)(
+                map_to_order_state_context,
+                map_to_order_state_environment,
+                &config.streams.map_to_order_state,
+            )
+        });
+        let order_processed_endpoint_sink_maker = makers.order_processed_endpoint_sink.clone();
+        let order_processed_endpoint_sink_context = context.clone();
+        let order_processed_endpoint_sink_environment = environment.clone();
+        let order_processed_endpoint_sink_task = scope.spawn(move || {
+            (order_processed_endpoint_sink_maker)(
+                order_processed_endpoint_sink_context,
+                order_processed_endpoint_sink_environment,
+                &config.endpoints.order_processed,
+            )
+        });
+        let process_order_item_sink_maker = makers.process_order_item_sink.clone();
+        let process_order_item_sink_context = context.clone();
+        let process_order_item_sink_environment = environment.clone();
+        let process_order_item_sink_task = scope.spawn(move || {
+            (process_order_item_sink_maker)(
+                process_order_item_sink_context,
+                process_order_item_sink_environment,
+                &config.endpoints.process_order_item,
+            )
+        });
+        let process_order_items_maker = makers.process_order_items.clone();
+        let process_order_items_context = context.clone();
+        let process_order_items_environment = environment.clone();
+        let process_order_items_task = scope.spawn(move || {
+            (process_order_items_maker)(
+                process_order_items_context,
+                process_order_items_environment,
+                &config.streams.process_order_items,
+            )
+        });
+        let process_order_source_maker = makers.process_order_source.clone();
+        let process_order_source_context = context.clone();
+        let process_order_source_environment = environment.clone();
+        let process_order_source_task = scope.spawn(move || {
+            (process_order_source_maker)(
+                process_order_source_context,
+                process_order_source_environment,
+                &config.endpoints.process_order,
+            )
+        });
+        let soft_deadline_maker = makers.soft_deadline.clone();
+        let soft_deadline_context = context.clone();
+        let soft_deadline_environment = environment.clone();
+        let soft_deadline_task = scope.spawn(move || {
+            (soft_deadline_maker)(
+                soft_deadline_context,
+                soft_deadline_environment,
+                &config.streams.soft_deadline,
+            )
+        });
+        Ok((
+            map_order_item_result_to_order_state_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
+                "function maker map_order_item_result_to_order_state panicked".to_string(),
+            ))??,
+            map_to_order_processed_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
+                "function maker map_to_order_processed panicked".to_string(),
+            ))??,
+            map_to_order_state_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
+                "function maker map_to_order_state panicked".to_string(),
+            ))??,
+            order_processed_endpoint_sink_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
+                "function maker order_processed_endpoint_sink panicked".to_string(),
+            ))??,
+            process_order_item_sink_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
+                "function maker process_order_item_sink panicked".to_string(),
+            ))??,
+            process_order_items_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
+                "function maker process_order_items panicked".to_string(),
+            ))??,
+            process_order_source_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
+                "function maker process_order_source panicked".to_string(),
+            ))??,
+            soft_deadline_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
+                "function maker soft_deadline panicked".to_string(),
+            ))??,
+        ))
+    })?;
     Ok(ServiceFunctions {
-        map_order_item_result_to_order_state: (makers.map_order_item_result_to_order_state)(context.clone(), environment.clone(), &config.streams.map_order_item_result_to_order_state)?,
-        map_to_order_processed: (makers.map_to_order_processed)(context.clone(), environment.clone(), &config.streams.map_to_order_processed)?,
-        map_to_order_state: (makers.map_to_order_state)(context.clone(), environment.clone(), &config.streams.map_to_order_state)?,
-        order_processed_endpoint_sink: (makers.order_processed_endpoint_sink)(context.clone(), environment.clone(), &config.endpoints.order_processed)?,
-        process_order_item_sink: (makers.process_order_item_sink)(context.clone(), environment.clone(), &config.endpoints.process_order_item)?,
-        process_order_items: (makers.process_order_items)(context.clone(), environment.clone(), &config.streams.process_order_items)?,
-        process_order_source: (makers.process_order_source)(context.clone(), environment.clone(), &config.endpoints.process_order)?,
-        soft_deadline: (makers.soft_deadline)(context.clone(), environment.clone(), &config.streams.soft_deadline)?,
+        map_order_item_result_to_order_state,
+        map_to_order_processed,
+        map_to_order_state,
+        order_processed_endpoint_sink,
+        process_order_item_sink,
+        process_order_items,
+        process_order_source,
+        soft_deadline,
     })
 }
 
