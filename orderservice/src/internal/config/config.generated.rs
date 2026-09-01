@@ -114,7 +114,7 @@ impl Default for Streams {
     None::<String>,
     None::<String>,
     -477_f64, -444_f64,
-).with_pipeline("order"), duration: Duration::from_millis(0) },
+).with_pipeline("order"), duration: Duration::from_millis(1000) },
             split_order_result: SplitStreamConfig::from(StreamConfig::new(SPLIT_ORDER_RESULT_STREAM_ID, "Split Order Result").with_graph(
     ORDER_SERVICE_ID, MERGE_RESULTS_STREAM_ID, [],
     None::<String>,
@@ -234,7 +234,7 @@ impl Default for Config {
             grpc_port: 9201,
             http_host: "0.0.0.0".to_owned(),
             http_port: 9091,
-            soft_deadline_margin_ms: 0,
+            soft_deadline_margin_ms: 1000,
             streams: Streams::default(),
             endpoints: Endpoints::default(),
             custom: CustomConfig::default(),
