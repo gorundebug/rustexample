@@ -2,7 +2,7 @@
 
 #![allow(dead_code, unused_imports)]
 
-use std::sync::{Arc, OnceLock, Weak};
+use std::sync::{Arc, OnceLock, Weak, mpsc};
 
 use servicelib::{
     MessageContext, Stream,
@@ -151,6 +151,8 @@ pub fn init_functions(
     environment: RuntimeEnvironment,
     makers: &ServiceMakers,
 ) -> RuntimeResult<ServiceFunctions> {
+    let maker_group_context = context.child();
+    let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
     let (
         map_order_item_result_to_order_state,
         map_to_order_processed,
@@ -162,112 +164,284 @@ pub fn init_functions(
         soft_deadline,
     ) = std::thread::scope(|scope| -> RuntimeResult<_> {
         let map_order_item_result_to_order_state_maker = makers.map_order_item_result_to_order_state.clone();
-        let map_order_item_result_to_order_state_context = context.clone();
+        let map_order_item_result_to_order_state_context = maker_group_context.clone();
+        let map_order_item_result_to_order_state_group_context = maker_group_context.clone();
         let map_order_item_result_to_order_state_environment = environment.clone();
+        let map_order_item_result_to_order_state_error_sender = maker_error_sender.clone();
         let map_order_item_result_to_order_state_task = scope.spawn(move || {
-            (map_order_item_result_to_order_state_maker)(
-                map_order_item_result_to_order_state_context,
-                map_order_item_result_to_order_state_environment,
-                &config.streams.map_order_item_result_to_order_state,
-            )
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (map_order_item_result_to_order_state_maker)(
+                    map_order_item_result_to_order_state_context,
+                    map_order_item_result_to_order_state_environment,
+                    &config.streams.map_order_item_result_to_order_state,
+                )
+            }));
+            match result {
+                Ok(Ok(value)) => Some(value),
+                Ok(Err(error)) => {
+                    map_order_item_result_to_order_state_group_context.cancel();
+                    map_order_item_result_to_order_state_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+                Err(panic) => {
+                    map_order_item_result_to_order_state_group_context.cancel();
+                    std::panic::resume_unwind(panic)
+                }
+            }
         });
         let map_to_order_processed_maker = makers.map_to_order_processed.clone();
-        let map_to_order_processed_context = context.clone();
+        let map_to_order_processed_context = maker_group_context.clone();
+        let map_to_order_processed_group_context = maker_group_context.clone();
         let map_to_order_processed_environment = environment.clone();
+        let map_to_order_processed_error_sender = maker_error_sender.clone();
         let map_to_order_processed_task = scope.spawn(move || {
-            (map_to_order_processed_maker)(
-                map_to_order_processed_context,
-                map_to_order_processed_environment,
-                &config.streams.map_to_order_processed,
-            )
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (map_to_order_processed_maker)(
+                    map_to_order_processed_context,
+                    map_to_order_processed_environment,
+                    &config.streams.map_to_order_processed,
+                )
+            }));
+            match result {
+                Ok(Ok(value)) => Some(value),
+                Ok(Err(error)) => {
+                    map_to_order_processed_group_context.cancel();
+                    map_to_order_processed_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+                Err(panic) => {
+                    map_to_order_processed_group_context.cancel();
+                    std::panic::resume_unwind(panic)
+                }
+            }
         });
         let map_to_order_state_maker = makers.map_to_order_state.clone();
-        let map_to_order_state_context = context.clone();
+        let map_to_order_state_context = maker_group_context.clone();
+        let map_to_order_state_group_context = maker_group_context.clone();
         let map_to_order_state_environment = environment.clone();
+        let map_to_order_state_error_sender = maker_error_sender.clone();
         let map_to_order_state_task = scope.spawn(move || {
-            (map_to_order_state_maker)(
-                map_to_order_state_context,
-                map_to_order_state_environment,
-                &config.streams.map_to_order_state,
-            )
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (map_to_order_state_maker)(
+                    map_to_order_state_context,
+                    map_to_order_state_environment,
+                    &config.streams.map_to_order_state,
+                )
+            }));
+            match result {
+                Ok(Ok(value)) => Some(value),
+                Ok(Err(error)) => {
+                    map_to_order_state_group_context.cancel();
+                    map_to_order_state_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+                Err(panic) => {
+                    map_to_order_state_group_context.cancel();
+                    std::panic::resume_unwind(panic)
+                }
+            }
         });
         let order_processed_endpoint_sink_maker = makers.order_processed_endpoint_sink.clone();
-        let order_processed_endpoint_sink_context = context.clone();
+        let order_processed_endpoint_sink_context = maker_group_context.clone();
+        let order_processed_endpoint_sink_group_context = maker_group_context.clone();
         let order_processed_endpoint_sink_environment = environment.clone();
+        let order_processed_endpoint_sink_error_sender = maker_error_sender.clone();
         let order_processed_endpoint_sink_task = scope.spawn(move || {
-            (order_processed_endpoint_sink_maker)(
-                order_processed_endpoint_sink_context,
-                order_processed_endpoint_sink_environment,
-                &config.endpoints.order_processed,
-            )
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (order_processed_endpoint_sink_maker)(
+                    order_processed_endpoint_sink_context,
+                    order_processed_endpoint_sink_environment,
+                    &config.endpoints.order_processed,
+                )
+            }));
+            match result {
+                Ok(Ok(value)) => Some(value),
+                Ok(Err(error)) => {
+                    order_processed_endpoint_sink_group_context.cancel();
+                    order_processed_endpoint_sink_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+                Err(panic) => {
+                    order_processed_endpoint_sink_group_context.cancel();
+                    std::panic::resume_unwind(panic)
+                }
+            }
         });
         let process_order_item_sink_maker = makers.process_order_item_sink.clone();
-        let process_order_item_sink_context = context.clone();
+        let process_order_item_sink_context = maker_group_context.clone();
+        let process_order_item_sink_group_context = maker_group_context.clone();
         let process_order_item_sink_environment = environment.clone();
+        let process_order_item_sink_error_sender = maker_error_sender.clone();
         let process_order_item_sink_task = scope.spawn(move || {
-            (process_order_item_sink_maker)(
-                process_order_item_sink_context,
-                process_order_item_sink_environment,
-                &config.endpoints.process_order_item,
-            )
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (process_order_item_sink_maker)(
+                    process_order_item_sink_context,
+                    process_order_item_sink_environment,
+                    &config.endpoints.process_order_item,
+                )
+            }));
+            match result {
+                Ok(Ok(value)) => Some(value),
+                Ok(Err(error)) => {
+                    process_order_item_sink_group_context.cancel();
+                    process_order_item_sink_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+                Err(panic) => {
+                    process_order_item_sink_group_context.cancel();
+                    std::panic::resume_unwind(panic)
+                }
+            }
         });
         let process_order_items_maker = makers.process_order_items.clone();
-        let process_order_items_context = context.clone();
+        let process_order_items_context = maker_group_context.clone();
+        let process_order_items_group_context = maker_group_context.clone();
         let process_order_items_environment = environment.clone();
+        let process_order_items_error_sender = maker_error_sender.clone();
         let process_order_items_task = scope.spawn(move || {
-            (process_order_items_maker)(
-                process_order_items_context,
-                process_order_items_environment,
-                &config.streams.process_order_items,
-            )
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (process_order_items_maker)(
+                    process_order_items_context,
+                    process_order_items_environment,
+                    &config.streams.process_order_items,
+                )
+            }));
+            match result {
+                Ok(Ok(value)) => Some(value),
+                Ok(Err(error)) => {
+                    process_order_items_group_context.cancel();
+                    process_order_items_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+                Err(panic) => {
+                    process_order_items_group_context.cancel();
+                    std::panic::resume_unwind(panic)
+                }
+            }
         });
         let process_order_source_maker = makers.process_order_source.clone();
-        let process_order_source_context = context.clone();
+        let process_order_source_context = maker_group_context.clone();
+        let process_order_source_group_context = maker_group_context.clone();
         let process_order_source_environment = environment.clone();
+        let process_order_source_error_sender = maker_error_sender.clone();
         let process_order_source_task = scope.spawn(move || {
-            (process_order_source_maker)(
-                process_order_source_context,
-                process_order_source_environment,
-                &config.endpoints.process_order,
-            )
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (process_order_source_maker)(
+                    process_order_source_context,
+                    process_order_source_environment,
+                    &config.endpoints.process_order,
+                )
+            }));
+            match result {
+                Ok(Ok(value)) => Some(value),
+                Ok(Err(error)) => {
+                    process_order_source_group_context.cancel();
+                    process_order_source_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+                Err(panic) => {
+                    process_order_source_group_context.cancel();
+                    std::panic::resume_unwind(panic)
+                }
+            }
         });
         let soft_deadline_maker = makers.soft_deadline.clone();
-        let soft_deadline_context = context.clone();
+        let soft_deadline_context = maker_group_context.clone();
+        let soft_deadline_group_context = maker_group_context.clone();
         let soft_deadline_environment = environment.clone();
+        let soft_deadline_error_sender = maker_error_sender.clone();
         let soft_deadline_task = scope.spawn(move || {
-            (soft_deadline_maker)(
-                soft_deadline_context,
-                soft_deadline_environment,
-                &config.streams.soft_deadline,
-            )
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (soft_deadline_maker)(
+                    soft_deadline_context,
+                    soft_deadline_environment,
+                    &config.streams.soft_deadline,
+                )
+            }));
+            match result {
+                Ok(Ok(value)) => Some(value),
+                Ok(Err(error)) => {
+                    soft_deadline_group_context.cancel();
+                    soft_deadline_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+                Err(panic) => {
+                    soft_deadline_group_context.cancel();
+                    std::panic::resume_unwind(panic)
+                }
+            }
         });
         Ok((
             map_order_item_result_to_order_state_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
                 "function maker map_order_item_result_to_order_state panicked".to_string(),
-            ))??,
+            ))?,
             map_to_order_processed_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
                 "function maker map_to_order_processed panicked".to_string(),
-            ))??,
+            ))?,
             map_to_order_state_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
                 "function maker map_to_order_state panicked".to_string(),
-            ))??,
+            ))?,
             order_processed_endpoint_sink_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
                 "function maker order_processed_endpoint_sink panicked".to_string(),
-            ))??,
+            ))?,
             process_order_item_sink_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
                 "function maker process_order_item_sink panicked".to_string(),
-            ))??,
+            ))?,
             process_order_items_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
                 "function maker process_order_items panicked".to_string(),
-            ))??,
+            ))?,
             process_order_source_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
                 "function maker process_order_source panicked".to_string(),
-            ))??,
+            ))?,
             soft_deadline_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
                 "function maker soft_deadline panicked".to_string(),
-            ))??,
+            ))?,
         ))
     })?;
+    drop(maker_error_sender);
+    if let Ok(error) = maker_error_receiver.try_recv() {
+        return Err(error);
+    }
+    let map_order_item_result_to_order_state = map_order_item_result_to_order_state.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker map_order_item_result_to_order_state failed without an error".to_string(),
+    ))?;
+    let map_to_order_processed = map_to_order_processed.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker map_to_order_processed failed without an error".to_string(),
+    ))?;
+    let map_to_order_state = map_to_order_state.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker map_to_order_state failed without an error".to_string(),
+    ))?;
+    let order_processed_endpoint_sink = order_processed_endpoint_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker order_processed_endpoint_sink failed without an error".to_string(),
+    ))?;
+    let process_order_item_sink = process_order_item_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker process_order_item_sink failed without an error".to_string(),
+    ))?;
+    let process_order_items = process_order_items.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker process_order_items failed without an error".to_string(),
+    ))?;
+    let process_order_source = process_order_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker process_order_source failed without an error".to_string(),
+    ))?;
+    let soft_deadline = soft_deadline.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker soft_deadline failed without an error".to_string(),
+    ))?;
     Ok(ServiceFunctions {
         map_order_item_result_to_order_state,
         map_to_order_processed,

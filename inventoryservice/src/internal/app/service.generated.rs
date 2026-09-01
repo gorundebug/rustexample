@@ -2,7 +2,7 @@
 
 #![allow(dead_code, unused_imports)]
 
-use std::sync::{Arc, OnceLock, Weak};
+use std::sync::{Arc, OnceLock, Weak, mpsc};
 
 use servicelib::{
     MessageContext, Stream,
@@ -103,39 +103,87 @@ pub fn init_functions(
     environment: RuntimeEnvironment,
     makers: &ServiceMakers,
 ) -> RuntimeResult<ServiceFunctions> {
+    let maker_group_context = context.child();
+    let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
     let (
         get_inventory_item_data,
         process_order_item_source,
     ) = std::thread::scope(|scope| -> RuntimeResult<_> {
         let get_inventory_item_data_maker = makers.get_inventory_item_data.clone();
-        let get_inventory_item_data_context = context.clone();
+        let get_inventory_item_data_context = maker_group_context.clone();
+        let get_inventory_item_data_group_context = maker_group_context.clone();
         let get_inventory_item_data_environment = environment.clone();
+        let get_inventory_item_data_error_sender = maker_error_sender.clone();
         let get_inventory_item_data_task = scope.spawn(move || {
-            (get_inventory_item_data_maker)(
-                get_inventory_item_data_context,
-                get_inventory_item_data_environment,
-                &config.streams.get_inventory_item_data,
-            )
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (get_inventory_item_data_maker)(
+                    get_inventory_item_data_context,
+                    get_inventory_item_data_environment,
+                    &config.streams.get_inventory_item_data,
+                )
+            }));
+            match result {
+                Ok(Ok(value)) => Some(value),
+                Ok(Err(error)) => {
+                    get_inventory_item_data_group_context.cancel();
+                    get_inventory_item_data_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+                Err(panic) => {
+                    get_inventory_item_data_group_context.cancel();
+                    std::panic::resume_unwind(panic)
+                }
+            }
         });
         let process_order_item_source_maker = makers.process_order_item_source.clone();
-        let process_order_item_source_context = context.clone();
+        let process_order_item_source_context = maker_group_context.clone();
+        let process_order_item_source_group_context = maker_group_context.clone();
         let process_order_item_source_environment = environment.clone();
+        let process_order_item_source_error_sender = maker_error_sender.clone();
         let process_order_item_source_task = scope.spawn(move || {
-            (process_order_item_source_maker)(
-                process_order_item_source_context,
-                process_order_item_source_environment,
-                &config.endpoints.process_order_item,
-            )
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (process_order_item_source_maker)(
+                    process_order_item_source_context,
+                    process_order_item_source_environment,
+                    &config.endpoints.process_order_item,
+                )
+            }));
+            match result {
+                Ok(Ok(value)) => Some(value),
+                Ok(Err(error)) => {
+                    process_order_item_source_group_context.cancel();
+                    process_order_item_source_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+                Err(panic) => {
+                    process_order_item_source_group_context.cancel();
+                    std::panic::resume_unwind(panic)
+                }
+            }
         });
         Ok((
             get_inventory_item_data_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
                 "function maker get_inventory_item_data panicked".to_string(),
-            ))??,
+            ))?,
             process_order_item_source_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
                 "function maker process_order_item_source panicked".to_string(),
-            ))??,
+            ))?,
         ))
     })?;
+    drop(maker_error_sender);
+    if let Ok(error) = maker_error_receiver.try_recv() {
+        return Err(error);
+    }
+    let get_inventory_item_data = get_inventory_item_data.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker get_inventory_item_data failed without an error".to_string(),
+    ))?;
+    let process_order_item_source = process_order_item_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker process_order_item_source failed without an error".to_string(),
+    ))?;
     Ok(ServiceFunctions {
         get_inventory_item_data,
         process_order_item_source,

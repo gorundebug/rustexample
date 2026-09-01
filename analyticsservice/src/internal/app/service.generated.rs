@@ -2,7 +2,7 @@
 
 #![allow(dead_code, unused_imports)]
 
-use std::sync::{Arc, OnceLock, Weak};
+use std::sync::{Arc, OnceLock, Weak, mpsc};
 
 use servicelib::{
     MessageContext, Stream,
@@ -96,53 +96,122 @@ pub fn init_functions(
     environment: RuntimeEnvironment,
     makers: &ServiceMakers,
 ) -> RuntimeResult<ServiceFunctions> {
+    let maker_group_context = context.child();
+    let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
     let (
         analytics_schedule_source,
         count_order_processed,
         order_processed_endpoint_source,
     ) = std::thread::scope(|scope| -> RuntimeResult<_> {
         let analytics_schedule_source_maker = makers.analytics_schedule_source.clone();
-        let analytics_schedule_source_context = context.clone();
+        let analytics_schedule_source_context = maker_group_context.clone();
+        let analytics_schedule_source_group_context = maker_group_context.clone();
         let analytics_schedule_source_environment = environment.clone();
+        let analytics_schedule_source_error_sender = maker_error_sender.clone();
         let analytics_schedule_source_task = scope.spawn(move || {
-            (analytics_schedule_source_maker)(
-                analytics_schedule_source_context,
-                analytics_schedule_source_environment,
-                &config.endpoints.analytics_schedule,
-            )
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (analytics_schedule_source_maker)(
+                    analytics_schedule_source_context,
+                    analytics_schedule_source_environment,
+                    &config.endpoints.analytics_schedule,
+                )
+            }));
+            match result {
+                Ok(Ok(value)) => Some(value),
+                Ok(Err(error)) => {
+                    analytics_schedule_source_group_context.cancel();
+                    analytics_schedule_source_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+                Err(panic) => {
+                    analytics_schedule_source_group_context.cancel();
+                    std::panic::resume_unwind(panic)
+                }
+            }
         });
         let count_order_processed_maker = makers.count_order_processed.clone();
-        let count_order_processed_context = context.clone();
+        let count_order_processed_context = maker_group_context.clone();
+        let count_order_processed_group_context = maker_group_context.clone();
         let count_order_processed_environment = environment.clone();
+        let count_order_processed_error_sender = maker_error_sender.clone();
         let count_order_processed_task = scope.spawn(move || {
-            (count_order_processed_maker)(
-                count_order_processed_context,
-                count_order_processed_environment,
-                &config.streams.count_order_processed,
-            )
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (count_order_processed_maker)(
+                    count_order_processed_context,
+                    count_order_processed_environment,
+                    &config.streams.count_order_processed,
+                )
+            }));
+            match result {
+                Ok(Ok(value)) => Some(value),
+                Ok(Err(error)) => {
+                    count_order_processed_group_context.cancel();
+                    count_order_processed_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+                Err(panic) => {
+                    count_order_processed_group_context.cancel();
+                    std::panic::resume_unwind(panic)
+                }
+            }
         });
         let order_processed_endpoint_source_maker = makers.order_processed_endpoint_source.clone();
-        let order_processed_endpoint_source_context = context.clone();
+        let order_processed_endpoint_source_context = maker_group_context.clone();
+        let order_processed_endpoint_source_group_context = maker_group_context.clone();
         let order_processed_endpoint_source_environment = environment.clone();
+        let order_processed_endpoint_source_error_sender = maker_error_sender.clone();
         let order_processed_endpoint_source_task = scope.spawn(move || {
-            (order_processed_endpoint_source_maker)(
-                order_processed_endpoint_source_context,
-                order_processed_endpoint_source_environment,
-                &config.endpoints.order_processed,
-            )
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (order_processed_endpoint_source_maker)(
+                    order_processed_endpoint_source_context,
+                    order_processed_endpoint_source_environment,
+                    &config.endpoints.order_processed,
+                )
+            }));
+            match result {
+                Ok(Ok(value)) => Some(value),
+                Ok(Err(error)) => {
+                    order_processed_endpoint_source_group_context.cancel();
+                    order_processed_endpoint_source_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+                Err(panic) => {
+                    order_processed_endpoint_source_group_context.cancel();
+                    std::panic::resume_unwind(panic)
+                }
+            }
         });
         Ok((
             analytics_schedule_source_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
                 "function maker analytics_schedule_source panicked".to_string(),
-            ))??,
+            ))?,
             count_order_processed_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
                 "function maker count_order_processed panicked".to_string(),
-            ))??,
+            ))?,
             order_processed_endpoint_source_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
                 "function maker order_processed_endpoint_source panicked".to_string(),
-            ))??,
+            ))?,
         ))
     })?;
+    drop(maker_error_sender);
+    if let Ok(error) = maker_error_receiver.try_recv() {
+        return Err(error);
+    }
+    let analytics_schedule_source = analytics_schedule_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker analytics_schedule_source failed without an error".to_string(),
+    ))?;
+    let count_order_processed = count_order_processed.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker count_order_processed failed without an error".to_string(),
+    ))?;
+    let order_processed_endpoint_source = order_processed_endpoint_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker order_processed_endpoint_source failed without an error".to_string(),
+    ))?;
     Ok(ServiceFunctions {
         analytics_schedule_source,
         count_order_processed,
