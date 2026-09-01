@@ -1184,7 +1184,7 @@ dependencies = [
 
 [[package]]
 name = "inventory-service-api"
-version = "0.2.61"
+version = "0.2.62"
 dependencies = [
  "prost 0.13.5",
  "protoc-bin-vendored",
@@ -1681,7 +1681,7 @@ dependencies = [
 
 [[package]]
 name = "order-service-api"
-version = "0.2.61"
+version = "0.2.62"
 dependencies = [
  "ammonia",
  "async-trait",
@@ -2640,7 +2640,7 @@ dependencies = [
 
 [[package]]
 name = "servicelib-gorundebug"
-version = "0.2.61"
+version = "0.2.62"
 dependencies = [
  "arc-swap",
  "async-trait",
