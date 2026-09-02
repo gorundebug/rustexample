@@ -30,12 +30,16 @@ dependencies = [
  "async-trait",
  "croner",
  "example-model",
+ "mimalloc",
+ "opentelemetry",
  "serde",
  "serde_json",
  "servicelib-gorundebug",
  "tokio",
  "tonic",
  "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -1195,14 +1199,17 @@ name = "inventory_service"
 version = "0.2.72"
 dependencies = [
  "async-trait",
+ "axum 0.8.9",
  "example-model",
  "inventory-service-api",
+ "mimalloc",
  "serde",
  "serde_json",
  "servicelib-gorundebug",
  "tokio",
  "tonic",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -1329,6 +1336,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
 
 [[package]]
+name = "libmimalloc-sys"
+version = "0.1.49"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a45a52f43e1c16f667ccfe4dd8c85b7f7c204fd5e3bf46c5b0db9a5c3c0b8e9"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "libz-sys"
 version = "1.1.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1416,6 +1432,15 @@ name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
+
+[[package]]
+name = "mimalloc"
+version = "0.1.52"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d4139bb28d14ad1facf21d5eb8825051b326e172d216b39f6d31df53cc97862"
+dependencies = [
+ "libmimalloc-sys",
+]
 
 [[package]]
 name = "mime"
@@ -1685,8 +1710,15 @@ name = "order_service"
 version = "0.2.72"
 dependencies = [
  "async-trait",
+ "axum 0.8.9",
+ "axum-extra",
+ "chrono",
  "example-model",
+ "headers",
+ "http",
  "inventory-service-api",
+ "mimalloc",
+ "opentelemetry",
  "order-service-api",
  "serde",
  "serde_json",
@@ -1694,6 +1726,9 @@ dependencies = [
  "tokio",
  "tonic",
  "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -2606,7 +2641,7 @@ dependencies = [
 
 [[package]]
 name = "servicelib-gorundebug"
-version = "0.2.72"
+version = "0.2.73"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -3305,6 +3340,7 @@ version = "1.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5772d71c9be8a8a6ac2117d949c5b224c1b72241bb611d9a3012edcf8af7812"
 dependencies = [
+ "getrandom 0.4.3",
  "js-sys",
  "serde_core",
  "wasm-bindgen",
