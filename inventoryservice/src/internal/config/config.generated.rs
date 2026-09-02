@@ -53,7 +53,7 @@ impl Default for Streams {
     None::<String>,
     542_f64, 33_f64,
 ).with_pipeline("inventoryItem")),
-            process_inventory_item: InputStreamConfig { stream: StreamConfig::new(PROCESS_INVENTORY_ITEM_STREAM_ID, "Process Inventory Item ").with_graph(
+            process_inventory_item: InputStreamConfig { stream: StreamConfig::new(PROCESS_INVENTORY_ITEM_STREAM_ID, "Process Inventory Item").with_graph(
     INVENTORY_SERVICE_ID, MERGE_INVENTORY_RESULT_STREAM_ID, [],
     Some("OrderItem"),
     None::<String>,

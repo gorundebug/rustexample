@@ -1,7 +1,1 @@
-.PHONY: generate test
-
-generate:
-	cargo build
-
-test:
-	cargo test
+include make.generated.mk

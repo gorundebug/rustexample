@@ -1,27 +1,17 @@
 [package]
-name = "orderservice"
-version = "0.1.0"
+name = "order_service"
+version = "0.2.71"
 edition = "2024"
 rust-version = "1.85"
 
 [dependencies]
 async-trait = "0.1"
-axum = "0.8"
-axum-extra = { version = "0.12", features = ["cookie"] }
-chrono = { version = "0.4", features = ["serde"] }
-example-model = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.71" }
-headers = "0.4"
-http = "1"
-inventory-service-api = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.71" }
-mimalloc = "0.1"
-opentelemetry = "0.32"
-order-service-api = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.71" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.71" }
 tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
 tonic = "0.12"
 tracing = "0.1"
-tracing-opentelemetry = "0.33"
-tracing-subscriber = "0.3"
-uuid = { version = "1", features = ["v4"] }
+example-model = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.71" }
+order-service-api = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.71" }
+inventory-service-api = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.71" }
