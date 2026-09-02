@@ -259,7 +259,7 @@ impl
     }
 }
 
-pub fn make_process_order_source(
+pub async fn make_process_order_source(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
     _config: &HttpEndpointConfig,

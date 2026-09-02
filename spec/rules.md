@@ -35,6 +35,14 @@ user-owned extension points.
   interfaces. Keep their generated method signatures.
 - Pass the received `context.Context` to collectors, senders and callbacks.
   `context.Background()` and `context.TODO()` are forbidden in business paths.
+- Makers may perform asynchronous initialization. Generated initializer groups
+  run them through `errgroup`; they must honor cancellation and must not detach
+  initialization work from the group.
+- Preserve generated maker parameters and their order: cancellable group
+  context, runtime environment, then the exact typed function, stream,
+  endpoint, connector or service configuration. Runtime-owned router, handler
+  or owner values are additional explicit typed arguments where required;
+  makers must not recover these inputs from globals.
 - Use generated `Makefile` targets:
   - regenerate: `make gen`
   - build: `make build`
@@ -59,6 +67,8 @@ user-owned extension points.
   signatures unchanged.
 - Propagate `MessageContext`, use the provided collectors and stream contexts,
   and await asynchronous operations. Do not block Tokio worker threads.
+- Makers return `Future`s and each initializer group is joined concurrently by
+  Tokio. Do not introduce native threads or a second executor.
 - Keep generated ownership boundaries: payload values and `Arc` state must not
   outlive the request or graph lifecycle without an explicit runtime contract.
 - Use the generated workspace commands for build and test; the canonical test

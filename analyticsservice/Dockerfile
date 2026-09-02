@@ -48,7 +48,7 @@ RUN set -eu; \
     if [ -z "$manifest" ]; then echo "rustservicelib source context has no Cargo.toml" >&2; exit 1; fi; \
     source_dir=${manifest%/Cargo.toml}; \
     mkdir -p /workspace/rustservicelib; \
-    cp -a "$source_dir/." /workspace/rustservicelib/; \
+    cp -R "$source_dir/." /workspace/rustservicelib/; \
     rm -rf /tmp/rustservicelib-source /tmp/rustservicelib-archive
 COPY --from=module-model_rust-source / /tmp/module-model_rust-source
 RUN set -eu; \
@@ -65,7 +65,7 @@ RUN set -eu; \
     if [ -z "$manifest" ] || [ ! -f "$manifest" ]; then echo "module model_rust source context has no Cargo.toml" >&2; exit 1; fi; \
     source_dir=${manifest%/Cargo.toml}; \
     mkdir -p /workspace/modules/model_rust; \
-    cp -a "$source_dir/." /workspace/modules/model_rust/; \
+    cp -R "$source_dir/." /workspace/modules/model_rust/; \
     rm -rf /tmp/module-model_rust-source /tmp/module-model_rust-archive
 
 # Dev/debug uses the same dependency contexts; only the service source is mounted.

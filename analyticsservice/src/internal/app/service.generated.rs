@@ -2,13 +2,20 @@
 
 #![allow(dead_code, unused_imports)]
 
-use std::sync::{Arc, OnceLock, Weak, mpsc};
+use std::{future::Future, pin::Pin, sync::{Arc, OnceLock, Weak, mpsc}};
 
 use servicelib::{
     MessageContext, Stream,
     operators::{InputStream, SinkStream, SinkStreamWithResult},
     runtime::{
-        config::{ConfigLoader, CronEndpointConfig, KafkaEndpointConfig, ProcessStreamConfig,  },
+        config::{
+            ConfigLoader, RuntimeDataConnectorConfig,
+            CronEndpointConfig,
+            KafkaEndpointConfig,
+            ProcessStreamConfig,
+            KafkaDataConnectorConfig,
+            CronDataConnectorConfig,
+        },
         environment::{RuntimeEnvironment, RuntimeError, RuntimeResult},
         serviceapp::ServiceApp,
     },
@@ -45,6 +52,11 @@ pub struct ServiceRuntime {
     pub data_connectors: ServiceDataConnectors,
 }
 
+pub struct ServiceInfrastructure {
+    pub order_events_data_source: Arc<RdkafkaKafkaDataSource>,
+    pub local_cron_data_source: Arc<CronDataSource>,
+}
+
 struct GeneratedServiceInner {
     runtime: ServiceRuntime,
     app: OnceLock<Arc<ServiceApp>>,
@@ -57,30 +69,77 @@ pub struct GeneratedService {
 
 #[derive(Clone)]
 pub struct ServiceMakers {
-    pub analytics_schedule_source: Arc<dyn Fn(
+    pub analytics_schedule_source: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
-        &CronEndpointConfig,
-    ) -> RuntimeResult<AnalyticsScheduleSource> + Send + Sync>,
-    pub count_order_processed: Arc<dyn Fn(
+        &'a CronEndpointConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<AnalyticsScheduleSource>> + Send + 'a>> + Send + Sync>,
+    pub count_order_processed: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
-        &ProcessStreamConfig,
-    ) -> RuntimeResult<CountOrderProcessed> + Send + Sync>,
-    pub order_processed_endpoint_source: Arc<dyn Fn(
+        &'a ProcessStreamConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<CountOrderProcessed>> + Send + 'a>> + Send + Sync>,
+    pub order_processed_endpoint_source: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
-        &KafkaEndpointConfig,
-    ) -> RuntimeResult<OrderProcessedEndpointSource> + Send + Sync>,
+        &'a KafkaEndpointConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<OrderProcessedEndpointSource>> + Send + 'a>> + Send + Sync>,
+    pub order_events_data_source: ServiceInfrastructureMaker<KafkaDataConnectorConfig, Arc<RdkafkaKafkaDataSource>>,
+    pub local_cron_data_source: ServiceInfrastructureMaker<CronDataConnectorConfig, Arc<CronDataSource>>,
 }
+
+pub type ServiceInfrastructureMaker<C, T> = Arc<dyn for<'a> Fn(
+    MessageContext,
+    RuntimeEnvironment,
+    &'a C,
+) -> Pin<Box<dyn Future<Output = RuntimeResult<T>> + Send + 'a>> + Send + Sync>;
 
 impl Default for ServiceMakers {
     fn default() -> Self {
         Self {
-            analytics_schedule_source: Arc::new(make_analytics_schedule_source),
-            count_order_processed: Arc::new(make_count_order_processed),
-            order_processed_endpoint_source: Arc::new(make_order_processed_endpoint_source),
+            analytics_schedule_source: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_analytics_schedule_source(context, environment, config).await })
+            }),
+            count_order_processed: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_count_order_processed(context, environment, config).await })
+            }),
+            order_processed_endpoint_source: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_order_processed_endpoint_source(context, environment, config).await })
+            }),
+            order_events_data_source: Arc::new(|_context, environment, config| {
+                Box::pin(async move { RdkafkaKafkaDataSource::from_config(environment, config) })
+            }),
+            local_cron_data_source: Arc::new(|_context, environment, config| {
+                Box::pin(async move { CronDataSource::from_config(config, environment) })
+            }),
         }
+    }
+}
+
+fn connector_config(
+    environment: &RuntimeEnvironment,
+    connector_id: i32,
+) -> RuntimeResult<Arc<RuntimeDataConnectorConfig>> {
+    environment.runtime_config().data_connector_by_id(connector_id).ok_or_else(||
+        RuntimeError::InvalidConfiguration(format!(
+            "data connector {connector_id} is not configured"
+        ))
+    )
+}
+fn kafka_connector_config(environment: &RuntimeEnvironment, connector_id: i32) -> RuntimeResult<KafkaDataConnectorConfig> {
+    match connector_config(environment, connector_id)?.as_ref() {
+        RuntimeDataConnectorConfig::Kafka(config) => Ok(config.clone()),
+        _ => Err(RuntimeError::InvalidConfiguration(format!(
+            "data connector {connector_id} is not Kafka"
+        ))),
+    }
+}
+fn cron_connector_config(environment: &RuntimeEnvironment, connector_id: i32) -> RuntimeResult<CronDataConnectorConfig> {
+    match connector_config(environment, connector_id)?.as_ref() {
+        RuntimeDataConnectorConfig::Cron(config) => Ok(config.clone()),
+        _ => Err(RuntimeError::InvalidConfiguration(format!(
+            "data connector {connector_id} is not Cron"
+        ))),
     }
 }
 
@@ -90,7 +149,7 @@ pub struct ServiceFunctions {
     pub order_processed_endpoint_source: OrderProcessedEndpointSource,
 }
 
-pub fn init_functions(
+pub async fn init_functions(
     context: MessageContext,
     config: &Config,
     environment: RuntimeEnvironment,
@@ -98,107 +157,82 @@ pub fn init_functions(
 ) -> RuntimeResult<ServiceFunctions> {
     let maker_group_context = context.child();
     let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
-    let (
-        analytics_schedule_source,
-        count_order_processed,
-        order_processed_endpoint_source,
-    ) = std::thread::scope(|scope| -> RuntimeResult<_> {
         let analytics_schedule_source_maker = makers.analytics_schedule_source.clone();
         let analytics_schedule_source_context = maker_group_context.clone();
         let analytics_schedule_source_group_context = maker_group_context.clone();
         let analytics_schedule_source_environment = environment.clone();
         let analytics_schedule_source_error_sender = maker_error_sender.clone();
-        let analytics_schedule_source_task = scope.spawn(move || {
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                (analytics_schedule_source_maker)(
+        let analytics_schedule_source_future = async move {
+            let result = (analytics_schedule_source_maker)(
                     analytics_schedule_source_context,
                     analytics_schedule_source_environment,
                     &config.endpoints.analytics_schedule,
-                )
-            }));
+                ).await;
             match result {
-                Ok(Ok(value)) => Some(value),
-                Ok(Err(error)) => {
+                Ok(value) => Some(value),
+                Err(error) => {
                     analytics_schedule_source_group_context.cancel();
                     analytics_schedule_source_error_sender
                         .send(error)
                         .expect("function maker error receiver was dropped");
                     None
                 }
-                Err(panic) => {
-                    analytics_schedule_source_group_context.cancel();
-                    std::panic::resume_unwind(panic)
-                }
             }
-        });
+        };
         let count_order_processed_maker = makers.count_order_processed.clone();
         let count_order_processed_context = maker_group_context.clone();
         let count_order_processed_group_context = maker_group_context.clone();
         let count_order_processed_environment = environment.clone();
         let count_order_processed_error_sender = maker_error_sender.clone();
-        let count_order_processed_task = scope.spawn(move || {
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                (count_order_processed_maker)(
+        let count_order_processed_future = async move {
+            let result = (count_order_processed_maker)(
                     count_order_processed_context,
                     count_order_processed_environment,
                     &config.streams.count_order_processed,
-                )
-            }));
+                ).await;
             match result {
-                Ok(Ok(value)) => Some(value),
-                Ok(Err(error)) => {
+                Ok(value) => Some(value),
+                Err(error) => {
                     count_order_processed_group_context.cancel();
                     count_order_processed_error_sender
                         .send(error)
                         .expect("function maker error receiver was dropped");
                     None
                 }
-                Err(panic) => {
-                    count_order_processed_group_context.cancel();
-                    std::panic::resume_unwind(panic)
-                }
             }
-        });
+        };
         let order_processed_endpoint_source_maker = makers.order_processed_endpoint_source.clone();
         let order_processed_endpoint_source_context = maker_group_context.clone();
         let order_processed_endpoint_source_group_context = maker_group_context.clone();
         let order_processed_endpoint_source_environment = environment.clone();
         let order_processed_endpoint_source_error_sender = maker_error_sender.clone();
-        let order_processed_endpoint_source_task = scope.spawn(move || {
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                (order_processed_endpoint_source_maker)(
+        let order_processed_endpoint_source_future = async move {
+            let result = (order_processed_endpoint_source_maker)(
                     order_processed_endpoint_source_context,
                     order_processed_endpoint_source_environment,
                     &config.endpoints.order_processed,
-                )
-            }));
+                ).await;
             match result {
-                Ok(Ok(value)) => Some(value),
-                Ok(Err(error)) => {
+                Ok(value) => Some(value),
+                Err(error) => {
                     order_processed_endpoint_source_group_context.cancel();
                     order_processed_endpoint_source_error_sender
                         .send(error)
                         .expect("function maker error receiver was dropped");
                     None
                 }
-                Err(panic) => {
-                    order_processed_endpoint_source_group_context.cancel();
-                    std::panic::resume_unwind(panic)
-                }
             }
-        });
-        Ok((
-            analytics_schedule_source_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
-                "function maker analytics_schedule_source panicked".to_string(),
-            ))?,
-            count_order_processed_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
-                "function maker count_order_processed panicked".to_string(),
-            ))?,
-            order_processed_endpoint_source_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
-                "function maker order_processed_endpoint_source panicked".to_string(),
-            ))?,
-        ))
-    })?;
+        };
+    let (
+        analytics_schedule_source,
+        count_order_processed,
+        order_processed_endpoint_source,
+    ) = tokio::join!(
+        analytics_schedule_source_future,
+        count_order_processed_future,
+        order_processed_endpoint_source_future,
+    );
+    maker_group_context.cancel();
     drop(maker_error_sender);
     if let Ok(error) = maker_error_receiver.try_recv() {
         return Err(error);
@@ -218,25 +252,77 @@ pub fn init_functions(
         order_processed_endpoint_source,
     })
 }
+macro_rules! infrastructure_maker_future {
+    ($maker:expr, $context:expr, $environment:expr, $config:expr, $group:expr, $errors:expr) => ({
+        let maker = $maker.clone();
+        let context = $context.clone();
+        let environment = $environment.clone();
+        let config = $config;
+        let group = $group.clone();
+        let errors = $errors.clone();
+        async move {
+            match (maker)(context, environment, &config).await {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    group.cancel();
+                    errors.send(error).expect("infrastructure maker error receiver was dropped");
+                    None
+                }
+            }
+        }
+    });
+}
+
+pub async fn init_infrastructure(
+    context: MessageContext,
+    environment: RuntimeEnvironment,
+    makers: &ServiceMakers,
+) -> RuntimeResult<ServiceInfrastructure> {
+    let maker_group_context = context.child();
+    let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
+    let order_events_data_source_future = infrastructure_maker_future!(
+        makers.order_events_data_source, maker_group_context, environment,
+        kafka_connector_config(&environment, 3)?, maker_group_context, maker_error_sender
+    );
+    let local_cron_data_source_future = infrastructure_maker_future!(
+        makers.local_cron_data_source, maker_group_context, environment,
+        cron_connector_config(&environment, 2)?, maker_group_context, maker_error_sender
+    );
+    let (
+        order_events_data_source,
+        local_cron_data_source,
+    ) = tokio::join!(
+        order_events_data_source_future,
+        local_cron_data_source_future,
+    );
+    maker_group_context.cancel();
+    drop(maker_error_sender);
+    if let Ok(error) = maker_error_receiver.try_recv() {
+        return Err(error);
+    }
+    Ok(ServiceInfrastructure {
+        order_events_data_source: order_events_data_source.ok_or_else(|| RuntimeError::InvalidConfiguration("infrastructure maker order_events_data_source failed without an error".to_owned()))?,
+        local_cron_data_source: local_cron_data_source.ok_or_else(|| RuntimeError::InvalidConfiguration("infrastructure maker local_cron_data_source failed without an error".to_owned()))?,
+    })
+}
 
 pub fn init_runtime(
     config: &Config,
     environment: RuntimeEnvironment,
     functions: ServiceFunctions,
+    infrastructure: ServiceInfrastructure,
 ) -> RuntimeResult<ServiceRuntime>  {
     let analytics_schedule = Arc::new(InputStream::<String, (), String>::new(&config.streams.analytics_schedule, environment.clone()));
     let consume_order_processed = Arc::new(InputStream::<OrderProcessed, OrderProcessed, String>::new(&config.streams.consume_order_processed, environment.clone()));
     let (count_order_processed, count_order_processed_error) = consume_order_processed.stream().process(&config.streams.count_order_processed, functions.count_order_processed)?;
     let _ = &count_order_processed_error;
     consume_order_processed.set_source(&count_order_processed)?;
-    let order_events_data_source = RdkafkaKafkaDataSource::from_input(&consume_order_processed)?;
-    let local_cron_data_source = CronDataSource::new(crate::internal::config::LOCAL_CRON_CONNECTOR_ID, environment.clone())?;
-    order_events_data_source.add_endpoint(
+    infrastructure.order_events_data_source.add_endpoint(
         consume_order_processed.as_ref().clone(),
         functions.order_processed_endpoint_source,
     )?;
     make_croner_endpoint_consumer(
-        &local_cron_data_source, &analytics_schedule, functions.analytics_schedule_source,
+        &infrastructure.local_cron_data_source, &analytics_schedule, functions.analytics_schedule_source,
     )?;
     Ok(ServiceRuntime {
       streams: ServiceStreams {
@@ -247,8 +333,8 @@ pub fn init_runtime(
       handlers: ServiceHandlers {
       },
       data_connectors: ServiceDataConnectors {
-        order_events_data_source: order_events_data_source,
-        local_cron_data_source: local_cron_data_source,
+        order_events_data_source: infrastructure.order_events_data_source,
+        local_cron_data_source: infrastructure.local_cron_data_source,
       },
     })
 }
@@ -267,10 +353,13 @@ impl GeneratedService {
         custom_makers_init(context.clone(), &mut makers)?;
         let mut functions = init_functions(
             context.clone(), config, app.environment().clone(), &makers,
-        )?;
+        ).await?;
         custom_functions_init(context, &mut functions)?;
+        let infrastructure = init_infrastructure(
+            MessageContext::new(), app.environment().clone(), &makers,
+        ).await?;
         let runtime = init_runtime(
-            config, app.environment().clone(), functions,
+            config, app.environment().clone(), functions, infrastructure,
         )?;
         app.register_data_source(Arc::clone(&runtime.data_connectors.order_events_data_source))?;
         app.register_data_source(Arc::clone(&runtime.data_connectors.local_cron_data_source))?;

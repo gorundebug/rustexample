@@ -48,7 +48,7 @@ impl MapFunction<OrderState, OrderProcessed> for MapToOrderProcessed {
     }
 }
 
-pub fn make_map_to_order_processed(
+pub async fn make_map_to_order_processed(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
     _config: &MapStreamConfig,

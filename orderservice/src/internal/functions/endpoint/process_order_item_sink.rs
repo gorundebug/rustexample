@@ -131,7 +131,7 @@ impl
     }
 }
 
-pub fn make_process_order_item_sink(
+pub async fn make_process_order_item_sink(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
     _config: &GrpcEndpointConfig,

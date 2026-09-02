@@ -32,7 +32,7 @@ impl FlatMapFunction<Order, OrderItem> for ProcessOrderItems {
     }
 }
 
-pub fn make_process_order_items(
+pub async fn make_process_order_items(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
     _config: &FlatMapStreamConfig,

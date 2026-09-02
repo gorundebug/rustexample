@@ -22,7 +22,7 @@ impl ScheduleEndpointFunction<String> for AnalyticsScheduleSource {
     }
 }
 
-pub fn make_analytics_schedule_source(
+pub async fn make_analytics_schedule_source(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
     _config: &CronEndpointConfig,

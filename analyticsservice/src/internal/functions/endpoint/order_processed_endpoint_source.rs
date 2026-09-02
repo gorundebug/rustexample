@@ -81,7 +81,7 @@ impl EndpointHandler<(), OrderProcessed, OrderProcessed, String> for OrderProces
     }
 }
 
-pub fn make_order_processed_endpoint_source(
+pub async fn make_order_processed_endpoint_source(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
     _config: &KafkaEndpointConfig,

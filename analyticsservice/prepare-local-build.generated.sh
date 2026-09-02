@@ -7,7 +7,7 @@ work_dir="${2:?work directory is required}"
 test -f "$source_dir/Cargo.toml"
 mkdir -p "$work_dir"
 find "$work_dir" -mindepth 1 -maxdepth 1 ! -name target -exec rm -rf -- {} +
-cp -a "$source_dir/." "$work_dir/"
+cp -R "$source_dir/." "$work_dir/"
 
 manifest="$work_dir/Cargo.toml"
 sed -i -E 's|^servicelib-gorundebug[[:space:]]*=.*$|servicelib-gorundebug = { path = "/workspace/rustservicelib" }|' "$manifest"

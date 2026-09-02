@@ -70,7 +70,7 @@ RUN set -eu; \
     source_dir=${manifest%/Cargo.toml}; \
     if [ -z "$source_dir" ] || [ "$source_dir" = "/" ]; then echo "unsafe rustservicelib source directory" >&2; exit 1; fi; \
     mkdir -p /workspace/rustservicelib; \
-    cp -a "$source_dir/." /workspace/rustservicelib/; \
+    cp -R "$source_dir/." /workspace/rustservicelib/; \
     rm -rf /tmp/rustservicelib-source
 
 # Source-mounted local development stops before project sources are copied.

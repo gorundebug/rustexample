@@ -37,7 +37,7 @@ impl DelayFunction<Order> for SoftDeadline {
     }
 }
 
-pub fn make_soft_deadline(
+pub async fn make_soft_deadline(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
     _config: &DelayStreamConfig,

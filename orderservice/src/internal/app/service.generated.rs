@@ -2,13 +2,24 @@
 
 #![allow(dead_code, unused_imports)]
 
-use std::sync::{Arc, OnceLock, Weak, mpsc};
+use std::{future::Future, pin::Pin, sync::{Arc, OnceLock, Weak, mpsc}};
 
 use servicelib::{
     MessageContext, Stream,
     operators::{InputStream, SinkStream, SinkStreamWithResult},
     runtime::{
-        config::{ConfigLoader, DelayStreamConfig, FlatMapStreamConfig, GrpcEndpointConfig, HttpEndpointConfig, KafkaEndpointConfig, MapStreamConfig,  },
+        config::{
+            ConfigLoader, RuntimeDataConnectorConfig,
+            DelayStreamConfig,
+            FlatMapStreamConfig,
+            GrpcEndpointConfig,
+            HttpEndpointConfig,
+            KafkaEndpointConfig,
+            MapStreamConfig,
+            HttpDataConnectorConfig,
+            GrpcDataConnectorConfig,
+            KafkaDataConnectorConfig,
+        },
         environment::{RuntimeEnvironment, RuntimeError, RuntimeResult},
         serviceapp::ServiceApp,
     },
@@ -29,7 +40,6 @@ use servicelib::{
 
 use servicelib::{
     datasource::http::{AxumDataSource, EndpointHandler as _},
-    runtime::config::HttpDataConnectorConfig,
 };
 
 
@@ -55,6 +65,7 @@ pub struct ServiceHandlers {
 }
 
 pub struct ServiceDataConnectors {
+    pub order_service_api_data_source: Arc<AxumDataSource>,
     pub order_events_data_sink: Arc<RdkafkaKafkaDataSink>,
     pub inventory_data_sink: Arc<TonicDataSink>,
 }
@@ -63,6 +74,12 @@ pub struct ServiceRuntime {
     pub streams: ServiceStreams,
     pub handlers: ServiceHandlers,
     pub data_connectors: ServiceDataConnectors,
+}
+
+pub struct ServiceInfrastructure {
+    pub order_service_api_data_source: Arc<AxumDataSource>,
+    pub order_events_data_sink: Arc<RdkafkaKafkaDataSink>,
+    pub inventory_data_sink: Arc<TonicDataSink>,
 }
 
 struct GeneratedServiceInner {
@@ -77,60 +94,129 @@ pub struct GeneratedService {
 
 #[derive(Clone)]
 pub struct ServiceMakers {
-    pub map_order_item_result_to_order_state: Arc<dyn Fn(
+    pub map_order_item_result_to_order_state: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
-        &MapStreamConfig,
-    ) -> RuntimeResult<MapOrderItemResultToOrderState> + Send + Sync>,
-    pub map_to_order_processed: Arc<dyn Fn(
+        &'a MapStreamConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<MapOrderItemResultToOrderState>> + Send + 'a>> + Send + Sync>,
+    pub map_to_order_processed: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
-        &MapStreamConfig,
-    ) -> RuntimeResult<MapToOrderProcessed> + Send + Sync>,
-    pub map_to_order_state: Arc<dyn Fn(
+        &'a MapStreamConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<MapToOrderProcessed>> + Send + 'a>> + Send + Sync>,
+    pub map_to_order_state: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
-        &MapStreamConfig,
-    ) -> RuntimeResult<MapToOrderState> + Send + Sync>,
-    pub order_processed_endpoint_sink: Arc<dyn Fn(
+        &'a MapStreamConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<MapToOrderState>> + Send + 'a>> + Send + Sync>,
+    pub order_processed_endpoint_sink: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
-        &KafkaEndpointConfig,
-    ) -> RuntimeResult<OrderProcessedEndpointSink> + Send + Sync>,
-    pub process_order_item_sink: Arc<dyn Fn(
+        &'a KafkaEndpointConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<OrderProcessedEndpointSink>> + Send + 'a>> + Send + Sync>,
+    pub process_order_item_sink: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
-        &GrpcEndpointConfig,
-    ) -> RuntimeResult<ProcessOrderItemSink> + Send + Sync>,
-    pub process_order_items: Arc<dyn Fn(
+        &'a GrpcEndpointConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<ProcessOrderItemSink>> + Send + 'a>> + Send + Sync>,
+    pub process_order_items: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
-        &FlatMapStreamConfig,
-    ) -> RuntimeResult<ProcessOrderItems> + Send + Sync>,
-    pub process_order_source: Arc<dyn Fn(
+        &'a FlatMapStreamConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<ProcessOrderItems>> + Send + 'a>> + Send + Sync>,
+    pub process_order_source: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
-        &HttpEndpointConfig,
-    ) -> RuntimeResult<ProcessOrderSource> + Send + Sync>,
-    pub soft_deadline: Arc<dyn Fn(
+        &'a HttpEndpointConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<ProcessOrderSource>> + Send + 'a>> + Send + Sync>,
+    pub soft_deadline: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
-        &DelayStreamConfig,
-    ) -> RuntimeResult<SoftDeadline> + Send + Sync>,
+        &'a DelayStreamConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<SoftDeadline>> + Send + 'a>> + Send + Sync>,
+    pub order_service_api_data_source: ServiceInfrastructureMaker<HttpDataConnectorConfig, Arc<AxumDataSource>>,
+    pub order_events_data_sink: ServiceInfrastructureMaker<KafkaDataConnectorConfig, Arc<RdkafkaKafkaDataSink>>,
+    pub inventory_data_sink: ServiceInfrastructureMaker<GrpcDataConnectorConfig, Arc<TonicDataSink>>,
 }
+
+pub type ServiceInfrastructureMaker<C, T> = Arc<dyn for<'a> Fn(
+    MessageContext,
+    RuntimeEnvironment,
+    &'a C,
+) -> Pin<Box<dyn Future<Output = RuntimeResult<T>> + Send + 'a>> + Send + Sync>;
 
 impl Default for ServiceMakers {
     fn default() -> Self {
         Self {
-            map_order_item_result_to_order_state: Arc::new(make_map_order_item_result_to_order_state),
-            map_to_order_processed: Arc::new(make_map_to_order_processed),
-            map_to_order_state: Arc::new(make_map_to_order_state),
-            order_processed_endpoint_sink: Arc::new(make_order_processed_endpoint_sink),
-            process_order_item_sink: Arc::new(make_process_order_item_sink),
-            process_order_items: Arc::new(make_process_order_items),
-            process_order_source: Arc::new(make_process_order_source),
-            soft_deadline: Arc::new(make_soft_deadline),
+            map_order_item_result_to_order_state: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_map_order_item_result_to_order_state(context, environment, config).await })
+            }),
+            map_to_order_processed: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_map_to_order_processed(context, environment, config).await })
+            }),
+            map_to_order_state: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_map_to_order_state(context, environment, config).await })
+            }),
+            order_processed_endpoint_sink: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_order_processed_endpoint_sink(context, environment, config).await })
+            }),
+            process_order_item_sink: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_process_order_item_sink(context, environment, config).await })
+            }),
+            process_order_items: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_process_order_items(context, environment, config).await })
+            }),
+            process_order_source: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_process_order_source(context, environment, config).await })
+            }),
+            soft_deadline: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_soft_deadline(context, environment, config).await })
+            }),
+            order_service_api_data_source: Arc::new(|_context, environment, config| {
+                Box::pin(async move { Ok(AxumDataSource::new(environment, config)) })
+            }),
+            order_events_data_sink: Arc::new(|_context, environment, config| {
+                Box::pin(async move { RdkafkaKafkaDataSink::from_config(environment, config) })
+            }),
+            inventory_data_sink: Arc::new(|_context, environment, config| {
+                Box::pin(async move { TonicDataSink::from_config(environment, config) })
+            }),
         }
+    }
+}
+
+fn connector_config(
+    environment: &RuntimeEnvironment,
+    connector_id: i32,
+) -> RuntimeResult<Arc<RuntimeDataConnectorConfig>> {
+    environment.runtime_config().data_connector_by_id(connector_id).ok_or_else(||
+        RuntimeError::InvalidConfiguration(format!(
+            "data connector {connector_id} is not configured"
+        ))
+    )
+}
+fn http_connector_config(environment: &RuntimeEnvironment, connector_id: i32) -> RuntimeResult<HttpDataConnectorConfig> {
+    match connector_config(environment, connector_id)?.as_ref() {
+        RuntimeDataConnectorConfig::Http(config) => Ok(config.clone()),
+        _ => Err(RuntimeError::InvalidConfiguration(format!(
+            "data connector {connector_id} is not HTTP"
+        ))),
+    }
+}
+fn grpc_connector_config(environment: &RuntimeEnvironment, connector_id: i32) -> RuntimeResult<GrpcDataConnectorConfig> {
+    match connector_config(environment, connector_id)?.as_ref() {
+        RuntimeDataConnectorConfig::Grpc(config) => Ok(config.clone()),
+        _ => Err(RuntimeError::InvalidConfiguration(format!(
+            "data connector {connector_id} is not gRPC"
+        ))),
+    }
+}
+fn kafka_connector_config(environment: &RuntimeEnvironment, connector_id: i32) -> RuntimeResult<KafkaDataConnectorConfig> {
+    match connector_config(environment, connector_id)?.as_ref() {
+        RuntimeDataConnectorConfig::Kafka(config) => Ok(config.clone()),
+        _ => Err(RuntimeError::InvalidConfiguration(format!(
+            "data connector {connector_id} is not Kafka"
+        ))),
     }
 }
 
@@ -145,7 +231,7 @@ pub struct ServiceFunctions {
     pub soft_deadline: SoftDeadline,
 }
 
-pub fn init_functions(
+pub async fn init_functions(
     context: MessageContext,
     config: &Config,
     environment: RuntimeEnvironment,
@@ -153,6 +239,182 @@ pub fn init_functions(
 ) -> RuntimeResult<ServiceFunctions> {
     let maker_group_context = context.child();
     let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
+        let map_order_item_result_to_order_state_maker = makers.map_order_item_result_to_order_state.clone();
+        let map_order_item_result_to_order_state_context = maker_group_context.clone();
+        let map_order_item_result_to_order_state_group_context = maker_group_context.clone();
+        let map_order_item_result_to_order_state_environment = environment.clone();
+        let map_order_item_result_to_order_state_error_sender = maker_error_sender.clone();
+        let map_order_item_result_to_order_state_future = async move {
+            let result = (map_order_item_result_to_order_state_maker)(
+                    map_order_item_result_to_order_state_context,
+                    map_order_item_result_to_order_state_environment,
+                    &config.streams.map_order_item_result_to_order_state,
+                ).await;
+            match result {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    map_order_item_result_to_order_state_group_context.cancel();
+                    map_order_item_result_to_order_state_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+            }
+        };
+        let map_to_order_processed_maker = makers.map_to_order_processed.clone();
+        let map_to_order_processed_context = maker_group_context.clone();
+        let map_to_order_processed_group_context = maker_group_context.clone();
+        let map_to_order_processed_environment = environment.clone();
+        let map_to_order_processed_error_sender = maker_error_sender.clone();
+        let map_to_order_processed_future = async move {
+            let result = (map_to_order_processed_maker)(
+                    map_to_order_processed_context,
+                    map_to_order_processed_environment,
+                    &config.streams.map_to_order_processed,
+                ).await;
+            match result {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    map_to_order_processed_group_context.cancel();
+                    map_to_order_processed_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+            }
+        };
+        let map_to_order_state_maker = makers.map_to_order_state.clone();
+        let map_to_order_state_context = maker_group_context.clone();
+        let map_to_order_state_group_context = maker_group_context.clone();
+        let map_to_order_state_environment = environment.clone();
+        let map_to_order_state_error_sender = maker_error_sender.clone();
+        let map_to_order_state_future = async move {
+            let result = (map_to_order_state_maker)(
+                    map_to_order_state_context,
+                    map_to_order_state_environment,
+                    &config.streams.map_to_order_state,
+                ).await;
+            match result {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    map_to_order_state_group_context.cancel();
+                    map_to_order_state_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+            }
+        };
+        let order_processed_endpoint_sink_maker = makers.order_processed_endpoint_sink.clone();
+        let order_processed_endpoint_sink_context = maker_group_context.clone();
+        let order_processed_endpoint_sink_group_context = maker_group_context.clone();
+        let order_processed_endpoint_sink_environment = environment.clone();
+        let order_processed_endpoint_sink_error_sender = maker_error_sender.clone();
+        let order_processed_endpoint_sink_future = async move {
+            let result = (order_processed_endpoint_sink_maker)(
+                    order_processed_endpoint_sink_context,
+                    order_processed_endpoint_sink_environment,
+                    &config.endpoints.order_processed,
+                ).await;
+            match result {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    order_processed_endpoint_sink_group_context.cancel();
+                    order_processed_endpoint_sink_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+            }
+        };
+        let process_order_item_sink_maker = makers.process_order_item_sink.clone();
+        let process_order_item_sink_context = maker_group_context.clone();
+        let process_order_item_sink_group_context = maker_group_context.clone();
+        let process_order_item_sink_environment = environment.clone();
+        let process_order_item_sink_error_sender = maker_error_sender.clone();
+        let process_order_item_sink_future = async move {
+            let result = (process_order_item_sink_maker)(
+                    process_order_item_sink_context,
+                    process_order_item_sink_environment,
+                    &config.endpoints.process_order_item,
+                ).await;
+            match result {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    process_order_item_sink_group_context.cancel();
+                    process_order_item_sink_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+            }
+        };
+        let process_order_items_maker = makers.process_order_items.clone();
+        let process_order_items_context = maker_group_context.clone();
+        let process_order_items_group_context = maker_group_context.clone();
+        let process_order_items_environment = environment.clone();
+        let process_order_items_error_sender = maker_error_sender.clone();
+        let process_order_items_future = async move {
+            let result = (process_order_items_maker)(
+                    process_order_items_context,
+                    process_order_items_environment,
+                    &config.streams.process_order_items,
+                ).await;
+            match result {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    process_order_items_group_context.cancel();
+                    process_order_items_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+            }
+        };
+        let process_order_source_maker = makers.process_order_source.clone();
+        let process_order_source_context = maker_group_context.clone();
+        let process_order_source_group_context = maker_group_context.clone();
+        let process_order_source_environment = environment.clone();
+        let process_order_source_error_sender = maker_error_sender.clone();
+        let process_order_source_future = async move {
+            let result = (process_order_source_maker)(
+                    process_order_source_context,
+                    process_order_source_environment,
+                    &config.endpoints.process_order,
+                ).await;
+            match result {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    process_order_source_group_context.cancel();
+                    process_order_source_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+            }
+        };
+        let soft_deadline_maker = makers.soft_deadline.clone();
+        let soft_deadline_context = maker_group_context.clone();
+        let soft_deadline_group_context = maker_group_context.clone();
+        let soft_deadline_environment = environment.clone();
+        let soft_deadline_error_sender = maker_error_sender.clone();
+        let soft_deadline_future = async move {
+            let result = (soft_deadline_maker)(
+                    soft_deadline_context,
+                    soft_deadline_environment,
+                    &config.streams.soft_deadline,
+                ).await;
+            match result {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    soft_deadline_group_context.cancel();
+                    soft_deadline_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+            }
+        };
     let (
         map_order_item_result_to_order_state,
         map_to_order_processed,
@@ -162,258 +424,17 @@ pub fn init_functions(
         process_order_items,
         process_order_source,
         soft_deadline,
-    ) = std::thread::scope(|scope| -> RuntimeResult<_> {
-        let map_order_item_result_to_order_state_maker = makers.map_order_item_result_to_order_state.clone();
-        let map_order_item_result_to_order_state_context = maker_group_context.clone();
-        let map_order_item_result_to_order_state_group_context = maker_group_context.clone();
-        let map_order_item_result_to_order_state_environment = environment.clone();
-        let map_order_item_result_to_order_state_error_sender = maker_error_sender.clone();
-        let map_order_item_result_to_order_state_task = scope.spawn(move || {
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                (map_order_item_result_to_order_state_maker)(
-                    map_order_item_result_to_order_state_context,
-                    map_order_item_result_to_order_state_environment,
-                    &config.streams.map_order_item_result_to_order_state,
-                )
-            }));
-            match result {
-                Ok(Ok(value)) => Some(value),
-                Ok(Err(error)) => {
-                    map_order_item_result_to_order_state_group_context.cancel();
-                    map_order_item_result_to_order_state_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
-                Err(panic) => {
-                    map_order_item_result_to_order_state_group_context.cancel();
-                    std::panic::resume_unwind(panic)
-                }
-            }
-        });
-        let map_to_order_processed_maker = makers.map_to_order_processed.clone();
-        let map_to_order_processed_context = maker_group_context.clone();
-        let map_to_order_processed_group_context = maker_group_context.clone();
-        let map_to_order_processed_environment = environment.clone();
-        let map_to_order_processed_error_sender = maker_error_sender.clone();
-        let map_to_order_processed_task = scope.spawn(move || {
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                (map_to_order_processed_maker)(
-                    map_to_order_processed_context,
-                    map_to_order_processed_environment,
-                    &config.streams.map_to_order_processed,
-                )
-            }));
-            match result {
-                Ok(Ok(value)) => Some(value),
-                Ok(Err(error)) => {
-                    map_to_order_processed_group_context.cancel();
-                    map_to_order_processed_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
-                Err(panic) => {
-                    map_to_order_processed_group_context.cancel();
-                    std::panic::resume_unwind(panic)
-                }
-            }
-        });
-        let map_to_order_state_maker = makers.map_to_order_state.clone();
-        let map_to_order_state_context = maker_group_context.clone();
-        let map_to_order_state_group_context = maker_group_context.clone();
-        let map_to_order_state_environment = environment.clone();
-        let map_to_order_state_error_sender = maker_error_sender.clone();
-        let map_to_order_state_task = scope.spawn(move || {
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                (map_to_order_state_maker)(
-                    map_to_order_state_context,
-                    map_to_order_state_environment,
-                    &config.streams.map_to_order_state,
-                )
-            }));
-            match result {
-                Ok(Ok(value)) => Some(value),
-                Ok(Err(error)) => {
-                    map_to_order_state_group_context.cancel();
-                    map_to_order_state_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
-                Err(panic) => {
-                    map_to_order_state_group_context.cancel();
-                    std::panic::resume_unwind(panic)
-                }
-            }
-        });
-        let order_processed_endpoint_sink_maker = makers.order_processed_endpoint_sink.clone();
-        let order_processed_endpoint_sink_context = maker_group_context.clone();
-        let order_processed_endpoint_sink_group_context = maker_group_context.clone();
-        let order_processed_endpoint_sink_environment = environment.clone();
-        let order_processed_endpoint_sink_error_sender = maker_error_sender.clone();
-        let order_processed_endpoint_sink_task = scope.spawn(move || {
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                (order_processed_endpoint_sink_maker)(
-                    order_processed_endpoint_sink_context,
-                    order_processed_endpoint_sink_environment,
-                    &config.endpoints.order_processed,
-                )
-            }));
-            match result {
-                Ok(Ok(value)) => Some(value),
-                Ok(Err(error)) => {
-                    order_processed_endpoint_sink_group_context.cancel();
-                    order_processed_endpoint_sink_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
-                Err(panic) => {
-                    order_processed_endpoint_sink_group_context.cancel();
-                    std::panic::resume_unwind(panic)
-                }
-            }
-        });
-        let process_order_item_sink_maker = makers.process_order_item_sink.clone();
-        let process_order_item_sink_context = maker_group_context.clone();
-        let process_order_item_sink_group_context = maker_group_context.clone();
-        let process_order_item_sink_environment = environment.clone();
-        let process_order_item_sink_error_sender = maker_error_sender.clone();
-        let process_order_item_sink_task = scope.spawn(move || {
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                (process_order_item_sink_maker)(
-                    process_order_item_sink_context,
-                    process_order_item_sink_environment,
-                    &config.endpoints.process_order_item,
-                )
-            }));
-            match result {
-                Ok(Ok(value)) => Some(value),
-                Ok(Err(error)) => {
-                    process_order_item_sink_group_context.cancel();
-                    process_order_item_sink_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
-                Err(panic) => {
-                    process_order_item_sink_group_context.cancel();
-                    std::panic::resume_unwind(panic)
-                }
-            }
-        });
-        let process_order_items_maker = makers.process_order_items.clone();
-        let process_order_items_context = maker_group_context.clone();
-        let process_order_items_group_context = maker_group_context.clone();
-        let process_order_items_environment = environment.clone();
-        let process_order_items_error_sender = maker_error_sender.clone();
-        let process_order_items_task = scope.spawn(move || {
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                (process_order_items_maker)(
-                    process_order_items_context,
-                    process_order_items_environment,
-                    &config.streams.process_order_items,
-                )
-            }));
-            match result {
-                Ok(Ok(value)) => Some(value),
-                Ok(Err(error)) => {
-                    process_order_items_group_context.cancel();
-                    process_order_items_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
-                Err(panic) => {
-                    process_order_items_group_context.cancel();
-                    std::panic::resume_unwind(panic)
-                }
-            }
-        });
-        let process_order_source_maker = makers.process_order_source.clone();
-        let process_order_source_context = maker_group_context.clone();
-        let process_order_source_group_context = maker_group_context.clone();
-        let process_order_source_environment = environment.clone();
-        let process_order_source_error_sender = maker_error_sender.clone();
-        let process_order_source_task = scope.spawn(move || {
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                (process_order_source_maker)(
-                    process_order_source_context,
-                    process_order_source_environment,
-                    &config.endpoints.process_order,
-                )
-            }));
-            match result {
-                Ok(Ok(value)) => Some(value),
-                Ok(Err(error)) => {
-                    process_order_source_group_context.cancel();
-                    process_order_source_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
-                Err(panic) => {
-                    process_order_source_group_context.cancel();
-                    std::panic::resume_unwind(panic)
-                }
-            }
-        });
-        let soft_deadline_maker = makers.soft_deadline.clone();
-        let soft_deadline_context = maker_group_context.clone();
-        let soft_deadline_group_context = maker_group_context.clone();
-        let soft_deadline_environment = environment.clone();
-        let soft_deadline_error_sender = maker_error_sender.clone();
-        let soft_deadline_task = scope.spawn(move || {
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                (soft_deadline_maker)(
-                    soft_deadline_context,
-                    soft_deadline_environment,
-                    &config.streams.soft_deadline,
-                )
-            }));
-            match result {
-                Ok(Ok(value)) => Some(value),
-                Ok(Err(error)) => {
-                    soft_deadline_group_context.cancel();
-                    soft_deadline_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
-                Err(panic) => {
-                    soft_deadline_group_context.cancel();
-                    std::panic::resume_unwind(panic)
-                }
-            }
-        });
-        Ok((
-            map_order_item_result_to_order_state_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
-                "function maker map_order_item_result_to_order_state panicked".to_string(),
-            ))?,
-            map_to_order_processed_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
-                "function maker map_to_order_processed panicked".to_string(),
-            ))?,
-            map_to_order_state_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
-                "function maker map_to_order_state panicked".to_string(),
-            ))?,
-            order_processed_endpoint_sink_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
-                "function maker order_processed_endpoint_sink panicked".to_string(),
-            ))?,
-            process_order_item_sink_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
-                "function maker process_order_item_sink panicked".to_string(),
-            ))?,
-            process_order_items_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
-                "function maker process_order_items panicked".to_string(),
-            ))?,
-            process_order_source_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
-                "function maker process_order_source panicked".to_string(),
-            ))?,
-            soft_deadline_task.join().map_err(|_| RuntimeError::InvalidConfiguration(
-                "function maker soft_deadline panicked".to_string(),
-            ))?,
-        ))
-    })?;
+    ) = tokio::join!(
+        map_order_item_result_to_order_state_future,
+        map_to_order_processed_future,
+        map_to_order_state_future,
+        order_processed_endpoint_sink_future,
+        process_order_item_sink_future,
+        process_order_items_future,
+        process_order_source_future,
+        soft_deadline_future,
+    );
+    maker_group_context.cancel();
     drop(maker_error_sender);
     if let Ok(error) = maker_error_receiver.try_recv() {
         return Err(error);
@@ -453,11 +474,72 @@ pub fn init_functions(
         soft_deadline,
     })
 }
+macro_rules! infrastructure_maker_future {
+    ($maker:expr, $context:expr, $environment:expr, $config:expr, $group:expr, $errors:expr) => ({
+        let maker = $maker.clone();
+        let context = $context.clone();
+        let environment = $environment.clone();
+        let config = $config;
+        let group = $group.clone();
+        let errors = $errors.clone();
+        async move {
+            match (maker)(context, environment, &config).await {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    group.cancel();
+                    errors.send(error).expect("infrastructure maker error receiver was dropped");
+                    None
+                }
+            }
+        }
+    });
+}
+
+pub async fn init_infrastructure(
+    context: MessageContext,
+    environment: RuntimeEnvironment,
+    makers: &ServiceMakers,
+) -> RuntimeResult<ServiceInfrastructure> {
+    let maker_group_context = context.child();
+    let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
+    let order_service_api_data_source_future = infrastructure_maker_future!(
+        makers.order_service_api_data_source, maker_group_context, environment,
+        http_connector_config(&environment, 4)?, maker_group_context, maker_error_sender
+    );
+    let order_events_data_sink_future = infrastructure_maker_future!(
+        makers.order_events_data_sink, maker_group_context, environment,
+        kafka_connector_config(&environment, 3)?, maker_group_context, maker_error_sender
+    );
+    let inventory_data_sink_future = infrastructure_maker_future!(
+        makers.inventory_data_sink, maker_group_context, environment,
+        grpc_connector_config(&environment, 1)?, maker_group_context, maker_error_sender
+    );
+    let (
+        order_service_api_data_source,
+        order_events_data_sink,
+        inventory_data_sink,
+    ) = tokio::join!(
+        order_service_api_data_source_future,
+        order_events_data_sink_future,
+        inventory_data_sink_future,
+    );
+    maker_group_context.cancel();
+    drop(maker_error_sender);
+    if let Ok(error) = maker_error_receiver.try_recv() {
+        return Err(error);
+    }
+    Ok(ServiceInfrastructure {
+        order_service_api_data_source: order_service_api_data_source.ok_or_else(|| RuntimeError::InvalidConfiguration("infrastructure maker order_service_api_data_source failed without an error".to_owned()))?,
+        order_events_data_sink: order_events_data_sink.ok_or_else(|| RuntimeError::InvalidConfiguration("infrastructure maker order_events_data_sink failed without an error".to_owned()))?,
+        inventory_data_sink: inventory_data_sink.ok_or_else(|| RuntimeError::InvalidConfiguration("infrastructure maker inventory_data_sink failed without an error".to_owned()))?,
+    })
+}
 
 pub async fn init_runtime(
     config: &Config,
     environment: RuntimeEnvironment,
     functions: ServiceFunctions,
+    infrastructure: ServiceInfrastructure,
 ) -> Result<ServiceRuntime, Box<dyn std::error::Error>> {
     let process_order = Arc::new(InputStream::<Order, OrderState, String>::new(&config.streams.process_order, environment.clone()));
     let split_pipeline = process_order.stream().split(&config.streams.split_pipeline)?;
@@ -474,8 +556,7 @@ pub async fn init_runtime(
     let map_to_order_processed = map_to_order_processed_branch.map(&config.streams.map_to_order_processed, functions.map_to_order_processed)?;
     let publish_order_processed = map_to_order_processed.sink_with_result::<String, String>(&config.streams.publish_order_processed)?;
     process_order.set_source(&process_order_branch)?;
-    let order_events_data_sink = RdkafkaKafkaDataSink::from_stream(&publish_order_processed)?;
-    let inventory_data_sink = TonicDataSink::from_stream(&process_order_item)?;
+    let inventory_data_sink = Arc::clone(&infrastructure.inventory_data_sink);
     let client_sink = Arc::clone(&inventory_data_sink);
     let client: NoStreamingClientFunction<ProcessOrderItemRequest, ProcessOrderItemResponse> = Arc::new(move |context, request| {
         let client_sink = Arc::clone(&client_sink);
@@ -492,7 +573,7 @@ pub async fn init_runtime(
         client,
     )?;
     make_rdkafka_kafka_endpoint_consumer(
-        &publish_order_processed, Arc::clone(&order_events_data_sink), None,
+        &publish_order_processed, Arc::clone(&infrastructure.order_events_data_sink), None,
         functions.order_processed_endpoint_sink,
     )?;
     Ok(ServiceRuntime {
@@ -514,8 +595,9 @@ pub async fn init_runtime(
         process_order_source: functions.process_order_source,
       },
       data_connectors: ServiceDataConnectors {
-        order_events_data_sink: order_events_data_sink,
-        inventory_data_sink: inventory_data_sink,
+        order_service_api_data_source: infrastructure.order_service_api_data_source,
+        order_events_data_sink: infrastructure.order_events_data_sink,
+        inventory_data_sink: infrastructure.inventory_data_sink,
       },
     })
 }
@@ -534,32 +616,24 @@ impl GeneratedService {
         custom_makers_init(context.clone(), &mut makers)?;
         let mut functions = init_functions(
             context.clone(), config, app.environment().clone(), &makers,
-        )?;
-        custom_functions_init(context, &mut functions)?;
-        let runtime = init_runtime(
-            config, app.environment().clone(), functions,
         ).await?;
-        let order_service_api_data_source = AxumDataSource::new(
-            app.environment().clone(),
-            &HttpDataConnectorConfig {
-                id: config.endpoints.process_order.id_data_connector,
-                name: "Order Service API".to_owned(),
-                host: config.http_host.clone(),
-                port: config.http_port,
-                address: String::new(),
-                use_dedicated_listener: false,
-            },
-        );
+        custom_functions_init(context, &mut functions)?;
+        let infrastructure = init_infrastructure(
+            MessageContext::new(), app.environment().clone(), &makers,
+        ).await?;
+        let runtime = init_runtime(
+            config, app.environment().clone(), functions, infrastructure,
+        ).await?;
         runtime.handlers.process_order_source.reload(
             &config.endpoints.process_order, config.request_timeout_ms,
         );
-        order_service_api_data_source.add_endpoint(
+        runtime.data_connectors.order_service_api_data_source.add_endpoint(
             runtime.streams.process_order.as_ref().clone(),
             config.endpoints.process_order.clone(),
             runtime.handlers.process_order_source.clone(),
         )?;
-        app.add_http_router(order_service_api_data_source.router())?;
-        app.register_data_source(order_service_api_data_source)?;
+        app.add_http_router(runtime.data_connectors.order_service_api_data_source.router())?;
+        app.register_data_source(Arc::clone(&runtime.data_connectors.order_service_api_data_source))?;
         app.register_data_sink(Arc::clone(&runtime.data_connectors.order_events_data_sink))?;
         app.register_data_sink(Arc::clone(&runtime.data_connectors.inventory_data_sink))?;
 

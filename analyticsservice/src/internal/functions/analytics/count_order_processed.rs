@@ -46,7 +46,7 @@ impl ProcessFunction<OrderProcessed, OrderProcessed, String> for CountOrderProce
     }
 }
 
-pub fn make_count_order_processed(
+pub async fn make_count_order_processed(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
     _config: &ProcessStreamConfig,

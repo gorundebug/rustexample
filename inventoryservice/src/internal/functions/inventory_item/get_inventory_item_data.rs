@@ -84,7 +84,7 @@ fn reserve(stock: Option<&AtomicI32>, quantity: i32) -> (i32, bool) {
     (available, false)
 }
 
-pub fn make_get_inventory_item_data(
+pub async fn make_get_inventory_item_data(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
     _config: &ProcessStreamConfig,

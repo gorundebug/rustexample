@@ -38,7 +38,7 @@ impl MapFunction<Order, OrderState> for MapToOrderState {
     }
 }
 
-pub fn make_map_to_order_state(
+pub async fn make_map_to_order_state(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
     _config: &MapStreamConfig,

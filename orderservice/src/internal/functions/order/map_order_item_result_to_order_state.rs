@@ -44,7 +44,7 @@ impl MapFunction<OrderItemResult, OrderState> for MapOrderItemResultToOrderState
     }
 }
 
-pub fn make_map_order_item_result_to_order_state(
+pub async fn make_map_order_item_result_to_order_state(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
     _config: &MapStreamConfig,
