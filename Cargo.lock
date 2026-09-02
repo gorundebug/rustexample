@@ -1184,7 +1184,7 @@ dependencies = [
 
 [[package]]
 name = "inventory-service-api"
-version = "0.2.67"
+version = "0.2.68"
 dependencies = [
  "prost 0.13.5",
  "protoc-bin-vendored",
@@ -1449,9 +1449,9 @@ checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
 
 [[package]]
 name = "mio"
-version = "1.2.2"
+version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30d65c71f1ce40ab09135ce117d742b9f8a19ff91a41a8b57ed50bc2de59c427"
+checksum = "4b18443e9c262bfe8fa82f51666e2642c53393f7e5c27b3e1aeab922cff5b9d8"
 dependencies = [
  "libc",
  "log",
@@ -1681,7 +1681,7 @@ dependencies = [
 
 [[package]]
 name = "order-service-api"
-version = "0.2.67"
+version = "0.2.68"
 dependencies = [
  "ammonia",
  "async-trait",
@@ -2640,7 +2640,7 @@ dependencies = [
 
 [[package]]
 name = "servicelib-gorundebug"
-version = "0.2.67"
+version = "0.2.68"
 dependencies = [
  "arc-swap",
  "async-trait",
