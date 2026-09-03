@@ -9,11 +9,11 @@ async-trait = "0.1"
 axum = "0.8"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.75" }
+servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.76" }
 tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
 tonic = "0.12"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 mimalloc = "0.1"
-example-model = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.75" }
-inventory-service-api = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.75" }
+example-model = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.76" }
+inventory-service-api = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.76" }
