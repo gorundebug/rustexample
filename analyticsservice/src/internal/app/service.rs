@@ -6,7 +6,9 @@ use servicelib::{
     },
 };
 
-use super::service_generated::{GeneratedService, ServiceFunctions, ServiceMakers};
+use super::service_generated::{
+    GeneratedService, ServiceFunctions, ServiceMakers,
+};
 use crate::internal::config::Config;
 
 /// User-owned service extension surface. Generated graph and transport wiring
