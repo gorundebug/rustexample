@@ -117,6 +117,10 @@ impl Endpoints {
 #[serde(default, rename_all = "camelCase")]
 pub struct Config {
     pub analytics_schedule_enabled: bool,
+    pub analytics_schedule_missed_run_policy: String,
+    pub analytics_schedule_overlap_policy: String,
+    pub analytics_schedule_schedule: String,
+    pub analytics_schedule_timezone: String,
     pub analytics_schedule_tracing_enabled: bool,
     pub request_timeout_ms: u64,
     pub environment: String,
@@ -140,6 +144,10 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             analytics_schedule_enabled: true,
+            analytics_schedule_missed_run_policy: "FireOnce".to_owned(),
+            analytics_schedule_overlap_policy: "Skip".to_owned(),
+            analytics_schedule_schedule: "*/5 * * * *".to_owned(),
+            analytics_schedule_timezone: "UTC".to_owned(),
             analytics_schedule_tracing_enabled: false,
             request_timeout_ms: 0,
             environment: "".to_owned(),
@@ -192,6 +200,14 @@ impl ServiceConfigContract for Config {
     fn apply_environment(&mut self) -> Result<(), String> {
         apply_bool("ANALYTICS_SCHEDULE_ENABLED", &mut self.analytics_schedule_enabled)?;
         self.endpoints.analytics_schedule.enabled = self.analytics_schedule_enabled;
+        apply_string("ANALYTICS_SCHEDULE_MISSED_RUN_POLICY", &mut self.analytics_schedule_missed_run_policy);
+        self.endpoints.analytics_schedule.missed_run_policy = parse_schedule_missed_run_policy(&self.analytics_schedule_missed_run_policy)?;
+        apply_string("ANALYTICS_SCHEDULE_OVERLAP_POLICY", &mut self.analytics_schedule_overlap_policy);
+        self.endpoints.analytics_schedule.overlap_policy = parse_schedule_overlap_policy(&self.analytics_schedule_overlap_policy)?;
+        apply_string("ANALYTICS_SCHEDULE_SCHEDULE", &mut self.analytics_schedule_schedule);
+        self.endpoints.analytics_schedule.schedule = self.analytics_schedule_schedule.clone();
+        apply_string("ANALYTICS_SCHEDULE_TIMEZONE", &mut self.analytics_schedule_timezone);
+        self.endpoints.analytics_schedule.timezone = self.analytics_schedule_timezone.clone();
         apply_bool("ANALYTICS_SCHEDULE_TRACING_ENABLED", &mut self.analytics_schedule_tracing_enabled)?;
         self.endpoints.analytics_schedule.tracing_enabled = self.analytics_schedule_tracing_enabled;
         apply_u64("ANALYTICS_SERVICE_DEFAULT_GRPC_TIMEOUT", &mut self.request_timeout_ms)?;
