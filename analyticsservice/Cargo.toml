@@ -1,6 +1,6 @@
 [package]
 name = "analytics_service"
-version = "0.2.81"
+version = "0.2.82"
 edition = "2024"
 rust-version = "1.85"
 
@@ -9,11 +9,11 @@ async-trait = "0.1"
 croner = "3.0.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.81" }
+servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.82" }
 tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
 tonic = "0.12"
 tracing = "0.1"
-example-model = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.81" }
+example-model = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.82" }
 mimalloc = "0.1"
 opentelemetry = "0.32"
 tracing-opentelemetry = "0.33"
