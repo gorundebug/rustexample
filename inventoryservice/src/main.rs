@@ -13,24 +13,28 @@ use servicelib::runtime::{
         RuntimeEnvironment,
         metrics::{Metrics, NoopMetricsEngine},
     },
-    telemetry::opentelemetry::{Config as OpenTelemetryConfig, OpenTelemetry},
+    telemetry::opentelemetry::{
+        Config as OpenTelemetryConfig, OpenTelemetry, environment_flag_enabled, install_stdout,
+    },
 };
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (config_path, values_path) =
         config_paths("./config/config.yaml", "./config/overrides.yaml");
-    let telemetry = if std::env::var_os("SERVICELIB_OTEL_ENABLED").is_some() {
+    let noop_logs = environment_flag_enabled("SERVICELIB_NOOP_LOGS");
+    let noop_metrics = environment_flag_enabled("SERVICELIB_NOOP_METRICS");
+    let noop_tracing = environment_flag_enabled("SERVICELIB_NOOP_TRACING");
+    let telemetry = if environment_flag_enabled("SERVICELIB_OTEL_ENABLED")
+        && !(noop_logs && noop_metrics && noop_tracing)
+    {
         Some(OpenTelemetry::install(
             OpenTelemetryConfig::from_environment("Inventory Service"),
         )?)
-    } else if std::env::var_os("SERVICELIB_NOOP_TRACING").is_none() {
-        tracing_subscriber::fmt::init();
-        None
     } else {
+        install_stdout(!noop_logs, !noop_tracing)?;
         None
     };
-    let noop_metrics = std::env::var_os("SERVICELIB_NOOP_METRICS").is_some();
     let metrics = if noop_metrics {
         Metrics::noop()
     } else {
@@ -72,10 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
     };
     environment.publish_runtime_config(loader.runtime_config());
-    Service::new(&config, environment, loader)
-        .await?
-        .run()
-        .await
+    Service::new(&config, environment, loader).await?.run().await
 }
 
 fn config_paths(default_config: &str, default_values: &str) -> (String, String) {

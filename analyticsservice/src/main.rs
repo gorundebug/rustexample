@@ -5,29 +5,36 @@ use std::sync::Arc;
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use internal::{app::Service, config::Config};
+use internal::app::Service;
+use internal::config::Config;
 use servicelib::runtime::{
     config::{CallSemantics, ConfigLoader},
     environment::{
         RuntimeEnvironment,
         metrics::{Metrics, NoopMetricsEngine},
     },
-    telemetry::opentelemetry::{Config as OpenTelemetryConfig, OpenTelemetry},
+    telemetry::opentelemetry::{
+        Config as OpenTelemetryConfig, OpenTelemetry, environment_flag_enabled, install_stdout,
+    },
 };
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let telemetry = if std::env::var_os("SERVICELIB_OTEL_ENABLED").is_some() {
+    let (config_path, values_path) =
+        config_paths("./config/config.yaml", "./config/overrides.yaml");
+    let noop_logs = environment_flag_enabled("SERVICELIB_NOOP_LOGS");
+    let noop_metrics = environment_flag_enabled("SERVICELIB_NOOP_METRICS");
+    let noop_tracing = environment_flag_enabled("SERVICELIB_NOOP_TRACING");
+    let telemetry = if environment_flag_enabled("SERVICELIB_OTEL_ENABLED")
+        && !(noop_logs && noop_metrics && noop_tracing)
+    {
         Some(OpenTelemetry::install(
             OpenTelemetryConfig::from_environment("Analytics Service"),
         )?)
-    } else if std::env::var_os("SERVICELIB_NOOP_TRACING").is_none() {
-        tracing_subscriber::fmt::init();
-        None
     } else {
+        install_stdout(!noop_logs, !noop_tracing)?;
         None
     };
-    let noop_metrics = std::env::var_os("SERVICELIB_NOOP_METRICS").is_some();
     let metrics = if noop_metrics {
         Metrics::noop()
     } else {
@@ -36,8 +43,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map_or_else(Metrics::default, |telemetry| telemetry.metrics().clone())
     };
     let loader = ConfigLoader::load(
-        Some("./config/config.yaml"),
-        Some("./config/overrides.yaml"),
+        Some(config_path),
+        Some(values_path),
         Config::default(),
         &metrics,
         "Analytics Service",
@@ -69,8 +76,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
     };
     environment.publish_runtime_config(loader.runtime_config());
-    Service::new(&config, environment, loader)
-        .await?
-        .run()
-        .await
+    Service::new(&config, environment, loader).await?.run().await
+}
+
+fn config_paths(default_config: &str, default_values: &str) -> (String, String) {
+    let mut config = default_config.to_owned();
+    let mut values = default_values.to_owned();
+    let mut args = std::env::args().skip(1);
+    while let Some(argument) = args.next() {
+        match argument.as_str() {
+            "--config" => config = args.next().unwrap_or(config),
+            "--values" => values = args.next().unwrap_or(values),
+            _ => {}
+        }
+    }
+    (config, values)
 }
