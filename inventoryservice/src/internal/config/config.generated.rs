@@ -217,7 +217,7 @@ impl ServiceConfigContract for Config {
             },
             LinkConfig {
                 from: PROCESS_INVENTORY_ITEM_STREAM_ID, to: GET_INVENTORY_ITEM_DATA_STREAM_ID,
-                call_semantics: CallSemantics::TaskPool { pool_name: "Inventory Priority Workers".to_owned() },
+                call_semantics: CallSemantics::PriorityTaskPool { pool_name: "Inventory Priority Workers".to_owned(), priority: 10 },
                 r#async: false,
             },
         ]
