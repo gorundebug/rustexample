@@ -352,7 +352,7 @@ impl ServiceConfigContract for Config {
             },
             LinkConfig {
                 from: PROCESS_ORDER_STREAM_ID, to: SPLIT_PIPELINE_STREAM_ID,
-                call_semantics: CallSemantics::PriorityTaskPool { pool_name: "Default Pool".to_owned(), priority: 1 },
+                call_semantics: CallSemantics::TaskPool { pool_name: "Default Pool".to_owned() },
                 r#async: false,
             },
             LinkConfig {
