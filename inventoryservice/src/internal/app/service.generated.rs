@@ -6,7 +6,7 @@ use std::{future::Future, pin::Pin, sync::{Arc, OnceLock, Weak, mpsc}};
 
 use servicelib::{
     MessageContext, Stream,
-    operators::{InputStream, SinkStream, SinkStreamWithResult},
+    operators::{InputStream, SinkStream, SinkStreamWithResult, MultiJoinStream, TypedCaseStream},
     runtime::{
         config::{
             ConfigLoader, RuntimeDataConnectorConfig,
@@ -15,6 +15,7 @@ use servicelib::{
             GrpcDataConnectorConfig,
         },
         environment::{RuntimeEnvironment, RuntimeError, RuntimeResult},
+        datastruct::KeyValue,
         serviceapp::ServiceApp,
     },
 };
