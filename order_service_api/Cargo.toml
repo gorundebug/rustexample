@@ -1,6 +1,6 @@
 [package]
 name = "order-service-api"
-version = "0.2.92"
+version = "0.2.93"
 edition = "2024"
 rust-version = "1.85"
 
