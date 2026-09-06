@@ -38,6 +38,8 @@ use servicelib::{
 
 
 
+
+
 use servicelib::{
     datasource::http::{AxumDataSource, EndpointHandler as _},
 };
@@ -504,15 +506,15 @@ pub async fn init_infrastructure(
     let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
     let order_service_api_data_source_future = infrastructure_maker_future!(
         makers.order_service_api_data_source, maker_group_context, environment,
-        http_connector_config(&environment, 4)?, maker_group_context, maker_error_sender
+        http_connector_config(&environment, 5)?, maker_group_context, maker_error_sender
     );
     let order_events_data_sink_future = infrastructure_maker_future!(
         makers.order_events_data_sink, maker_group_context, environment,
-        kafka_connector_config(&environment, 3)?, maker_group_context, maker_error_sender
+        kafka_connector_config(&environment, 4)?, maker_group_context, maker_error_sender
     );
     let inventory_data_sink_future = infrastructure_maker_future!(
         makers.inventory_data_sink, maker_group_context, environment,
-        grpc_connector_config(&environment, 1)?, maker_group_context, maker_error_sender
+        grpc_connector_config(&environment, 2)?, maker_group_context, maker_error_sender
     );
     let (
         order_service_api_data_source,

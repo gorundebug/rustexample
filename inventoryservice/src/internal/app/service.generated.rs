@@ -25,6 +25,8 @@ use example_model::types::*;
 
 
 
+
+
 use servicelib::datasource::grpc::{
     NoStreamingEndpointConsumer, TonicDataSource,
     make_grpc_no_streaming_endpoint_consumer as make_grpc_source_endpoint_consumer,
@@ -245,7 +247,7 @@ pub async fn init_infrastructure(
     let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
     let inventory_service_api_data_source_future = infrastructure_maker_future!(
         makers.inventory_service_api_data_source, maker_group_context, environment,
-        grpc_connector_config(&environment, 1)?, maker_group_context, maker_error_sender
+        grpc_connector_config(&environment, 2)?, maker_group_context, maker_error_sender
     );
     let (
         inventory_service_api_data_source,
