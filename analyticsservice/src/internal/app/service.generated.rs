@@ -896,22 +896,25 @@ pub fn init_runtime(
         &infrastructure.local_cron_data_source, &analytics_schedule, functions.analytics_schedule_source,
     )?;
     let analytics_orders_data_source = make_custom_source_endpoint_consumer(
-        analytics_orders.as_ref().clone(), functions.analytics_orders_source.clone(), functions.analytics_orders_source,
+        analytics_orders.as_ref().clone(), &config.endpoints.analytics_orders,
+        functions.analytics_orders_source.clone(), functions.analytics_orders_source,
     )?;
     let analytics_payments_data_source = make_custom_source_endpoint_consumer(
-        analytics_payments.as_ref().clone(), functions.analytics_payments_source.clone(), functions.analytics_payments_source,
+        analytics_payments.as_ref().clone(), &config.endpoints.analytics_payments,
+        functions.analytics_payments_source.clone(), functions.analytics_payments_source,
     )?;
     let analytics_shipments_data_source = make_custom_source_endpoint_consumer(
-        analytics_shipments.as_ref().clone(), functions.analytics_shipments_source.clone(), functions.analytics_shipments_source,
+        analytics_shipments.as_ref().clone(), &config.endpoints.analytics_shipments,
+        functions.analytics_shipments_source.clone(), functions.analytics_shipments_source,
     )?;
     make_custom_sink_endpoint_consumer(
-        &write_joined_analytics, functions.joined_analytics_sink,
+        &write_joined_analytics, &config.endpoints.joined_analytics, functions.joined_analytics_sink,
     )?;
     make_custom_sink_endpoint_consumer(
-        &write_high_value_analytics, functions.high_value_analytics_sink,
+        &write_high_value_analytics, &config.endpoints.high_value_analytics, functions.high_value_analytics_sink,
     )?;
     make_custom_sink_endpoint_consumer(
-        &write_standard_analytics, functions.standard_analytics_sink,
+        &write_standard_analytics, &config.endpoints.standard_analytics, functions.standard_analytics_sink,
     )?;
     Ok(ServiceRuntime {
       streams: ServiceStreams {
