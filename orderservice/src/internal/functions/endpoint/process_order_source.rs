@@ -35,7 +35,7 @@ pub struct ProcessOrderSource {
 }
 
 pub struct ProcessOrderSourceState {
-    order: Order,
+    order: Arc<Order>,
     expected_items: usize,
     results: Vec<OrderItemResult>,
     response_sent: bool,
@@ -128,9 +128,9 @@ impl
         Ok((
             context.with_timeout_limit(timeout),
             ProcessOrderSourceState {
-                order,
+                order: Arc::new(order),
                 expected_items,
-                results: Vec::new(),
+                results: Vec::with_capacity(expected_items),
                 response_sent: false,
             },
         ))
@@ -228,8 +228,10 @@ impl
                 },
             ),
         );
-        let order = state.lock().await.order.clone();
-        stream.collect(context, order).await;
+        let order = Arc::clone(&state.lock().await.order);
+        stream
+            .collect_payload(context, Payload::Shared(order))
+            .await;
         Ok(())
     }
 
