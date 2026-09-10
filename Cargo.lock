@@ -25,7 +25,7 @@ dependencies = [
 
 [[package]]
 name = "analytics_service"
-version = "0.2.114"
+version = "0.2.115"
 dependencies = [
  "async-trait",
  "croner",
@@ -648,7 +648,7 @@ dependencies = [
 
 [[package]]
 name = "example-model"
-version = "0.2.114"
+version = "0.2.115"
 dependencies = [
  "serde",
 ]
@@ -1203,7 +1203,7 @@ dependencies = [
 
 [[package]]
 name = "inventory-service-api"
-version = "0.2.114"
+version = "0.2.115"
 dependencies = [
  "prost 0.13.5",
  "protoc-bin-vendored",
@@ -1214,7 +1214,7 @@ dependencies = [
 
 [[package]]
 name = "inventory_service"
-version = "0.2.114"
+version = "0.2.115"
 dependencies = [
  "async-trait",
  "axum 0.8.9",
@@ -1727,7 +1727,7 @@ dependencies = [
 
 [[package]]
 name = "order-service-api"
-version = "0.2.114"
+version = "0.2.115"
 dependencies = [
  "ammonia",
  "async-trait",
@@ -1752,7 +1752,7 @@ dependencies = [
 
 [[package]]
 name = "order_service"
-version = "0.2.114"
+version = "0.2.115"
 dependencies = [
  "async-trait",
  "axum 0.8.9",
@@ -2686,7 +2686,7 @@ dependencies = [
 
 [[package]]
 name = "servicelib-gorundebug"
-version = "0.2.114"
+version = "0.2.115"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -3124,9 +3124,9 @@ dependencies = [
 
 [[package]]
 name = "toml_edit"
-version = "0.25.13+spec-1.1.0"
+version = "0.25.14+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6975367e4d2ef766d86af01ffad14b622fecc8d4357a998fbc4deb6e9bacaf9b"
+checksum = "d2195eec204e2764644a4ea619704f9fbe5e0673038eded55ad9956f24fca0cc"
 dependencies = [
  "indexmap 2.14.2",
  "toml_datetime",
