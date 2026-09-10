@@ -1,4 +1,4 @@
-# Task 15/22: `JoinedAnalyticsSink`
+# Task 21/22: `HighValueAnalyticsSink`
 
 > Rules: [`spec/rules.md`](../rules.md)
 
@@ -6,13 +6,13 @@
 |-------|-------|
 | Language | `Rust` |
 | Kind | `custom-sink` |
-| File | `analyticsservice/src/internal/functions/endpoint/joined_analytics_sink.rs` |
+| File | `analyticsservice/src/internal/functions/endpoint/high_value_analytics_sink.rs` |
 | Service | `Analytics Service` |
 
 
 ## Behaviour
 
-Validate and record the result of the two-way analytics join.
+Validate and record analytics results routed to the high-value Case branch.
 
 
 
@@ -24,7 +24,7 @@ Validate and record the result of the two-way analytics join.
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
-- [ ] Open `analyticsservice/src/internal/functions/endpoint/joined_analytics_sink.rs` and preserve its generated contract
+- [ ] Open `analyticsservice/src/internal/functions/endpoint/high_value_analytics_sink.rs` and preserve its generated contract
 - [ ] Inspect input type `AnalyticsResult` in `analyticsservice/src/internal/types/analytics_result.rs`
 - [ ] Inspect output type `AnalyticsResult` in `analyticsservice/src/internal/types/analytics_result.rs`
 - [ ] Implement the Rust function without changing its generated trait contract
@@ -32,4 +32,4 @@ Validate and record the result of the two-way analytics join.
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
 - [ ] Run `cargo test --workspace --all-targets`
 - [ ] Re-read this checklist
-- [ ] Append to `spec/progress.md`: `- [x] analyticsservice/task15.md — JoinedAnalyticsSink — Rust — done`
+- [ ] Append to `spec/progress.md`: `- [x] analyticsservice/task21.md — HighValueAnalyticsSink — Rust — done`

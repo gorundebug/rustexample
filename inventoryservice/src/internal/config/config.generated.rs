@@ -22,13 +22,13 @@ use servicelib::runtime::config::{
 };
 
 pub const INVENTORY_SERVICE_ID: i32 = 3;
-pub const GET_INVENTORY_ITEM_DATA_STREAM_ID: i32 = 60;
-pub const MERGE_INVENTORY_RESULT_STREAM_ID: i32 = 62;
-pub const PROCESS_INVENTORY_ITEM_STREAM_ID: i32 = 63;
+pub const GET_INVENTORY_ITEM_DATA_STREAM_ID: i32 = 68;
+pub const MERGE_INVENTORY_RESULT_STREAM_ID: i32 = 70;
+pub const PROCESS_INVENTORY_ITEM_STREAM_ID: i32 = 71;
 
 pub const INVENTORY_SERVICE_API_CONNECTOR_ID: i32 = 2;
 
-pub const PROCESS_ORDER_ITEM_ENDPOINT_ID: i32 = 7;
+pub const PROCESS_ORDER_ITEM_ENDPOINT_ID: i32 = 9;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]

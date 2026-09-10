@@ -1,18 +1,18 @@
-# Task 15/22: `JoinedAnalyticsSink`
+# Task 20/22: `RouteAnalyticsResult`
 
 > Rules: [`spec/rules.md`](../rules.md)
 
 | Field | Value |
 |-------|-------|
 | Language | `Rust` |
-| Kind | `custom-sink` |
-| File | `analyticsservice/src/internal/functions/endpoint/joined_analytics_sink.rs` |
+| Kind | `case` |
+| File | `analyticsservice/src/internal/functions/multijoinanalytics/route_analytics_result.rs` |
 | Service | `Analytics Service` |
 
 
 ## Behaviour
 
-Validate and record the result of the two-way analytics join.
+Route high-value analytics results to the first branch and all others to the second branch.
 
 
 
@@ -20,11 +20,12 @@ Validate and record the result of the two-way analytics join.
 ## Stream types
 - Input: `AnalyticsResult` — `analyticsservice/src/internal/types/analytics_result.rs`
 - Output: `AnalyticsResult` — `analyticsservice/src/internal/types/analytics_result.rs`
+- Key: `AnalyticsKey` — `analyticsservice/src/internal/types/analytics_key.generated.rs`
 
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
-- [ ] Open `analyticsservice/src/internal/functions/endpoint/joined_analytics_sink.rs` and preserve its generated contract
+- [ ] Open `analyticsservice/src/internal/functions/multijoinanalytics/route_analytics_result.rs` and preserve its generated contract
 - [ ] Inspect input type `AnalyticsResult` in `analyticsservice/src/internal/types/analytics_result.rs`
 - [ ] Inspect output type `AnalyticsResult` in `analyticsservice/src/internal/types/analytics_result.rs`
 - [ ] Implement the Rust function without changing its generated trait contract
@@ -32,4 +33,4 @@ Validate and record the result of the two-way analytics join.
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
 - [ ] Run `cargo test --workspace --all-targets`
 - [ ] Re-read this checklist
-- [ ] Append to `spec/progress.md`: `- [x] analyticsservice/task15.md — JoinedAnalyticsSink — Rust — done`
+- [ ] Append to `spec/progress.md`: `- [x] analyticsservice/task20.md — RouteAnalyticsResult — Rust — done`

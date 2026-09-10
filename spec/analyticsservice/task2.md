@@ -1,4 +1,4 @@
-# Task 2/17: `OrderProcessedEndpointSource`
+# Task 2/22: `OrderProcessedEndpointSource`
 
 > Rules: [`spec/rules.md`](../rules.md)
 

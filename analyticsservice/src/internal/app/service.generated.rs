@@ -6,16 +6,18 @@ use std::{future::Future, pin::Pin, sync::{Arc, OnceLock, Weak, mpsc}};
 
 use servicelib::{
     MessageContext, Stream,
-    operators::{InputStream, SinkStream, SinkStreamWithResult, MultiJoinStream, TypedCaseStream},
+    operators::{InputStream, SinkStream, SinkStreamWithResult, MultiJoinStream, TypedCaseStream, LinkStream},
     runtime::{
         config::{
             ConfigLoader, RuntimeDataConnectorConfig,
             CaseStreamConfig,
             CronEndpointConfig,
             CustomEndpointConfig,
+            FilterStreamConfig,
             JoinStreamConfig,
             KafkaEndpointConfig,
             KeyByStreamConfig,
+            MapStreamConfig,
             MultiJoinStreamConfig,
             ProcessStreamConfig,
             KafkaDataConnectorConfig,
@@ -48,9 +50,17 @@ pub struct ServiceStreams {
     pub analytics_orders: Arc<InputStream<AnalyticsEvent, (), String>>,
     pub analytics_payments: Arc<InputStream<AnalyticsEvent, (), String>>,
     pub analytics_shipments: Arc<InputStream<AnalyticsEvent, (), String>>,
+    pub cycle_analytics_input: Arc<InputStream<AnalyticsEvent, (), String>>,
+    pub cycle_analytics_link: Arc<LinkStream<AnalyticsEvent>>,
     pub count_order_processed: Stream<OrderProcessed>,
     pub split_analytics_orders: [Stream<AnalyticsEvent>; 2],
     pub split_analytics_payments: [Stream<AnalyticsEvent>; 2],
+    pub merge_cycle_analytics: Stream<AnalyticsEvent>,
+    pub advance_cycle_analytics: Stream<AnalyticsEvent>,
+    pub split_cycle_analytics: [Stream<AnalyticsEvent>; 2],
+    pub complete_cycle_analytics: Stream<AnalyticsEvent>,
+    pub continue_cycle_analytics: Stream<AnalyticsEvent>,
+    pub write_cycle_analytics: Arc<SinkStream<AnalyticsEvent, String>>,
     pub key_orders_for_join: Stream<KeyValue<String, AnalyticsEvent>>,
     pub key_payments_for_join: Stream<KeyValue<String, AnalyticsEvent>>,
     pub join_order_payment_analytics: Stream<AnalyticsResult>,
@@ -73,6 +83,7 @@ pub struct ServiceDataConnectors {
     pub analytics_orders_data_source: Arc<CustomDataSource<(), AnalyticsEvent, (), String, AnalyticsOrdersSource, AnalyticsOrdersSource>>,
     pub analytics_payments_data_source: Arc<CustomDataSource<(), AnalyticsEvent, (), String, AnalyticsPaymentsSource, AnalyticsPaymentsSource>>,
     pub analytics_shipments_data_source: Arc<CustomDataSource<(), AnalyticsEvent, (), String, AnalyticsShipmentsSource, AnalyticsShipmentsSource>>,
+    pub cycle_analytics_input_data_source: Arc<CustomDataSource<(), AnalyticsEvent, (), String, CycleAnalyticsInputSource, CycleAnalyticsInputSource>>,
     pub order_events_data_source: Arc<RdkafkaKafkaDataSource>,
     pub local_cron_data_source: Arc<CronDataSource>,
 }
@@ -100,6 +111,11 @@ pub struct GeneratedService {
 
 #[derive(Clone)]
 pub struct ServiceMakers {
+    pub advance_cycle_analytics: Arc<dyn for<'a> Fn(
+        MessageContext,
+        RuntimeEnvironment,
+        &'a MapStreamConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<AdvanceCycleAnalytics>> + Send + 'a>> + Send + Sync>,
     pub analytics_orders_source: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
@@ -120,11 +136,31 @@ pub struct ServiceMakers {
         RuntimeEnvironment,
         &'a CustomEndpointConfig,
     ) -> Pin<Box<dyn Future<Output = RuntimeResult<AnalyticsShipmentsSource>> + Send + 'a>> + Send + Sync>,
+    pub complete_cycle_analytics: Arc<dyn for<'a> Fn(
+        MessageContext,
+        RuntimeEnvironment,
+        &'a FilterStreamConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<CompleteCycleAnalytics>> + Send + 'a>> + Send + Sync>,
+    pub continue_cycle_analytics: Arc<dyn for<'a> Fn(
+        MessageContext,
+        RuntimeEnvironment,
+        &'a FilterStreamConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<ContinueCycleAnalytics>> + Send + 'a>> + Send + Sync>,
     pub count_order_processed: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
         &'a ProcessStreamConfig,
     ) -> Pin<Box<dyn Future<Output = RuntimeResult<CountOrderProcessed>> + Send + 'a>> + Send + Sync>,
+    pub cycle_analytics_input_source: Arc<dyn for<'a> Fn(
+        MessageContext,
+        RuntimeEnvironment,
+        &'a CustomEndpointConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<CycleAnalyticsInputSource>> + Send + 'a>> + Send + Sync>,
+    pub cycle_analytics_result_sink: Arc<dyn for<'a> Fn(
+        MessageContext,
+        RuntimeEnvironment,
+        &'a CustomEndpointConfig,
+    ) -> Pin<Box<dyn Future<Output = RuntimeResult<CycleAnalyticsResultSink>> + Send + 'a>> + Send + Sync>,
     pub high_value_analytics_sink: Arc<dyn for<'a> Fn(
         MessageContext,
         RuntimeEnvironment,
@@ -198,6 +234,9 @@ pub type ServiceInfrastructureMaker<C, T> = Arc<dyn for<'a> Fn(
 impl Default for ServiceMakers {
     fn default() -> Self {
         Self {
+            advance_cycle_analytics: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_advance_cycle_analytics(context, environment, config).await })
+            }),
             analytics_orders_source: Arc::new(|context, environment, config| {
                 Box::pin(async move { make_analytics_orders_source(context, environment, config).await })
             }),
@@ -210,8 +249,20 @@ impl Default for ServiceMakers {
             analytics_shipments_source: Arc::new(|context, environment, config| {
                 Box::pin(async move { make_analytics_shipments_source(context, environment, config).await })
             }),
+            complete_cycle_analytics: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_complete_cycle_analytics(context, environment, config).await })
+            }),
+            continue_cycle_analytics: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_continue_cycle_analytics(context, environment, config).await })
+            }),
             count_order_processed: Arc::new(|context, environment, config| {
                 Box::pin(async move { make_count_order_processed(context, environment, config).await })
+            }),
+            cycle_analytics_input_source: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_cycle_analytics_input_source(context, environment, config).await })
+            }),
+            cycle_analytics_result_sink: Arc::new(|context, environment, config| {
+                Box::pin(async move { make_cycle_analytics_result_sink(context, environment, config).await })
             }),
             high_value_analytics_sink: Arc::new(|context, environment, config| {
                 Box::pin(async move { make_high_value_analytics_sink(context, environment, config).await })
@@ -287,11 +338,16 @@ fn cron_connector_config(environment: &RuntimeEnvironment, connector_id: i32) ->
 }
 
 pub struct ServiceFunctions {
+    pub advance_cycle_analytics: AdvanceCycleAnalytics,
     pub analytics_orders_source: AnalyticsOrdersSource,
     pub analytics_payments_source: AnalyticsPaymentsSource,
     pub analytics_schedule_source: AnalyticsScheduleSource,
     pub analytics_shipments_source: AnalyticsShipmentsSource,
+    pub complete_cycle_analytics: CompleteCycleAnalytics,
+    pub continue_cycle_analytics: ContinueCycleAnalytics,
     pub count_order_processed: CountOrderProcessed,
+    pub cycle_analytics_input_source: CycleAnalyticsInputSource,
+    pub cycle_analytics_result_sink: CycleAnalyticsResultSink,
     pub high_value_analytics_sink: HighValueAnalyticsSink,
     pub join_order_payment_analytics: JoinOrderPaymentAnalytics,
     pub joined_analytics_sink: JoinedAnalyticsSink,
@@ -314,6 +370,28 @@ pub async fn init_functions(
 ) -> RuntimeResult<ServiceFunctions> {
     let maker_group_context = context.child();
     let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
+        let advance_cycle_analytics_maker = makers.advance_cycle_analytics.clone();
+        let advance_cycle_analytics_context = maker_group_context.clone();
+        let advance_cycle_analytics_group_context = maker_group_context.clone();
+        let advance_cycle_analytics_environment = environment.clone();
+        let advance_cycle_analytics_error_sender = maker_error_sender.clone();
+        let advance_cycle_analytics_future = async move {
+            let result = (advance_cycle_analytics_maker)(
+                    advance_cycle_analytics_context,
+                    advance_cycle_analytics_environment,
+                    &config.streams.advance_cycle_analytics,
+                ).await;
+            match result {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    advance_cycle_analytics_group_context.cancel();
+                    advance_cycle_analytics_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+            }
+        };
         let analytics_orders_source_maker = makers.analytics_orders_source.clone();
         let analytics_orders_source_context = maker_group_context.clone();
         let analytics_orders_source_group_context = maker_group_context.clone();
@@ -402,6 +480,50 @@ pub async fn init_functions(
                 }
             }
         };
+        let complete_cycle_analytics_maker = makers.complete_cycle_analytics.clone();
+        let complete_cycle_analytics_context = maker_group_context.clone();
+        let complete_cycle_analytics_group_context = maker_group_context.clone();
+        let complete_cycle_analytics_environment = environment.clone();
+        let complete_cycle_analytics_error_sender = maker_error_sender.clone();
+        let complete_cycle_analytics_future = async move {
+            let result = (complete_cycle_analytics_maker)(
+                    complete_cycle_analytics_context,
+                    complete_cycle_analytics_environment,
+                    &config.streams.complete_cycle_analytics,
+                ).await;
+            match result {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    complete_cycle_analytics_group_context.cancel();
+                    complete_cycle_analytics_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+            }
+        };
+        let continue_cycle_analytics_maker = makers.continue_cycle_analytics.clone();
+        let continue_cycle_analytics_context = maker_group_context.clone();
+        let continue_cycle_analytics_group_context = maker_group_context.clone();
+        let continue_cycle_analytics_environment = environment.clone();
+        let continue_cycle_analytics_error_sender = maker_error_sender.clone();
+        let continue_cycle_analytics_future = async move {
+            let result = (continue_cycle_analytics_maker)(
+                    continue_cycle_analytics_context,
+                    continue_cycle_analytics_environment,
+                    &config.streams.continue_cycle_analytics,
+                ).await;
+            match result {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    continue_cycle_analytics_group_context.cancel();
+                    continue_cycle_analytics_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+            }
+        };
         let count_order_processed_maker = makers.count_order_processed.clone();
         let count_order_processed_context = maker_group_context.clone();
         let count_order_processed_group_context = maker_group_context.clone();
@@ -418,6 +540,50 @@ pub async fn init_functions(
                 Err(error) => {
                     count_order_processed_group_context.cancel();
                     count_order_processed_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+            }
+        };
+        let cycle_analytics_input_source_maker = makers.cycle_analytics_input_source.clone();
+        let cycle_analytics_input_source_context = maker_group_context.clone();
+        let cycle_analytics_input_source_group_context = maker_group_context.clone();
+        let cycle_analytics_input_source_environment = environment.clone();
+        let cycle_analytics_input_source_error_sender = maker_error_sender.clone();
+        let cycle_analytics_input_source_future = async move {
+            let result = (cycle_analytics_input_source_maker)(
+                    cycle_analytics_input_source_context,
+                    cycle_analytics_input_source_environment,
+                    &config.endpoints.cycle_analytics_input,
+                ).await;
+            match result {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    cycle_analytics_input_source_group_context.cancel();
+                    cycle_analytics_input_source_error_sender
+                        .send(error)
+                        .expect("function maker error receiver was dropped");
+                    None
+                }
+            }
+        };
+        let cycle_analytics_result_sink_maker = makers.cycle_analytics_result_sink.clone();
+        let cycle_analytics_result_sink_context = maker_group_context.clone();
+        let cycle_analytics_result_sink_group_context = maker_group_context.clone();
+        let cycle_analytics_result_sink_environment = environment.clone();
+        let cycle_analytics_result_sink_error_sender = maker_error_sender.clone();
+        let cycle_analytics_result_sink_future = async move {
+            let result = (cycle_analytics_result_sink_maker)(
+                    cycle_analytics_result_sink_context,
+                    cycle_analytics_result_sink_environment,
+                    &config.endpoints.cycle_analytics_result,
+                ).await;
+            match result {
+                Ok(value) => Some(value),
+                Err(error) => {
+                    cycle_analytics_result_sink_group_context.cancel();
+                    cycle_analytics_result_sink_error_sender
                         .send(error)
                         .expect("function maker error receiver was dropped");
                     None
@@ -689,11 +855,16 @@ pub async fn init_functions(
             }
         };
     let (
+        advance_cycle_analytics,
         analytics_orders_source,
         analytics_payments_source,
         analytics_schedule_source,
         analytics_shipments_source,
+        complete_cycle_analytics,
+        continue_cycle_analytics,
         count_order_processed,
+        cycle_analytics_input_source,
+        cycle_analytics_result_sink,
         high_value_analytics_sink,
         join_order_payment_analytics,
         joined_analytics_sink,
@@ -707,11 +878,16 @@ pub async fn init_functions(
         route_analytics_result,
         standard_analytics_sink,
     ) = tokio::join!(
+        advance_cycle_analytics_future,
         analytics_orders_source_future,
         analytics_payments_source_future,
         analytics_schedule_source_future,
         analytics_shipments_source_future,
+        complete_cycle_analytics_future,
+        continue_cycle_analytics_future,
         count_order_processed_future,
+        cycle_analytics_input_source_future,
+        cycle_analytics_result_sink_future,
         high_value_analytics_sink_future,
         join_order_payment_analytics_future,
         joined_analytics_sink_future,
@@ -730,6 +906,9 @@ pub async fn init_functions(
     if let Ok(error) = maker_error_receiver.try_recv() {
         return Err(error);
     }
+    let advance_cycle_analytics = advance_cycle_analytics.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker advance_cycle_analytics failed without an error".to_string(),
+    ))?;
     let analytics_orders_source = analytics_orders_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
         "function maker analytics_orders_source failed without an error".to_string(),
     ))?;
@@ -742,8 +921,20 @@ pub async fn init_functions(
     let analytics_shipments_source = analytics_shipments_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
         "function maker analytics_shipments_source failed without an error".to_string(),
     ))?;
+    let complete_cycle_analytics = complete_cycle_analytics.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker complete_cycle_analytics failed without an error".to_string(),
+    ))?;
+    let continue_cycle_analytics = continue_cycle_analytics.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker continue_cycle_analytics failed without an error".to_string(),
+    ))?;
     let count_order_processed = count_order_processed.ok_or_else(|| RuntimeError::InvalidConfiguration(
         "function maker count_order_processed failed without an error".to_string(),
+    ))?;
+    let cycle_analytics_input_source = cycle_analytics_input_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker cycle_analytics_input_source failed without an error".to_string(),
+    ))?;
+    let cycle_analytics_result_sink = cycle_analytics_result_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
+        "function maker cycle_analytics_result_sink failed without an error".to_string(),
     ))?;
     let high_value_analytics_sink = high_value_analytics_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
         "function maker high_value_analytics_sink failed without an error".to_string(),
@@ -782,11 +973,16 @@ pub async fn init_functions(
         "function maker standard_analytics_sink failed without an error".to_string(),
     ))?;
     Ok(ServiceFunctions {
+        advance_cycle_analytics,
         analytics_orders_source,
         analytics_payments_source,
         analytics_schedule_source,
         analytics_shipments_source,
+        complete_cycle_analytics,
+        continue_cycle_analytics,
         count_order_processed,
+        cycle_analytics_input_source,
+        cycle_analytics_result_sink,
         high_value_analytics_sink,
         join_order_payment_analytics,
         joined_analytics_sink,
@@ -861,6 +1057,7 @@ pub fn init_runtime(
     functions: ServiceFunctions,
     infrastructure: ServiceInfrastructure,
 ) -> RuntimeResult<ServiceRuntime>  {
+    let cycle_analytics_link = LinkStream::<AnalyticsEvent>::make(&config.streams.cycle_analytics_link, environment.clone());
     let analytics_schedule = Arc::new(InputStream::<String, (), String>::new(&config.streams.analytics_schedule, environment.clone()));
     let consume_order_processed = Arc::new(InputStream::<OrderProcessed, OrderProcessed, String>::new(&config.streams.consume_order_processed, environment.clone()));
     let (count_order_processed, count_order_processed_error) = consume_order_processed.stream().process(&config.streams.count_order_processed, functions.count_order_processed)?;
@@ -872,6 +1069,14 @@ pub fn init_runtime(
     let [key_orders_for_join_branch, key_orders_for_multi_join_branch] = split_analytics_orders.clone();
     let split_analytics_payments = analytics_payments.stream().split(&config.streams.split_analytics_payments)?;
     let [key_payments_for_join_branch, key_payments_for_multi_join_branch] = split_analytics_payments.clone();
+    let cycle_analytics_input = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.cycle_analytics_input, environment.clone()));
+    let merge_cycle_analytics = cycle_analytics_input.stream().merge(&config.streams.merge_cycle_analytics, &[cycle_analytics_link.stream().clone()])?;
+    let advance_cycle_analytics = merge_cycle_analytics.map(&config.streams.advance_cycle_analytics, functions.advance_cycle_analytics)?;
+    let split_cycle_analytics = advance_cycle_analytics.split(&config.streams.split_cycle_analytics)?;
+    let [complete_cycle_analytics_branch, continue_cycle_analytics_branch] = split_cycle_analytics.clone();
+    let complete_cycle_analytics = complete_cycle_analytics_branch.filter(&config.streams.complete_cycle_analytics, functions.complete_cycle_analytics)?;
+    let continue_cycle_analytics = continue_cycle_analytics_branch.filter(&config.streams.continue_cycle_analytics, functions.continue_cycle_analytics)?;
+    let write_cycle_analytics = complete_cycle_analytics.sink::<String>(&config.streams.write_cycle_analytics)?;
     let key_orders_for_join = key_orders_for_join_branch.key_by(&config.streams.key_orders_for_join, functions.key_orders_for_join)?;
     let key_payments_for_join = key_payments_for_join_branch.key_by(&config.streams.key_payments_for_join, functions.key_payments_for_join)?;
     let join_order_payment_analytics = key_orders_for_join.join(&config.streams.join_order_payment_analytics, &key_payments_for_join, functions.join_order_payment_analytics)?;
@@ -888,6 +1093,7 @@ pub fn init_runtime(
     let write_high_value_analytics = high_value_analytics.sink::<String>(&config.streams.write_high_value_analytics)?;
     let write_standard_analytics = standard_analytics.sink::<String>(&config.streams.write_standard_analytics)?;
     consume_order_processed.set_source(&count_order_processed)?;
+    cycle_analytics_link.set_source(&continue_cycle_analytics)?;
     infrastructure.order_events_data_source.add_endpoint(
         consume_order_processed.as_ref().clone(),
         functions.order_processed_endpoint_source,
@@ -907,6 +1113,13 @@ pub fn init_runtime(
         analytics_shipments.as_ref().clone(), &config.endpoints.analytics_shipments,
         functions.analytics_shipments_source.clone(), functions.analytics_shipments_source,
     )?;
+    let cycle_analytics_input_data_source = make_custom_source_endpoint_consumer(
+        cycle_analytics_input.as_ref().clone(), &config.endpoints.cycle_analytics_input,
+        functions.cycle_analytics_input_source.clone(), functions.cycle_analytics_input_source,
+    )?;
+    make_custom_sink_endpoint_consumer(
+        &write_cycle_analytics, &config.endpoints.cycle_analytics_result, functions.cycle_analytics_result_sink,
+    )?;
     make_custom_sink_endpoint_consumer(
         &write_joined_analytics, &config.endpoints.joined_analytics, functions.joined_analytics_sink,
     )?;
@@ -923,9 +1136,17 @@ pub fn init_runtime(
         analytics_orders: analytics_orders.clone(),
         analytics_payments: analytics_payments.clone(),
         analytics_shipments: analytics_shipments.clone(),
+        cycle_analytics_input: cycle_analytics_input.clone(),
+        cycle_analytics_link: cycle_analytics_link,
         count_order_processed,
         split_analytics_orders,
         split_analytics_payments,
+        merge_cycle_analytics,
+        advance_cycle_analytics,
+        split_cycle_analytics,
+        complete_cycle_analytics,
+        continue_cycle_analytics,
+        write_cycle_analytics,
         key_orders_for_join,
         key_payments_for_join,
         join_order_payment_analytics,
@@ -946,6 +1167,7 @@ pub fn init_runtime(
         analytics_orders_data_source,
         analytics_payments_data_source,
         analytics_shipments_data_source,
+        cycle_analytics_input_data_source,
         order_events_data_source: infrastructure.order_events_data_source,
         local_cron_data_source: infrastructure.local_cron_data_source,
       },
@@ -979,6 +1201,7 @@ impl GeneratedService {
         app.register_data_source(Arc::clone(&runtime.data_connectors.analytics_orders_data_source))?;
         app.register_data_source(Arc::clone(&runtime.data_connectors.analytics_payments_data_source))?;
         app.register_data_source(Arc::clone(&runtime.data_connectors.analytics_shipments_data_source))?;
+        app.register_data_source(Arc::clone(&runtime.data_connectors.cycle_analytics_input_data_source))?;
 
         let service = Self {
             inner: Arc::new(GeneratedServiceInner {

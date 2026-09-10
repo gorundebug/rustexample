@@ -30,19 +30,27 @@ pub const ANALYTICS_PAYMENTS_STREAM_ID: i32 = 5;
 pub const ANALYTICS_SHIPMENTS_STREAM_ID: i32 = 6;
 pub const SPLIT_ANALYTICS_ORDERS_STREAM_ID: i32 = 7;
 pub const SPLIT_ANALYTICS_PAYMENTS_STREAM_ID: i32 = 8;
-pub const JOIN_ORDER_PAYMENT_ANALYTICS_STREAM_ID: i32 = 9;
-pub const KEY_ORDERS_FOR_JOIN_STREAM_ID: i32 = 10;
-pub const KEY_PAYMENTS_FOR_JOIN_STREAM_ID: i32 = 11;
-pub const WRITE_JOINED_ANALYTICS_STREAM_ID: i32 = 12;
-pub const HIGH_VALUE_ANALYTICS_STREAM_ID: i32 = 13;
-pub const KEY_ORDERS_FOR_MULTI_JOIN_STREAM_ID: i32 = 14;
-pub const KEY_PAYMENTS_FOR_MULTI_JOIN_STREAM_ID: i32 = 15;
-pub const KEY_SHIPMENTS_FOR_MULTI_JOIN_STREAM_ID: i32 = 16;
-pub const MULTI_JOIN_ANALYTICS_EVENTS_STREAM_ID: i32 = 17;
-pub const ROUTE_ANALYTICS_RESULT_STREAM_ID: i32 = 18;
-pub const STANDARD_ANALYTICS_STREAM_ID: i32 = 19;
-pub const WRITE_HIGH_VALUE_ANALYTICS_STREAM_ID: i32 = 20;
-pub const WRITE_STANDARD_ANALYTICS_STREAM_ID: i32 = 21;
+pub const ADVANCE_CYCLE_ANALYTICS_STREAM_ID: i32 = 9;
+pub const COMPLETE_CYCLE_ANALYTICS_STREAM_ID: i32 = 10;
+pub const CONTINUE_CYCLE_ANALYTICS_STREAM_ID: i32 = 11;
+pub const CYCLE_ANALYTICS_INPUT_STREAM_ID: i32 = 12;
+pub const CYCLE_ANALYTICS_LINK_STREAM_ID: i32 = 13;
+pub const MERGE_CYCLE_ANALYTICS_STREAM_ID: i32 = 14;
+pub const SPLIT_CYCLE_ANALYTICS_STREAM_ID: i32 = 15;
+pub const WRITE_CYCLE_ANALYTICS_STREAM_ID: i32 = 16;
+pub const JOIN_ORDER_PAYMENT_ANALYTICS_STREAM_ID: i32 = 17;
+pub const KEY_ORDERS_FOR_JOIN_STREAM_ID: i32 = 18;
+pub const KEY_PAYMENTS_FOR_JOIN_STREAM_ID: i32 = 19;
+pub const WRITE_JOINED_ANALYTICS_STREAM_ID: i32 = 20;
+pub const HIGH_VALUE_ANALYTICS_STREAM_ID: i32 = 21;
+pub const KEY_ORDERS_FOR_MULTI_JOIN_STREAM_ID: i32 = 22;
+pub const KEY_PAYMENTS_FOR_MULTI_JOIN_STREAM_ID: i32 = 23;
+pub const KEY_SHIPMENTS_FOR_MULTI_JOIN_STREAM_ID: i32 = 24;
+pub const MULTI_JOIN_ANALYTICS_EVENTS_STREAM_ID: i32 = 25;
+pub const ROUTE_ANALYTICS_RESULT_STREAM_ID: i32 = 26;
+pub const STANDARD_ANALYTICS_STREAM_ID: i32 = 27;
+pub const WRITE_HIGH_VALUE_ANALYTICS_STREAM_ID: i32 = 28;
+pub const WRITE_STANDARD_ANALYTICS_STREAM_ID: i32 = 29;
 
 pub const ANALYTICS_FUNCTIONS_CONNECTOR_ID: i32 = 1;
 pub const LOCAL_CRON_CONNECTOR_ID: i32 = 3;
@@ -51,11 +59,13 @@ pub const ORDER_EVENTS_CONNECTOR_ID: i32 = 4;
 pub const ANALYTICS_ORDERS_ENDPOINT_ID: i32 = 1;
 pub const ANALYTICS_PAYMENTS_ENDPOINT_ID: i32 = 2;
 pub const ANALYTICS_SHIPMENTS_ENDPOINT_ID: i32 = 3;
-pub const HIGH_VALUE_ANALYTICS_ENDPOINT_ID: i32 = 4;
-pub const JOINED_ANALYTICS_ENDPOINT_ID: i32 = 5;
-pub const STANDARD_ANALYTICS_ENDPOINT_ID: i32 = 6;
-pub const ANALYTICS_SCHEDULE_ENDPOINT_ID: i32 = 8;
-pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 10;
+pub const CYCLE_ANALYTICS_INPUT_ENDPOINT_ID: i32 = 4;
+pub const CYCLE_ANALYTICS_RESULT_ENDPOINT_ID: i32 = 5;
+pub const HIGH_VALUE_ANALYTICS_ENDPOINT_ID: i32 = 6;
+pub const JOINED_ANALYTICS_ENDPOINT_ID: i32 = 7;
+pub const STANDARD_ANALYTICS_ENDPOINT_ID: i32 = 8;
+pub const ANALYTICS_SCHEDULE_ENDPOINT_ID: i32 = 10;
+pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 12;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -68,6 +78,14 @@ pub struct Streams {
     pub analytics_shipments: InputStreamConfig,
     pub split_analytics_orders: SplitStreamConfig,
     pub split_analytics_payments: SplitStreamConfig,
+    pub advance_cycle_analytics: MapStreamConfig,
+    pub complete_cycle_analytics: FilterStreamConfig,
+    pub continue_cycle_analytics: FilterStreamConfig,
+    pub cycle_analytics_input: InputStreamConfig,
+    pub cycle_analytics_link: CycleLinkStreamConfig,
+    pub merge_cycle_analytics: MergeStreamConfig,
+    pub split_cycle_analytics: SplitStreamConfig,
+    pub write_cycle_analytics: SinkStreamConfig,
     pub join_order_payment_analytics: JoinStreamConfig,
     pub key_orders_for_join: KeyByStreamConfig,
     pub key_payments_for_join: KeyByStreamConfig,
@@ -134,6 +152,54 @@ impl Default for Streams {
     None::<String>,
     -1390_f64, 430_f64,
 ).with_pipeline("analyticsSources")),
+            advance_cycle_analytics: MapStreamConfig::from(StreamConfig::new(ADVANCE_CYCLE_ANALYTICS_STREAM_ID, "Advance Cycle Analytics").with_graph(
+    ANALYTICS_SERVICE_ID, MERGE_CYCLE_ANALYTICS_STREAM_ID, [],
+    Some("AnalyticsEvent"),
+    None::<String>,
+    -1100_f64, 1160_f64,
+).with_pipeline("cycleAnalytics")),
+            complete_cycle_analytics: FilterStreamConfig::from(StreamConfig::new(COMPLETE_CYCLE_ANALYTICS_STREAM_ID, "Complete Cycle Analytics").with_graph(
+    ANALYTICS_SERVICE_ID, SPLIT_CYCLE_ANALYTICS_STREAM_ID, [],
+    None::<String>,
+    None::<String>,
+    -600_f64, 1260_f64,
+).with_pipeline("cycleAnalytics")),
+            continue_cycle_analytics: FilterStreamConfig::from(StreamConfig::new(CONTINUE_CYCLE_ANALYTICS_STREAM_ID, "Continue Cycle Analytics").with_graph(
+    ANALYTICS_SERVICE_ID, SPLIT_CYCLE_ANALYTICS_STREAM_ID, [],
+    None::<String>,
+    None::<String>,
+    -600_f64, 1060_f64,
+).with_pipeline("cycleAnalytics")),
+            cycle_analytics_input: InputStreamConfig { stream: StreamConfig::new(CYCLE_ANALYTICS_INPUT_STREAM_ID, "Cycle Analytics Input").with_graph(
+    ANALYTICS_SERVICE_ID, 0, [],
+    Some("AnalyticsEvent"),
+    None::<String>,
+    -1600_f64, 1160_f64,
+).with_pipeline("cycleAnalytics"), endpoint_id: CYCLE_ANALYTICS_INPUT_ENDPOINT_ID },
+            cycle_analytics_link: CycleLinkStreamConfig::from(StreamConfig::new(CYCLE_ANALYTICS_LINK_STREAM_ID, "Cycle Analytics Link").with_graph(
+    ANALYTICS_SERVICE_ID, CONTINUE_CYCLE_ANALYTICS_STREAM_ID, [],
+    None::<String>,
+    None::<String>,
+    -1100_f64, 960_f64,
+).with_pipeline("cycleAnalytics")),
+            merge_cycle_analytics: MergeStreamConfig::from(StreamConfig::new(MERGE_CYCLE_ANALYTICS_STREAM_ID, "Merge Cycle Analytics").with_graph(
+    ANALYTICS_SERVICE_ID, 0, [CYCLE_ANALYTICS_INPUT_STREAM_ID, CYCLE_ANALYTICS_LINK_STREAM_ID],
+    None::<String>,
+    None::<String>,
+    -1350_f64, 1160_f64,
+).with_pipeline("cycleAnalytics")),
+            split_cycle_analytics: SplitStreamConfig::from(StreamConfig::new(SPLIT_CYCLE_ANALYTICS_STREAM_ID, "Split Cycle Analytics").with_graph(
+    ANALYTICS_SERVICE_ID, ADVANCE_CYCLE_ANALYTICS_STREAM_ID, [],
+    None::<String>,
+    None::<String>,
+    -850_f64, 1160_f64,
+).with_pipeline("cycleAnalytics")),
+            write_cycle_analytics: SinkStreamConfig { stream: StreamConfig::new(WRITE_CYCLE_ANALYTICS_STREAM_ID, "Write Cycle Analytics").with_graph(
+    ANALYTICS_SERVICE_ID, COMPLETE_CYCLE_ANALYTICS_STREAM_ID, [],
+    Some("AnalyticsEvent"),
+    None::<String>,
+    -350_f64, 1260_f64,
+).with_pipeline("cycleAnalytics"), endpoint_id: CYCLE_ANALYTICS_RESULT_ENDPOINT_ID },
             join_order_payment_analytics: JoinStreamConfig { stream: StreamConfig::new(JOIN_ORDER_PAYMENT_ANALYTICS_STREAM_ID, "Join Order Payment Analytics").with_graph(
     ANALYTICS_SERVICE_ID, KEY_ORDERS_FOR_JOIN_STREAM_ID, [KEY_PAYMENTS_FOR_JOIN_STREAM_ID],
     Some("AnalyticsResult"),
@@ -227,6 +293,14 @@ impl Streams {
             self.analytics_shipments.clone().into(),
             self.split_analytics_orders.clone().into(),
             self.split_analytics_payments.clone().into(),
+            self.advance_cycle_analytics.clone().into(),
+            self.complete_cycle_analytics.clone().into(),
+            self.continue_cycle_analytics.clone().into(),
+            self.cycle_analytics_input.clone().into(),
+            self.cycle_analytics_link.clone().into(),
+            self.merge_cycle_analytics.clone().into(),
+            self.split_cycle_analytics.clone().into(),
+            self.write_cycle_analytics.clone().into(),
             self.join_order_payment_analytics.clone().into(),
             self.key_orders_for_join.clone().into(),
             self.key_payments_for_join.clone().into(),
@@ -250,6 +324,8 @@ pub struct Endpoints {
     pub analytics_orders: CustomEndpointConfig,
     pub analytics_payments: CustomEndpointConfig,
     pub analytics_shipments: CustomEndpointConfig,
+    pub cycle_analytics_input: CustomEndpointConfig,
+    pub cycle_analytics_result: CustomEndpointConfig,
     pub high_value_analytics: CustomEndpointConfig,
     pub joined_analytics: CustomEndpointConfig,
     pub standard_analytics: CustomEndpointConfig,
@@ -270,6 +346,14 @@ impl Default for Endpoints {
             },
             analytics_shipments: CustomEndpointConfig {
                 id: ANALYTICS_SHIPMENTS_ENDPOINT_ID, name: "Analytics Shipments".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
+                tracing_enabled: false,
+            },
+            cycle_analytics_input: CustomEndpointConfig {
+                id: CYCLE_ANALYTICS_INPUT_ENDPOINT_ID, name: "Cycle Analytics Input".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
+                tracing_enabled: false,
+            },
+            cycle_analytics_result: CustomEndpointConfig {
+                id: CYCLE_ANALYTICS_RESULT_ENDPOINT_ID, name: "Cycle Analytics Result".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             high_value_analytics: CustomEndpointConfig {
@@ -309,6 +393,8 @@ impl Endpoints {
             self.analytics_orders.clone().into(),
             self.analytics_payments.clone().into(),
             self.analytics_shipments.clone().into(),
+            self.cycle_analytics_input.clone().into(),
+            self.cycle_analytics_result.clone().into(),
             self.high_value_analytics.clone().into(),
             self.joined_analytics.clone().into(),
             self.standard_analytics.clone().into(),

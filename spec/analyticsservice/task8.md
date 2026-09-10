@@ -1,18 +1,18 @@
-# Task 8/17: `KeyPaymentsForJoin`
+# Task 8/22: `AdvanceCycleAnalytics`
 
 > Rules: [`spec/rules.md`](../rules.md)
 
 | Field | Value |
 |-------|-------|
 | Language | `Rust` |
-| Kind | `keyBy` |
-| File | `analyticsservice/src/internal/functions/joinanalytics/key_payments_for_join.rs` |
+| Kind | `map` |
+| File | `analyticsservice/src/internal/functions/cycleanalytics/advance_cycle_analytics.rs` |
 | Service | `Analytics Service` |
 
 
 ## Behaviour
 
-Key the payment analytics event by correlation key.
+Increment the cycle counter while preserving the analytics event identity.
 
 
 
@@ -20,12 +20,11 @@ Key the payment analytics event by correlation key.
 ## Stream types
 - Input: `AnalyticsEvent` — `analyticsservice/src/internal/types/analytics_event.rs`
 - Output: `AnalyticsEvent` — `analyticsservice/src/internal/types/analytics_event.rs`
-- Key: `AnalyticsKey` — `analyticsservice/src/internal/types/analytics_key.generated.rs`
 
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
-- [ ] Open `analyticsservice/src/internal/functions/joinanalytics/key_payments_for_join.rs` and preserve its generated contract
+- [ ] Open `analyticsservice/src/internal/functions/cycleanalytics/advance_cycle_analytics.rs` and preserve its generated contract
 - [ ] Inspect input type `AnalyticsEvent` in `analyticsservice/src/internal/types/analytics_event.rs`
 - [ ] Inspect output type `AnalyticsEvent` in `analyticsservice/src/internal/types/analytics_event.rs`
 - [ ] Implement the Rust function without changing its generated trait contract
@@ -33,4 +32,4 @@ Key the payment analytics event by correlation key.
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
 - [ ] Run `cargo test --workspace --all-targets`
 - [ ] Re-read this checklist
-- [ ] Append to `spec/progress.md`: `- [x] analyticsservice/task8.md — KeyPaymentsForJoin — Rust — done`
+- [ ] Append to `spec/progress.md`: `- [x] analyticsservice/task8.md — AdvanceCycleAnalytics — Rust — done`
