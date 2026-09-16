@@ -25,7 +25,7 @@ dependencies = [
 
 [[package]]
 name = "analytics_service"
-version = "0.2.117"
+version = "0.2.118"
 dependencies = [
  "async-trait",
  "croner",
@@ -648,7 +648,7 @@ dependencies = [
 
 [[package]]
 name = "example-model"
-version = "0.2.117"
+version = "0.2.118"
 dependencies = [
  "serde",
 ]
@@ -1203,7 +1203,7 @@ dependencies = [
 
 [[package]]
 name = "inventory-service-api"
-version = "0.2.117"
+version = "0.2.118"
 dependencies = [
  "prost 0.13.5",
  "protoc-bin-vendored",
@@ -1214,7 +1214,7 @@ dependencies = [
 
 [[package]]
 name = "inventory_service"
-version = "0.2.117"
+version = "0.2.118"
 dependencies = [
  "async-trait",
  "axum 0.8.9",
@@ -1727,7 +1727,7 @@ dependencies = [
 
 [[package]]
 name = "order-service-api"
-version = "0.2.117"
+version = "0.2.118"
 dependencies = [
  "ammonia",
  "async-trait",
@@ -1752,7 +1752,7 @@ dependencies = [
 
 [[package]]
 name = "order_service"
-version = "0.2.117"
+version = "0.2.118"
 dependencies = [
  "async-trait",
  "axum 0.8.9",
@@ -2686,7 +2686,7 @@ dependencies = [
 
 [[package]]
 name = "servicelib-gorundebug"
-version = "0.2.117"
+version = "0.2.118"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -2923,13 +2923,13 @@ dependencies = [
 
 [[package]]
 name = "synstructure"
-version = "0.13.2"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "728a70f3dbaf5bab7f0c4b1ac8d7ae5ea60a4b5549c8a5914361c99147a709d2"
+checksum = "901704edd0dfe137f1987838ee4f259e4e063c31371bdb423f7ae38ec6f77f02"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.119",
+ "syn 3.0.5",
 ]
 
 [[package]]
@@ -3817,13 +3817,13 @@ dependencies = [
 
 [[package]]
 name = "yoke-derive"
-version = "0.8.2"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de844c262c8848816172cef550288e7dc6c7b7814b4ee56b3e1553f275f1858e"
+checksum = "33811428bee40dbceb6d545e95754741d17a6aef9a4849f0fd62e2ba4f412a78"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.119",
+ "syn 3.0.5",
  "synstructure",
 ]
 
@@ -3858,13 +3858,13 @@ dependencies = [
 
 [[package]]
 name = "zerofrom-derive"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11532158c46691caf0f2593ea8358fed6bbf68a0315e80aae9bd41fbade684a1"
+checksum = "f75b4683f6c7f45248d4d64056a24298c6281e0993356d7d1b4a1a962ef10d4a"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.119",
+ "syn 3.0.5",
  "synstructure",
 ]
 
