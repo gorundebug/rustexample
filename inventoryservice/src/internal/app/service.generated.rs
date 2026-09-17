@@ -29,19 +29,66 @@ use example_model::types::*;
 
 
 use servicelib::datasource::grpc::{
-    NoStreamingEndpointConsumer, TonicDataSource,
+    NoStreamingEndpointConsumer, ServerStreamingEndpointConsumer,
+    ClientStreamingEndpointConsumer, BidiStreamingEndpointConsumer, TonicDataSource,
     make_grpc_no_streaming_endpoint_consumer as make_grpc_source_endpoint_consumer,
+    make_grpc_server_streaming_endpoint_consumer as make_grpc_server_source_endpoint_consumer,
+    make_grpc_client_streaming_endpoint_consumer as make_grpc_client_source_endpoint_consumer,
+    make_grpc_bidi_streaming_endpoint_consumer as make_grpc_bidi_source_endpoint_consumer,
 };
 use tonic::{Request, Response, Status};
 use inventory_service_api::inventoryserviceapi::inventory_service_api_server::{
     InventoryServiceApi, InventoryServiceApiServer,
 };
 
-use inventory_service_api::processorderitem::{
-    ProcessOrderItemRequest, ProcessOrderItemResponse,
-};
 
 use crate::internal::{config::Config, functions::*};
+
+use futures_util::{Stream as FuturesStream, StreamExt};
+
+// Bounded queues apply transport backpressure instead of buffering a whole RPC.
+const GRPC_STREAM_BUFFER: usize = 16;
+
+fn grpc_request_stream<T>(receiver: tokio::sync::mpsc::Receiver<T>)
+    -> impl FuturesStream<Item = T> + Send
+where T: Send + 'static {
+    futures_util::stream::unfold(receiver, |mut receiver| async move {
+        receiver.recv().await.map(|value| (value, receiver))
+    })
+}
+
+
+pub struct GrpcResponseStream<T> {
+    receiver: tokio::sync::mpsc::Receiver<Result<T, Status>>,
+    context: MessageContext,
+}
+
+impl<T> FuturesStream for GrpcResponseStream<T> {
+    type Item = Result<T, Status>;
+    fn poll_next(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>)
+        -> std::task::Poll<Option<Self::Item>> {
+        self.get_mut().receiver.poll_recv(cx)
+    }
+}
+
+impl<T> Drop for GrpcResponseStream<T> {
+    fn drop(&mut self) { self.context.cancel(); }
+}
+
+struct GrpcResponseSender<T>(tokio::sync::mpsc::Sender<Result<T, Status>>);
+
+#[tonic::async_trait]
+impl<T: Send + 'static> servicelib::datasource::grpc::Sender<T> for GrpcResponseSender<T> {
+    async fn send(&self, context: MessageContext, value: T)
+        -> servicelib::datasource::grpc::HandlerResult {
+        tokio::select! {
+            _ = context.cancelled() => Err(Box::new(Status::cancelled("RPC cancelled")) as _),
+            result = self.0.send(Ok(value)) => result.map_err(|_| Box::new(Status::cancelled("response stream closed")) as _),
+        }
+    }
+}
+
+
 
 pub struct ServiceStreams {
     pub process_order_item: Arc<InputStream<OrderItem, OrderItemResult, OrderItemResult>>,
@@ -71,7 +118,7 @@ pub struct ServiceInfrastructure {
 struct GeneratedServiceInner {
     runtime: ServiceRuntime,
     process_order_item_endpoint: Arc<NoStreamingEndpointConsumer<
-        (), ProcessOrderItemRequest, ProcessOrderItemResponse,
+        (), inventory_service_api::processorderitem::ProcessOrderItemRequest, inventory_service_api::processorderitem::ProcessOrderItemResponse,
         OrderItem, OrderItemResult, OrderItemResult, ProcessOrderItemSource
     >>,
     app: OnceLock<Arc<ServiceApp>>,
@@ -377,15 +424,23 @@ impl GeneratedService {
 
 #[tonic::async_trait]
 impl InventoryServiceApi for GeneratedService {
+
+
     async fn process_order_item(
         &self,
-        request: Request<ProcessOrderItemRequest>,
-    ) -> Result<Response<ProcessOrderItemResponse>, Status> {
+        request: Request<inventory_service_api::processorderitem::ProcessOrderItemRequest>,
+    ) -> Result<Response<inventory_service_api::processorderitem::ProcessOrderItemResponse>, Status> {
         let context = MessageContext::from_tonic_request(&request);
+
+        let request = request.into_inner();
+
+
         let response = self.inner.process_order_item_endpoint
-            .handle(context, request.into_inner())
+            .handle(context, request)
             .await
             .map_err(|error| Status::internal(error.to_string()))?;
         Ok(Response::new(response))
+
     }
+
 }

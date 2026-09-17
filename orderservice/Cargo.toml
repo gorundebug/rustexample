@@ -1,20 +1,21 @@
 [package]
 name = "order_service"
-version = "0.2.119"
+version = "0.2.120"
 edition = "2024"
 rust-version = "1.85"
 
 [dependencies]
 async-trait = "0.1"
+futures-util = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.119" }
+servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.120" }
 tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
 tonic = "0.12"
 tracing = "0.1"
-example-model = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.119" }
-order-service-api = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.119" }
-inventory-service-api = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.119" }
+example-model = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.120" }
+order-service-api = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.120" }
+inventory-service-api = { git = "https://github.com/gorundebug/rustexample.git", tag = "v0.2.120" }
 axum = "0.8"
 axum-extra = { version = "0.12", features = ["cookie"] }
 chrono = { version = "0.4", features = ["serde"] }

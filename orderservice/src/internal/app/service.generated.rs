@@ -27,10 +27,14 @@ use servicelib::{
 };
 use example_model::types::*;
 
-use servicelib::datasink::grpc::{NoStreamingClientFunction, TonicDataSink, make_grpc_no_streaming_endpoint_consumer};
-use inventory_service_api::{
-    inventoryserviceapi::inventory_service_api_client::InventoryServiceApiClient,
-    processorderitem::{ ProcessOrderItemRequest, ProcessOrderItemResponse },
+use servicelib::datasink::grpc::{
+    NoStreamingClientFunction, ServerStreamingClientFunction,
+    ClientStreamingClientFunction, BidiStreamingClientFunction,
+    ClientStreamingCall, BidiStreamingCall, ResponseStream,
+    TonicDataSink, make_grpc_no_streaming_endpoint_consumer,
+    make_grpc_server_streaming_endpoint_consumer,
+    make_grpc_client_streaming_endpoint_consumer,
+    make_grpc_bidi_streaming_endpoint_consumer,
 };
 
 use servicelib::{
@@ -47,6 +51,99 @@ use servicelib::{
 
 
 use crate::internal::{config::Config, functions::*, types::*};
+
+use futures_util::{Stream as FuturesStream, StreamExt};
+
+// Bounded queues apply transport backpressure instead of buffering a whole RPC.
+const GRPC_STREAM_BUFFER: usize = 16;
+
+fn grpc_request_stream<T>(receiver: tokio::sync::mpsc::Receiver<T>)
+    -> impl FuturesStream<Item = T> + Send
+where T: Send + 'static {
+    futures_util::stream::unfold(receiver, |mut receiver| async move {
+        receiver.recv().await.map(|value| (value, receiver))
+    })
+}
+
+
+
+// The RPC future runs while requests are sent. Waiting to start it until EOF
+// would deadlock a bounded request channel.
+struct GrpcStreamingCall<Req, Res> {
+    sender: tokio::sync::Mutex<Option<tokio::sync::mpsc::Sender<Req>>>,
+    response: tokio::sync::Mutex<Option<tokio::task::JoinHandle<servicelib::datasink::grpc::HandlerResult<Res>>>>,
+    context: MessageContext,
+}
+
+impl<Req, Res> Drop for GrpcStreamingCall<Req, Res> {
+    fn drop(&mut self) {
+        self.context.cancel();
+        if let Some(task) = self.response.get_mut().take() { task.abort(); }
+    }
+}
+
+impl<Req: Send + 'static, Res: Send + 'static> GrpcStreamingCall<Req, Res> {
+    async fn send_request(&self, value: Req) -> servicelib::datasink::grpc::HandlerResult {
+        let sender = self.sender.lock().await.clone()
+            .ok_or_else(|| tonic::Status::failed_precondition("request stream closed"))?;
+        tokio::select! {
+            _ = self.context.cancelled() => Err(Box::new(tonic::Status::cancelled("RPC cancelled")) as _),
+            result = sender.send(value) => result.map_err(|_| Box::new(tonic::Status::cancelled("request stream closed")) as _),
+        }
+    }
+    async fn receive_response(&self) -> servicelib::datasink::grpc::HandlerResult<Res> {
+        let mut response = self.response.lock().await;
+        let task = response.as_mut()
+            .ok_or_else(|| tonic::Status::failed_precondition("RPC result already consumed"))?;
+        let result = tokio::select! {
+            _ = self.context.cancelled() => {
+                task.abort();
+                Err(Box::new(tonic::Status::cancelled("RPC cancelled")) as servicelib::datasink::grpc::HandlerError)
+            },
+            result = &mut *task => result.map_err(|error| Box::new(error) as servicelib::datasink::grpc::HandlerError)?,
+        };
+        response.take();
+        result
+    }
+}
+
+#[tonic::async_trait]
+impl<Req: Send + 'static, Res: Send + 'static> ClientStreamingCall<Req, Res> for GrpcStreamingCall<Req, Res> {
+    async fn send(&self, request: Req) -> servicelib::datasink::grpc::HandlerResult {
+        self.send_request(request).await
+    }
+    async fn close_and_recv(&self) -> servicelib::datasink::grpc::HandlerResult<Res> {
+        self.sender.lock().await.take();
+        self.receive_response().await
+    }
+}
+
+struct GrpcBidiCall<Req, Res> {
+    call: GrpcStreamingCall<Req, tonic::Streaming<Res>>,
+    responses: tokio::sync::OnceCell<tokio::sync::Mutex<tonic::Streaming<Res>>>,
+}
+
+#[tonic::async_trait]
+impl<Req: Send + 'static, Res: Send + 'static> BidiStreamingCall<Req, Res> for GrpcBidiCall<Req, Res> {
+    async fn send(&self, request: Req) -> servicelib::datasink::grpc::HandlerResult {
+        self.call.send_request(request).await
+    }
+    async fn recv(&self) -> servicelib::datasink::grpc::HandlerResult<Option<Res>> {
+        let responses = self.responses.get_or_try_init(|| async {
+            self.call.receive_response().await.map(tokio::sync::Mutex::new)
+        }).await?;
+        let mut responses = responses.lock().await;
+        tokio::select! {
+            _ = self.call.context.cancelled() => Err(Box::new(tonic::Status::cancelled("RPC cancelled")) as _),
+            result = responses.message() => result.map_err(|error| Box::new(error) as _),
+        }
+    }
+    async fn close_send(&self) -> servicelib::datasink::grpc::HandlerResult {
+        self.call.sender.lock().await.take();
+        Ok(())
+    }
+}
+
 
 pub struct ServiceStreams {
     pub process_order: Arc<InputStream<Order, OrderState, String>>,
@@ -561,13 +658,16 @@ pub async fn init_runtime(
     process_order.set_source(&process_order_branch)?;
     let inventory_data_sink = Arc::clone(&infrastructure.inventory_data_sink);
     let client_sink = Arc::clone(&inventory_data_sink);
-    let client: NoStreamingClientFunction<ProcessOrderItemRequest, ProcessOrderItemResponse> = Arc::new(move |context, request| {
+    let client: NoStreamingClientFunction<inventory_service_api::processorderitem::ProcessOrderItemRequest, inventory_service_api::processorderitem::ProcessOrderItemResponse> = Arc::new(move |context, request| {
         let client_sink = Arc::clone(&client_sink);
         Box::pin(async move {
             let channel = client_sink.channel().await?;
+
             let mut request = tonic::Request::new(request);
             context.apply_to_tonic_request(&mut request);
-            Ok(InventoryServiceApiClient::new(channel).process_order_item(request).await?.into_inner())
+
+            Ok(inventory_service_api::inventoryserviceapi::inventory_service_api_client::InventoryServiceApiClient::new(channel).process_order_item(request).await?.into_inner())
+
         })
     });
     make_grpc_no_streaming_endpoint_consumer(
