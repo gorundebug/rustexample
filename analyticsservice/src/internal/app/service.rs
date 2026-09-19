@@ -6,10 +6,10 @@ use servicelib::{
     },
 };
 
-use super::service_generated::{
-    GeneratedService, ServiceFunctions, ServiceMakers,
-};
-use crate::internal::config::Config;
+use super::service_generated::{GeneratedService, ServiceFunctions, ServiceMakers};
+use std::sync::Arc;
+
+use crate::internal::{config::Config, functions::InvokeAnalyticsSubstream};
 
 /// User-owned service extension surface. Generated graph and transport wiring
 /// live in `service.generated.rs`, so graph changes never add concrete entity
@@ -17,14 +17,25 @@ use crate::internal::config::Config;
 pub struct Service {
     generated: GeneratedService,
 }
+impl std::ops::Deref for Service {
+    type Target = GeneratedService;
+    fn deref(&self) -> &Self::Target {
+        &self.generated
+    }
+}
 
 impl Service {
     fn custom_makers_init(
         _context: MessageContext,
         makers: &mut ServiceMakers,
     ) -> RuntimeResult<()> {
-        // Replace generated makers here. This file survives regeneration.
-        let _ = makers;
+        let substream = makers
+            .substreams
+            .get_analyze_analytics_substream_substream();
+        makers.invoke_analytics_substream = Arc::new(move |_, _, _| {
+            let substream = substream.clone();
+            Box::pin(async move { Ok(InvokeAnalyticsSubstream::new(substream)) })
+        });
         Ok(())
     }
 

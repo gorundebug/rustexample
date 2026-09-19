@@ -1,4 +1,3 @@
-use crate::internal::types::AnalyticsResult;
 use async_trait::async_trait;
 use servicelib::{
     MessageContext,
@@ -11,10 +10,13 @@ use servicelib::{
     },
 };
 
+use crate::internal::types::AnalyticsResult;
+
 #[derive(Clone, Default)]
-pub struct JoinedAnalyticsSink;
+pub struct SubstreamAnalyticsResultSink;
+
 #[async_trait]
-impl EndpointHandler<(), AnalyticsResult, String> for JoinedAnalyticsSink {
+impl EndpointHandler<(), AnalyticsResult, String> for SubstreamAnalyticsResultSink {
     fn get_stream_id(&self, _context: &MessageContext, value: &AnalyticsResult) -> String {
         value.key.clone()
     }
@@ -33,15 +35,11 @@ impl EndpointHandler<(), AnalyticsResult, String> for JoinedAnalyticsSink {
         value: Payload<AnalyticsResult>,
         _result_stream: &Stream<String>,
     ) -> HandlerResult {
-        let expected = match value.key.as_str() {
-            "high-value" => Some(30),
-            "standard" => Some(3),
-            _ => None,
-        };
-        if expected == Some(value.total) && value.kind == "join" {
+        let value = value.into_value();
+        if value.key == "substream" && value.total == 14 && value.kind == "substream" {
             Ok(())
         } else {
-            Err(std::io::Error::other("unexpected joined analytics result").into())
+            Err(std::io::Error::other("unexpected substream analytics result").into())
         }
     }
     async fn end_request(
@@ -53,10 +51,11 @@ impl EndpointHandler<(), AnalyticsResult, String> for JoinedAnalyticsSink {
     ) {
     }
 }
-pub async fn make_joined_analytics_sink(
+
+pub async fn make_substream_analytics_result_sink(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
     _config: &CustomEndpointConfig,
-) -> RuntimeResult<JoinedAnalyticsSink> {
-    Ok(JoinedAnalyticsSink)
+) -> RuntimeResult<SubstreamAnalyticsResultSink> {
+    Ok(SubstreamAnalyticsResultSink)
 }

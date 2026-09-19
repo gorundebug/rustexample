@@ -1,5 +1,27 @@
-httpHost: 0.0.0.0
-httpPort: 9091
-inventoryAddress: http://127.0.0.1:9202
-requestTimeoutMs: 5000
-softDeadlineMarginMs: 1000
+dataConnectors:
+  inventoryServiceApi:
+    address: $inventoryServiceApiAddress
+    connectionsCount: $inventoryServiceApiConnectionsCount
+  orderEvents:
+    brokers: $orderEventsBrokers
+    password: $orderEventsPassword
+    saslMechanism: $orderEventsSaslMechanism
+    securityProtocol: $orderEventsSecurityProtocol
+    username: $orderEventsUsername
+endpoints:
+  orderProcessed:
+    enabled: $orderProcessedEnabled
+pools:
+  defaultPool:
+    executorsCount: $defaultPoolExecutorsCount
+services:
+  orderService:
+    defaultGrpcTimeout: $orderServiceDefaultGrpcTimeout
+    environment: $orderServiceEnvironment
+    grpcHost: $orderServiceGrpcHost
+    grpcPort: $orderServiceGrpcPort
+    httpHost: $orderServiceHttpHost
+    httpPort: $orderServiceHttpPort
+streams:
+  softDeadline:
+    duration: $softDeadlineDuration

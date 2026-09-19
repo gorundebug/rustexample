@@ -1,4 +1,5 @@
-use crate::internal::types::AnalyticsEvent;
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use servicelib::{
     MessageContext,
@@ -12,37 +13,36 @@ use servicelib::{
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
-use std::sync::Arc;
+
+use crate::internal::types::AnalyticsEvent;
 
 #[derive(Clone, Default)]
-pub struct AnalyticsShipmentsSource;
+pub struct SubstreamAnalyticsInputSource;
+
 #[async_trait]
-impl DataProducer<AnalyticsEvent> for AnalyticsShipmentsSource {
+impl DataProducer<AnalyticsEvent> for SubstreamAnalyticsInputSource {
     async fn start(
         &self,
         context: MessageContext,
         consumer: Arc<dyn Consumer<AnalyticsEvent>>,
     ) -> HandlerResult {
-        for value in [
-            AnalyticsEvent {
-                key: "high-value".into(),
-                value: 30,
-                kind: "shipment".into(),
-            },
-            AnalyticsEvent {
-                key: "standard".into(),
-                value: 3,
-                kind: "shipment".into(),
-            },
-        ] {
-            consumer.consume(context.clone(), Payload::new(value)).await;
-        }
+        consumer
+            .consume(
+                context,
+                Payload::new(AnalyticsEvent {
+                    key: "substream".into(),
+                    value: 7,
+                    kind: "input".into(),
+                }),
+            )
+            .await;
         Ok(())
     }
     async fn stop(&self, _context: MessageContext) {}
 }
+
 #[async_trait]
-impl EndpointHandler<(), AnalyticsEvent, (), String> for AnalyticsShipmentsSource {
+impl EndpointHandler<(), AnalyticsEvent, (), String> for SubstreamAnalyticsInputSource {
     fn concurrency(&self, _stream: &StreamContext<AnalyticsEvent, (), String>) -> usize {
         0
     }
@@ -83,10 +83,11 @@ impl EndpointHandler<(), AnalyticsEvent, (), String> for AnalyticsShipmentsSourc
     ) {
     }
 }
-pub async fn make_analytics_shipments_source(
+
+pub async fn make_substream_analytics_input_source(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
     _config: &CustomEndpointConfig,
-) -> RuntimeResult<AnalyticsShipmentsSource> {
-    Ok(AnalyticsShipmentsSource)
+) -> RuntimeResult<SubstreamAnalyticsInputSource> {
+    Ok(SubstreamAnalyticsInputSource)
 }

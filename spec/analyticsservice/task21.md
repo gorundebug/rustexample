@@ -1,4 +1,4 @@
-# Task 21/22: `HighValueAnalyticsSink`
+# Task 21/26: `HighValueAnalyticsSink`
 
 > Rules: [`spec/rules.md`](../rules.md)
 

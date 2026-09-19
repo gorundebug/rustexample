@@ -4,6 +4,7 @@ mod cycleanalytics;
 mod endpoint;
 mod joinanalytics;
 mod multijoinanalytics;
+mod substreamanalytics;
 
 pub use analytics::*;
 pub use cron::*;
@@ -11,3 +12,4 @@ pub use cycleanalytics::*;
 pub use endpoint::*;
 pub use joinanalytics::*;
 pub use multijoinanalytics::*;
+pub use substreamanalytics::*;

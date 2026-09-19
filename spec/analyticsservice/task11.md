@@ -1,4 +1,4 @@
-# Task 11/22: `CycleAnalyticsResultSink`
+# Task 11/26: `CycleAnalyticsResultSink`
 
 > Rules: [`spec/rules.md`](../rules.md)
 

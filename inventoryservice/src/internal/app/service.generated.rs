@@ -2,45 +2,39 @@
 
 #![allow(dead_code, unused_imports)]
 
-use std::{future::Future, pin::Pin, sync::{Arc, OnceLock, Weak, mpsc}};
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::{Arc, OnceLock, Weak, mpsc},
+};
 
+use example_model::types::*;
 use servicelib::{
     MessageContext, Stream,
-    operators::{InputStream, SinkStream, SinkStreamWithResult, MultiJoinStream, TypedCaseStream},
+    operators::{InputStream, MultiJoinStream, SinkStream, SinkStreamWithResult, TypedCaseStream},
     runtime::{
         config::{
-            ConfigLoader, RuntimeDataConnectorConfig,
-            GrpcEndpointConfig,
-            ProcessStreamConfig,
-            GrpcDataConnectorConfig,
+            ConfigLoader, GrpcDataConnectorConfig, GrpcEndpointConfig, ProcessStreamConfig,
+            RuntimeDataConnectorConfig,
         },
-        environment::{RuntimeEnvironment, RuntimeError, RuntimeResult},
         datastruct::KeyValue,
+        environment::{RuntimeEnvironment, RuntimeError, RuntimeResult},
         serviceapp::ServiceApp,
     },
 };
-use example_model::types::*;
 
-
-
-
-
-
-
-
-use servicelib::datasource::grpc::{
-    NoStreamingEndpointConsumer, ServerStreamingEndpointConsumer,
-    ClientStreamingEndpointConsumer, BidiStreamingEndpointConsumer, TonicDataSource,
-    make_grpc_no_streaming_endpoint_consumer as make_grpc_source_endpoint_consumer,
-    make_grpc_server_streaming_endpoint_consumer as make_grpc_server_source_endpoint_consumer,
-    make_grpc_client_streaming_endpoint_consumer as make_grpc_client_source_endpoint_consumer,
-    make_grpc_bidi_streaming_endpoint_consumer as make_grpc_bidi_source_endpoint_consumer,
-};
-use tonic::{Request, Response, Status};
 use inventory_service_api::inventoryserviceapi::inventory_service_api_server::{
     InventoryServiceApi, InventoryServiceApiServer,
 };
-
+use servicelib::datasource::grpc::{
+    BidiStreamingEndpointConsumer, ClientStreamingEndpointConsumer, NoStreamingEndpointConsumer,
+    ServerStreamingEndpointConsumer, TonicDataSource,
+    make_grpc_bidi_streaming_endpoint_consumer as make_grpc_bidi_source_endpoint_consumer,
+    make_grpc_client_streaming_endpoint_consumer as make_grpc_client_source_endpoint_consumer,
+    make_grpc_no_streaming_endpoint_consumer as make_grpc_source_endpoint_consumer,
+    make_grpc_server_streaming_endpoint_consumer as make_grpc_server_source_endpoint_consumer,
+};
+use tonic::{Request, Response, Status};
 
 use crate::internal::{config::Config, functions::*};
 
@@ -49,14 +43,16 @@ use futures_util::{Stream as FuturesStream, StreamExt};
 // Bounded queues apply transport backpressure instead of buffering a whole RPC.
 const GRPC_STREAM_BUFFER: usize = 16;
 
-fn grpc_request_stream<T>(receiver: tokio::sync::mpsc::Receiver<T>)
-    -> impl FuturesStream<Item = T> + Send
-where T: Send + 'static {
+fn grpc_request_stream<T>(
+    receiver: tokio::sync::mpsc::Receiver<T>,
+) -> impl FuturesStream<Item = T> + Send
+where
+    T: Send + 'static,
+{
     futures_util::stream::unfold(receiver, |mut receiver| async move {
         receiver.recv().await.map(|value| (value, receiver))
     })
 }
-
 
 pub struct GrpcResponseStream<T> {
     receiver: tokio::sync::mpsc::Receiver<Result<T, Status>>,
@@ -65,30 +61,35 @@ pub struct GrpcResponseStream<T> {
 
 impl<T> FuturesStream for GrpcResponseStream<T> {
     type Item = Result<T, Status>;
-    fn poll_next(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-        -> std::task::Poll<Option<Self::Item>> {
+    fn poll_next(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
         self.get_mut().receiver.poll_recv(cx)
     }
 }
 
 impl<T> Drop for GrpcResponseStream<T> {
-    fn drop(&mut self) { self.context.cancel(); }
+    fn drop(&mut self) {
+        self.context.cancel();
+    }
 }
 
 struct GrpcResponseSender<T>(tokio::sync::mpsc::Sender<Result<T, Status>>);
 
 #[tonic::async_trait]
 impl<T: Send + 'static> servicelib::datasource::grpc::Sender<T> for GrpcResponseSender<T> {
-    async fn send(&self, context: MessageContext, value: T)
-        -> servicelib::datasource::grpc::HandlerResult {
+    async fn send(
+        &self,
+        context: MessageContext,
+        value: T,
+    ) -> servicelib::datasource::grpc::HandlerResult {
         tokio::select! {
             _ = context.cancelled() => Err(Box::new(Status::cancelled("RPC cancelled")) as _),
             result = self.0.send(Ok(value)) => result.map_err(|_| Box::new(Status::cancelled("response stream closed")) as _),
         }
     }
 }
-
-
 
 pub struct ServiceStreams {
     pub process_order_item: Arc<InputStream<OrderItem, OrderItemResult, OrderItemResult>>,
@@ -117,10 +118,17 @@ pub struct ServiceInfrastructure {
 
 struct GeneratedServiceInner {
     runtime: ServiceRuntime,
-    process_order_item_endpoint: Arc<NoStreamingEndpointConsumer<
-        (), inventory_service_api::processorderitem::ProcessOrderItemRequest, inventory_service_api::processorderitem::ProcessOrderItemResponse,
-        OrderItem, OrderItemResult, OrderItemResult, ProcessOrderItemSource
-    >>,
+    process_order_item_endpoint: Arc<
+        NoStreamingEndpointConsumer<
+            (),
+            inventory_service_api::processorderitem::ProcessOrderItemRequest,
+            inventory_service_api::processorderitem::ProcessOrderItemResponse,
+            OrderItem,
+            OrderItemResult,
+            OrderItemResult,
+            ProcessOrderItemSource,
+        >,
+    >,
     app: OnceLock<Arc<ServiceApp>>,
 }
 
@@ -131,33 +139,52 @@ pub struct GeneratedService {
 
 #[derive(Clone)]
 pub struct ServiceMakers {
-    pub get_inventory_item_data: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a ProcessStreamConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<GetInventoryItemData>> + Send + 'a>> + Send + Sync>,
-    pub process_order_item_source: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a GrpcEndpointConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<ProcessOrderItemSource>> + Send + 'a>> + Send + Sync>,
-    pub inventory_service_api_data_source: ServiceInfrastructureMaker<GrpcDataConnectorConfig, Arc<TonicDataSource>>,
+    pub get_inventory_item_data: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a ProcessStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<GetInventoryItemData>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub process_order_item_source: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a GrpcEndpointConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<ProcessOrderItemSource>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub inventory_service_api_data_source:
+        ServiceInfrastructureMaker<GrpcDataConnectorConfig, Arc<TonicDataSource>>,
 }
 
-pub type ServiceInfrastructureMaker<C, T> = Arc<dyn for<'a> Fn(
-    MessageContext,
-    RuntimeEnvironment,
-    &'a C,
-) -> Pin<Box<dyn Future<Output = RuntimeResult<T>> + Send + 'a>> + Send + Sync>;
+pub type ServiceInfrastructureMaker<C, T> = Arc<
+    dyn for<'a> Fn(
+            MessageContext,
+            RuntimeEnvironment,
+            &'a C,
+        ) -> Pin<Box<dyn Future<Output = RuntimeResult<T>> + Send + 'a>>
+        + Send
+        + Sync,
+>;
 
 impl Default for ServiceMakers {
     fn default() -> Self {
         Self {
             get_inventory_item_data: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_get_inventory_item_data(context, environment, config).await })
+                Box::pin(
+                    async move { make_get_inventory_item_data(context, environment, config).await },
+                )
             }),
             process_order_item_source: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_process_order_item_source(context, environment, config).await })
+                Box::pin(async move {
+                    make_process_order_item_source(context, environment, config).await
+                })
             }),
             inventory_service_api_data_source: Arc::new(|_context, environment, config| {
                 Box::pin(async move { TonicDataSource::from_config(environment, config) })
@@ -170,13 +197,19 @@ fn connector_config(
     environment: &RuntimeEnvironment,
     connector_id: i32,
 ) -> RuntimeResult<Arc<RuntimeDataConnectorConfig>> {
-    environment.runtime_config().data_connector_by_id(connector_id).ok_or_else(||
-        RuntimeError::InvalidConfiguration(format!(
-            "data connector {connector_id} is not configured"
-        ))
-    )
+    environment
+        .runtime_config()
+        .data_connector_by_id(connector_id)
+        .ok_or_else(|| {
+            RuntimeError::InvalidConfiguration(format!(
+                "data connector {connector_id} is not configured"
+            ))
+        })
 }
-fn grpc_connector_config(environment: &RuntimeEnvironment, connector_id: i32) -> RuntimeResult<GrpcDataConnectorConfig> {
+fn grpc_connector_config(
+    environment: &RuntimeEnvironment,
+    connector_id: i32,
+) -> RuntimeResult<GrpcDataConnectorConfig> {
     match connector_config(environment, connector_id)?.as_ref() {
         RuntimeDataConnectorConfig::Grpc(config) => Ok(config.clone()),
         _ => Err(RuntimeError::InvalidConfiguration(format!(
@@ -198,54 +231,53 @@ pub async fn init_functions(
 ) -> RuntimeResult<ServiceFunctions> {
     let maker_group_context = context.child();
     let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
-        let get_inventory_item_data_maker = makers.get_inventory_item_data.clone();
-        let get_inventory_item_data_context = maker_group_context.clone();
-        let get_inventory_item_data_group_context = maker_group_context.clone();
-        let get_inventory_item_data_environment = environment.clone();
-        let get_inventory_item_data_error_sender = maker_error_sender.clone();
-        let get_inventory_item_data_future = async move {
-            let result = (get_inventory_item_data_maker)(
-                    get_inventory_item_data_context,
-                    get_inventory_item_data_environment,
-                    &config.streams.get_inventory_item_data,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    get_inventory_item_data_group_context.cancel();
-                    get_inventory_item_data_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+    let get_inventory_item_data_maker = makers.get_inventory_item_data.clone();
+    let get_inventory_item_data_context = maker_group_context.clone();
+    let get_inventory_item_data_group_context = maker_group_context.clone();
+    let get_inventory_item_data_environment = environment.clone();
+    let get_inventory_item_data_error_sender = maker_error_sender.clone();
+    let get_inventory_item_data_future = async move {
+        let result = (get_inventory_item_data_maker)(
+            get_inventory_item_data_context,
+            get_inventory_item_data_environment,
+            &config.streams.get_inventory_item_data,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                get_inventory_item_data_group_context.cancel();
+                get_inventory_item_data_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let process_order_item_source_maker = makers.process_order_item_source.clone();
-        let process_order_item_source_context = maker_group_context.clone();
-        let process_order_item_source_group_context = maker_group_context.clone();
-        let process_order_item_source_environment = environment.clone();
-        let process_order_item_source_error_sender = maker_error_sender.clone();
-        let process_order_item_source_future = async move {
-            let result = (process_order_item_source_maker)(
-                    process_order_item_source_context,
-                    process_order_item_source_environment,
-                    &config.endpoints.process_order_item,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    process_order_item_source_group_context.cancel();
-                    process_order_item_source_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let process_order_item_source_maker = makers.process_order_item_source.clone();
+    let process_order_item_source_context = maker_group_context.clone();
+    let process_order_item_source_group_context = maker_group_context.clone();
+    let process_order_item_source_environment = environment.clone();
+    let process_order_item_source_error_sender = maker_error_sender.clone();
+    let process_order_item_source_future = async move {
+        let result = (process_order_item_source_maker)(
+            process_order_item_source_context,
+            process_order_item_source_environment,
+            &config.endpoints.process_order_item,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                process_order_item_source_group_context.cancel();
+                process_order_item_source_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-    let (
-        get_inventory_item_data,
-        process_order_item_source,
-    ) = tokio::join!(
+        }
+    };
+    let (get_inventory_item_data, process_order_item_source) = tokio::join!(
         get_inventory_item_data_future,
         process_order_item_source_future,
     );
@@ -254,19 +286,23 @@ pub async fn init_functions(
     if let Ok(error) = maker_error_receiver.try_recv() {
         return Err(error);
     }
-    let get_inventory_item_data = get_inventory_item_data.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker get_inventory_item_data failed without an error".to_string(),
-    ))?;
-    let process_order_item_source = process_order_item_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker process_order_item_source failed without an error".to_string(),
-    ))?;
+    let get_inventory_item_data = get_inventory_item_data.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker get_inventory_item_data failed without an error".to_string(),
+        )
+    })?;
+    let process_order_item_source = process_order_item_source.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker process_order_item_source failed without an error".to_string(),
+        )
+    })?;
     Ok(ServiceFunctions {
         get_inventory_item_data,
         process_order_item_source,
     })
 }
 macro_rules! infrastructure_maker_future {
-    ($maker:expr, $context:expr, $environment:expr, $config:expr, $group:expr, $errors:expr) => ({
+    ($maker:expr, $context:expr, $environment:expr, $config:expr, $group:expr, $errors:expr) => {{
         let maker = $maker.clone();
         let context = $context.clone();
         let environment = $environment.clone();
@@ -278,12 +314,14 @@ macro_rules! infrastructure_maker_future {
                 Ok(value) => Some(value),
                 Err(error) => {
                     group.cancel();
-                    errors.send(error).expect("infrastructure maker error receiver was dropped");
+                    errors
+                        .send(error)
+                        .expect("infrastructure maker error receiver was dropped");
                     None
                 }
             }
         }
-    });
+    }};
 }
 
 pub async fn init_infrastructure(
@@ -294,21 +332,27 @@ pub async fn init_infrastructure(
     let maker_group_context = context.child();
     let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
     let inventory_service_api_data_source_future = infrastructure_maker_future!(
-        makers.inventory_service_api_data_source, maker_group_context, environment,
-        grpc_connector_config(&environment, 2)?, maker_group_context, maker_error_sender
+        makers.inventory_service_api_data_source,
+        maker_group_context,
+        environment,
+        grpc_connector_config(&environment, 2)?,
+        maker_group_context,
+        maker_error_sender
     );
-    let (
-        inventory_service_api_data_source,
-    ) = tokio::join!(
-        inventory_service_api_data_source_future,
-    );
+    let (inventory_service_api_data_source,) =
+        tokio::join!(inventory_service_api_data_source_future,);
     maker_group_context.cancel();
     drop(maker_error_sender);
     if let Ok(error) = maker_error_receiver.try_recv() {
         return Err(error);
     }
     Ok(ServiceInfrastructure {
-        inventory_service_api_data_source: inventory_service_api_data_source.ok_or_else(|| RuntimeError::InvalidConfiguration("infrastructure maker inventory_service_api_data_source failed without an error".to_owned()))?,
+        inventory_service_api_data_source: inventory_service_api_data_source.ok_or_else(|| {
+            RuntimeError::InvalidConfiguration(
+                "infrastructure maker inventory_service_api_data_source failed without an error"
+                    .to_owned(),
+            )
+        })?,
     })
 }
 
@@ -317,25 +361,38 @@ pub fn init_runtime(
     environment: RuntimeEnvironment,
     functions: ServiceFunctions,
     infrastructure: ServiceInfrastructure,
-) -> RuntimeResult<ServiceRuntime>  {
-    let process_inventory_item = Arc::new(InputStream::<OrderItem, OrderItemResult, OrderItemResult>::new(&config.streams.process_inventory_item, environment.clone()));
-    let (get_inventory_item_data, get_inventory_item_error) = process_inventory_item.stream().process(&config.streams.get_inventory_item_data, functions.get_inventory_item_data)?;
+) -> RuntimeResult<ServiceRuntime> {
+    let _ = &infrastructure;
+    let process_inventory_item = Arc::new(
+        InputStream::<OrderItem, OrderItemResult, OrderItemResult>::new(
+            &config.streams.process_inventory_item,
+            environment.clone(),
+        ),
+    );
+    let (get_inventory_item_data, get_inventory_item_error) =
+        process_inventory_item.stream().process(
+            &config.streams.get_inventory_item_data,
+            functions.get_inventory_item_data,
+        )?;
     let _ = &get_inventory_item_error;
-    let merge_inventory_result = get_inventory_item_data.merge(&config.streams.merge_inventory_result, &[get_inventory_item_error.clone()])?;
+    let merge_inventory_result = get_inventory_item_data.merge(
+        &config.streams.merge_inventory_result,
+        &[get_inventory_item_error.clone()],
+    )?;
     process_inventory_item.set_source(&merge_inventory_result)?;
     Ok(ServiceRuntime {
-      streams: ServiceStreams {
-        process_order_item: process_inventory_item.clone(),
-        get_inventory_item_data,
-        get_inventory_item_error,
-        merge_inventory_result,
-      },
-      handlers: ServiceHandlers {
-        process_order_item_source: functions.process_order_item_source,
-      },
-      data_connectors: ServiceDataConnectors {
-        inventory_service_api_data_source: infrastructure.inventory_service_api_data_source,
-      },
+        streams: ServiceStreams {
+            process_order_item: process_inventory_item.clone(),
+            get_inventory_item_data,
+            get_inventory_item_error,
+            merge_inventory_result,
+        },
+        handlers: ServiceHandlers {
+            process_order_item_source: functions.process_order_item_source,
+        },
+        data_connectors: ServiceDataConnectors {
+            inventory_service_api_data_source: infrastructure.inventory_service_api_data_source,
+        },
     })
 }
 
@@ -351,16 +408,12 @@ impl GeneratedService {
         let context = MessageContext::new();
         let mut makers = ServiceMakers::default();
         custom_makers_init(context.clone(), &mut makers)?;
-        let mut functions = init_functions(
-            context.clone(), config, app.environment().clone(), &makers,
-        ).await?;
+        let mut functions =
+            init_functions(context.clone(), config, app.environment().clone(), &makers).await?;
         custom_functions_init(context, &mut functions)?;
-        let infrastructure = init_infrastructure(
-            MessageContext::new(), app.environment().clone(), &makers,
-        ).await?;
-        let runtime = init_runtime(
-            config, app.environment().clone(), functions, infrastructure,
-        )?;
+        let infrastructure =
+            init_infrastructure(MessageContext::new(), app.environment().clone(), &makers).await?;
+        let runtime = init_runtime(config, app.environment().clone(), functions, infrastructure)?;
         let process_order_item_endpoint = make_grpc_source_endpoint_consumer(
             runtime.streams.process_order_item.as_ref().clone(),
             runtime.handlers.process_order_item_source.clone(),
@@ -374,7 +427,11 @@ impl GeneratedService {
             }),
         };
         app.register_data_source(Arc::clone(
-            &service.inner.runtime.data_connectors.inventory_service_api_data_source,
+            &service
+                .inner
+                .runtime
+                .data_connectors
+                .inventory_service_api_data_source,
         ))?;
 
         let weak: Weak<GeneratedServiceInner> = Arc::downgrade(&service.inner);
@@ -382,9 +439,10 @@ impl GeneratedService {
             let Some(inner) = weak.upgrade() else {
                 return Ok(());
             };
-            let app = inner.app.get().ok_or_else(||
-                "service application is not initialized".to_owned()
-            )?;
+            let app = inner
+                .app
+                .get()
+                .ok_or_else(|| "service application is not initialized".to_owned())?;
             app.validate_reload(&config.service())
                 .map_err(|error| error.to_string())?;
             app.environment().publish_runtime_config(runtime_config);
@@ -393,22 +451,25 @@ impl GeneratedService {
         app.add_component(Arc::new(config_loader))?;
         app.add_grpc_service(InventoryServiceApiServer::new(service.clone()))?;
         let app = Arc::new(app);
-        service.inner.app.set(app).map_err(|_| {
-            "service application initialized twice".to_owned()
-        })?;
+        service
+            .inner
+            .app
+            .set(app)
+            .map_err(|_| "service application initialized twice".to_owned())?;
         Ok(service)
     }
 
     pub async fn run(self) -> Result<(), Box<dyn std::error::Error>> {
-        let app = self.inner.app.get().ok_or_else(||
-            "service application is not initialized".to_owned()
-        )?;
+        let app = self
+            .inner
+            .app
+            .get()
+            .ok_or_else(|| "service application is not initialized".to_owned())?;
         app.start(MessageContext::new()).await?;
         #[cfg(unix)]
         {
-            let mut terminate = tokio::signal::unix::signal(
-                tokio::signal::unix::SignalKind::terminate(),
-            )?;
+            let mut terminate =
+                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
             tokio::select! {
                 result = tokio::signal::ctrl_c() => result?,
                 _ = terminate.recv() => {},
@@ -421,26 +482,23 @@ impl GeneratedService {
     }
 }
 
-
 #[tonic::async_trait]
 impl InventoryServiceApi for GeneratedService {
-
-
     async fn process_order_item(
         &self,
         request: Request<inventory_service_api::processorderitem::ProcessOrderItemRequest>,
-    ) -> Result<Response<inventory_service_api::processorderitem::ProcessOrderItemResponse>, Status> {
+    ) -> Result<Response<inventory_service_api::processorderitem::ProcessOrderItemResponse>, Status>
+    {
         let context = MessageContext::from_tonic_request(&request);
 
         let request = request.into_inner();
 
-
-        let response = self.inner.process_order_item_endpoint
+        let response = self
+            .inner
+            .process_order_item_endpoint
             .handle(context, request)
             .await
             .map_err(|error| Status::internal(error.to_string()))?;
         Ok(Response::new(response))
-
     }
-
 }

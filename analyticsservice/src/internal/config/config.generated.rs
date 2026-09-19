@@ -4,21 +4,23 @@
 
 use std::time::Duration;
 
-use serde::{Deserialize, Serialize};
 use super::custom::CustomConfig;
-use servicelib::api::{DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType, KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy, ScheduleOverlapPolicy, TypeDefinitionFormat};
+use serde::{Deserialize, Serialize};
+use servicelib::api::{
+    DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType,
+    KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy,
+    ScheduleOverlapPolicy, TypeDefinitionFormat,
+};
 use servicelib::runtime::config::{
-    CallSemantics, Config as ServiceConfigContract, CycleLinkStreamConfig,
-    DelayStreamConfig, FilterStreamConfig, FlatMapIterableStreamConfig,
-    FlatMapStreamConfig, InputStreamConfig, JoinStreamConfig, KeyByStreamConfig,
-    LinkConfig, MapStreamConfig, MergeStreamConfig, MultiJoinStreamConfig,
-    ModuleConfig, PoolConfig, ProcessStreamConfig, RuntimeDataConnectorConfig,
-    RuntimeEndpointConfig, RuntimeStreamConfig, ServiceConfig, SinkStreamConfig,
-    SplitStreamConfig, StreamConfig, WhenStreamConfig, CaseStreamConfig,
-    TypeConfig, HttpDataConnectorConfig, GrpcDataConnectorConfig, KafkaDataConnectorConfig,
-    CronDataConnectorConfig,
-    CustomDataConnectorConfig, HttpEndpointConfig, GrpcEndpointConfig, KafkaEndpointConfig,
-    CustomEndpointConfig, CronEndpointConfig,
+    CallSemantics, CaseStreamConfig, Config as ServiceConfigContract, CronDataConnectorConfig,
+    CronEndpointConfig, CustomDataConnectorConfig, CustomEndpointConfig, CycleLinkStreamConfig,
+    DelayStreamConfig, FilterStreamConfig, FlatMapIterableStreamConfig, FlatMapStreamConfig,
+    GrpcDataConnectorConfig, GrpcEndpointConfig, HttpDataConnectorConfig, HttpEndpointConfig,
+    InputStreamConfig, JoinStreamConfig, KafkaDataConnectorConfig, KafkaEndpointConfig,
+    KeyByStreamConfig, LinkConfig, MapStreamConfig, MergeStreamConfig, ModuleConfig,
+    MultiJoinStreamConfig, PoolConfig, ProcessStreamConfig, RuntimeDataConnectorConfig,
+    RuntimeEndpointConfig, RuntimeStreamConfig, ServiceConfig, SinkStreamConfig, SplitStreamConfig,
+    StreamConfig, SubStreamConfig, TypeConfig, WhenStreamConfig,
 };
 
 pub const ANALYTICS_SERVICE_ID: i32 = 1;
@@ -51,6 +53,11 @@ pub const ROUTE_ANALYTICS_RESULT_STREAM_ID: i32 = 26;
 pub const STANDARD_ANALYTICS_STREAM_ID: i32 = 27;
 pub const WRITE_HIGH_VALUE_ANALYTICS_STREAM_ID: i32 = 28;
 pub const WRITE_STANDARD_ANALYTICS_STREAM_ID: i32 = 29;
+pub const ANALYZE_ANALYTICS_SUBSTREAM_STREAM_ID: i32 = 30;
+pub const BUILD_SUBSTREAM_ANALYTICS_RESULT_STREAM_ID: i32 = 31;
+pub const INVOKE_ANALYTICS_SUBSTREAM_STREAM_ID: i32 = 32;
+pub const SUBSTREAM_ANALYTICS_INPUT_STREAM_ID: i32 = 33;
+pub const WRITE_SUBSTREAM_ANALYTICS_STREAM_ID: i32 = 34;
 
 pub const ANALYTICS_FUNCTIONS_CONNECTOR_ID: i32 = 1;
 pub const LOCAL_CRON_CONNECTOR_ID: i32 = 3;
@@ -64,8 +71,10 @@ pub const CYCLE_ANALYTICS_RESULT_ENDPOINT_ID: i32 = 5;
 pub const HIGH_VALUE_ANALYTICS_ENDPOINT_ID: i32 = 6;
 pub const JOINED_ANALYTICS_ENDPOINT_ID: i32 = 7;
 pub const STANDARD_ANALYTICS_ENDPOINT_ID: i32 = 8;
-pub const ANALYTICS_SCHEDULE_ENDPOINT_ID: i32 = 10;
-pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 12;
+pub const SUBSTREAM_ANALYTICS_INPUT_ENDPOINT_ID: i32 = 9;
+pub const SUBSTREAM_ANALYTICS_RESULT_ENDPOINT_ID: i32 = 10;
+pub const ANALYTICS_SCHEDULE_ENDPOINT_ID: i32 = 12;
+pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 14;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -99,185 +108,535 @@ pub struct Streams {
     pub standard_analytics: WhenStreamConfig,
     pub write_high_value_analytics: SinkStreamConfig,
     pub write_standard_analytics: SinkStreamConfig,
+    pub analyze_analytics_substream: SubStreamConfig,
+    pub build_substream_analytics_result: MapStreamConfig,
+    pub invoke_analytics_substream: MapStreamConfig,
+    pub substream_analytics_input: InputStreamConfig,
+    pub write_substream_analytics: SinkStreamConfig,
 }
 
 impl Default for Streams {
     fn default() -> Self {
         Self {
-            analytics_schedule: InputStreamConfig { stream: StreamConfig::new(ANALYTICS_SCHEDULE_STREAM_ID, "Analytics Schedule").with_graph(
-    ANALYTICS_SERVICE_ID, 0, [],
-    Some("AutomationJob"),
-    None::<String>,
-    -1905_f64, -497_f64,
-).with_pipeline("analytics"), endpoint_id: ANALYTICS_SCHEDULE_ENDPOINT_ID },
-            consume_order_processed: InputStreamConfig { stream: StreamConfig::new(CONSUME_ORDER_PROCESSED_STREAM_ID, "Consume Order Processed").with_graph(
-    ANALYTICS_SERVICE_ID, COUNT_ORDER_PROCESSED_STREAM_ID, [],
-    Some("OrderProcessed"),
-    None::<String>,
-    -1453_f64, -510_f64,
-).with_pipeline("analytics"), endpoint_id: ORDER_PROCESSED_ENDPOINT_ID },
-            count_order_processed: ProcessStreamConfig { stream: StreamConfig::new(COUNT_ORDER_PROCESSED_STREAM_ID, "Count Order Processed").with_graph(
-    ANALYTICS_SERVICE_ID, CONSUME_ORDER_PROCESSED_STREAM_ID, [],
-    Some("OrderProcessed"),
-    None::<String>,
-    -1695_f64, -518_f64,
-).with_pipeline("analytics"), pattern: ProcessPattern::Undefined },
-            analytics_orders: InputStreamConfig { stream: StreamConfig::new(ANALYTICS_ORDERS_STREAM_ID, "Analytics Orders").with_graph(
-    ANALYTICS_SERVICE_ID, 0, [],
-    Some("AnalyticsEvent"),
-    None::<String>,
-    -1739_f64, -1133_f64,
-).with_pipeline("analyticsSources"), endpoint_id: ANALYTICS_ORDERS_ENDPOINT_ID },
-            analytics_payments: InputStreamConfig { stream: StreamConfig::new(ANALYTICS_PAYMENTS_STREAM_ID, "Analytics Payments").with_graph(
-    ANALYTICS_SERVICE_ID, 0, [],
-    Some("AnalyticsEvent"),
-    None::<String>,
-    -2307_f64, -767_f64,
-).with_pipeline("analyticsSources"), endpoint_id: ANALYTICS_PAYMENTS_ENDPOINT_ID },
-            analytics_shipments: InputStreamConfig { stream: StreamConfig::new(ANALYTICS_SHIPMENTS_STREAM_ID, "Analytics Shipments").with_graph(
-    ANALYTICS_SERVICE_ID, 0, [],
-    Some("AnalyticsEvent"),
-    None::<String>,
-    12_f64, -1308_f64,
-).with_pipeline("analyticsSources"), endpoint_id: ANALYTICS_SHIPMENTS_ENDPOINT_ID },
-            split_analytics_orders: SplitStreamConfig::from(StreamConfig::new(SPLIT_ANALYTICS_ORDERS_STREAM_ID, "Split Analytics Orders").with_graph(
-    ANALYTICS_SERVICE_ID, ANALYTICS_ORDERS_STREAM_ID, [],
-    None::<String>,
-    None::<String>,
-    -1529_f64, -1100_f64,
-).with_pipeline("analyticsSources")),
-            split_analytics_payments: SplitStreamConfig::from(StreamConfig::new(SPLIT_ANALYTICS_PAYMENTS_STREAM_ID, "Split Analytics Payments").with_graph(
-    ANALYTICS_SERVICE_ID, ANALYTICS_PAYMENTS_STREAM_ID, [],
-    None::<String>,
-    None::<String>,
-    -1945_f64, -776_f64,
-).with_pipeline("analyticsSources")),
-            advance_cycle_analytics: MapStreamConfig::from(StreamConfig::new(ADVANCE_CYCLE_ANALYTICS_STREAM_ID, "Advance Cycle Analytics").with_graph(
-    ANALYTICS_SERVICE_ID, MERGE_CYCLE_ANALYTICS_STREAM_ID, [],
-    Some("AnalyticsEvent"),
-    None::<String>,
-    -1502_f64, -1648_f64,
-).with_pipeline("cycleAnalytics")),
-            complete_cycle_analytics: FilterStreamConfig::from(StreamConfig::new(COMPLETE_CYCLE_ANALYTICS_STREAM_ID, "Complete Cycle Analytics").with_graph(
-    ANALYTICS_SERVICE_ID, SPLIT_CYCLE_ANALYTICS_STREAM_ID, [],
-    None::<String>,
-    None::<String>,
-    -529_f64, -1718_f64,
-).with_pipeline("cycleAnalytics")),
-            continue_cycle_analytics: FilterStreamConfig::from(StreamConfig::new(CONTINUE_CYCLE_ANALYTICS_STREAM_ID, "Continue Cycle Analytics").with_graph(
-    ANALYTICS_SERVICE_ID, SPLIT_CYCLE_ANALYTICS_STREAM_ID, [],
-    None::<String>,
-    None::<String>,
-    -879_f64, -2196_f64,
-).with_pipeline("cycleAnalytics")),
-            cycle_analytics_input: InputStreamConfig { stream: StreamConfig::new(CYCLE_ANALYTICS_INPUT_STREAM_ID, "Cycle Analytics Input").with_graph(
-    ANALYTICS_SERVICE_ID, 0, [],
-    Some("AnalyticsEvent"),
-    None::<String>,
-    -2362_f64, -1830_f64,
-).with_pipeline("cycleAnalytics"), endpoint_id: CYCLE_ANALYTICS_INPUT_ENDPOINT_ID },
-            cycle_analytics_link: CycleLinkStreamConfig::from(StreamConfig::new(CYCLE_ANALYTICS_LINK_STREAM_ID, "Cycle Analytics Link").with_graph(
-    ANALYTICS_SERVICE_ID, CONTINUE_CYCLE_ANALYTICS_STREAM_ID, [],
-    None::<String>,
-    None::<String>,
-    -1311_f64, -2114_f64,
-).with_pipeline("cycleAnalytics")),
-            merge_cycle_analytics: MergeStreamConfig::from(StreamConfig::new(MERGE_CYCLE_ANALYTICS_STREAM_ID, "Merge Cycle Analytics").with_graph(
-    ANALYTICS_SERVICE_ID, 0, [CYCLE_ANALYTICS_INPUT_STREAM_ID, CYCLE_ANALYTICS_LINK_STREAM_ID],
-    None::<String>,
-    None::<String>,
-    -1830_f64, -1827_f64,
-).with_pipeline("cycleAnalytics")),
-            split_cycle_analytics: SplitStreamConfig::from(StreamConfig::new(SPLIT_CYCLE_ANALYTICS_STREAM_ID, "Split Cycle Analytics").with_graph(
-    ANALYTICS_SERVICE_ID, ADVANCE_CYCLE_ANALYTICS_STREAM_ID, [],
-    None::<String>,
-    None::<String>,
-    -830_f64, -1687_f64,
-).with_pipeline("cycleAnalytics")),
-            write_cycle_analytics: SinkStreamConfig { stream: StreamConfig::new(WRITE_CYCLE_ANALYTICS_STREAM_ID, "Write Cycle Analytics").with_graph(
-    ANALYTICS_SERVICE_ID, COMPLETE_CYCLE_ANALYTICS_STREAM_ID, [],
-    Some("AnalyticsEvent"),
-    None::<String>,
-    -545_f64, -2204_f64,
-).with_pipeline("cycleAnalytics"), endpoint_id: CYCLE_ANALYTICS_RESULT_ENDPOINT_ID },
-            join_order_payment_analytics: JoinStreamConfig { stream: StreamConfig::new(JOIN_ORDER_PAYMENT_ANALYTICS_STREAM_ID, "Join Order Payment Analytics").with_graph(
-    ANALYTICS_SERVICE_ID, KEY_ORDERS_FOR_JOIN_STREAM_ID, [KEY_PAYMENTS_FOR_JOIN_STREAM_ID],
-    Some("AnalyticsResult"),
-    None::<String>,
-    -637_f64, -1050_f64,
-).with_pipeline("joinAnalytics"), join_type: JoinType::Inner, join_storage: JoinStorageType::HashMap, ttl: Duration::from_millis(60000), renew_ttl: true },
-            key_orders_for_join: KeyByStreamConfig::from(StreamConfig::new(KEY_ORDERS_FOR_JOIN_STREAM_ID, "Key Orders For Join").with_graph(
-    ANALYTICS_SERVICE_ID, SPLIT_ANALYTICS_ORDERS_STREAM_ID, [],
-    Some("AnalyticsEvent"),
-    Some("AnalyticsKey"),
-    -1258_f64, -1007_f64,
-).with_pipeline("joinAnalytics")),
-            key_payments_for_join: KeyByStreamConfig::from(StreamConfig::new(KEY_PAYMENTS_FOR_JOIN_STREAM_ID, "Key Payments For Join").with_graph(
-    ANALYTICS_SERVICE_ID, SPLIT_ANALYTICS_PAYMENTS_STREAM_ID, [],
-    Some("AnalyticsEvent"),
-    Some("AnalyticsKey"),
-    -1377_f64, -723_f64,
-).with_pipeline("joinAnalytics")),
-            write_joined_analytics: SinkStreamConfig { stream: StreamConfig::new(WRITE_JOINED_ANALYTICS_STREAM_ID, "Write Joined Analytics").with_graph(
-    ANALYTICS_SERVICE_ID, JOIN_ORDER_PAYMENT_ANALYTICS_STREAM_ID, [],
-    Some("AnalyticsResult"),
-    None::<String>,
-    -231_f64, -1079_f64,
-).with_pipeline("joinAnalytics"), endpoint_id: JOINED_ANALYTICS_ENDPOINT_ID },
-            high_value_analytics: WhenStreamConfig::from(StreamConfig::new(HIGH_VALUE_ANALYTICS_STREAM_ID, "High Value Analytics").with_graph(
-    ANALYTICS_SERVICE_ID, ROUTE_ANALYTICS_RESULT_STREAM_ID, [],
-    Some("AnalyticsResult"),
-    None::<String>,
-    398_f64, -1650_f64,
-).with_pipeline("multiJoinAnalytics")),
-            key_orders_for_multi_join: KeyByStreamConfig::from(StreamConfig::new(KEY_ORDERS_FOR_MULTI_JOIN_STREAM_ID, "Key Orders For Multi Join").with_graph(
-    ANALYTICS_SERVICE_ID, SPLIT_ANALYTICS_ORDERS_STREAM_ID, [],
-    Some("AnalyticsEvent"),
-    Some("AnalyticsKey"),
-    -1325_f64, -1256_f64,
-).with_pipeline("multiJoinAnalytics")),
-            key_payments_for_multi_join: KeyByStreamConfig::from(StreamConfig::new(KEY_PAYMENTS_FOR_MULTI_JOIN_STREAM_ID, "Key Payments For Multi Join").with_graph(
-    ANALYTICS_SERVICE_ID, SPLIT_ANALYTICS_PAYMENTS_STREAM_ID, [],
-    Some("AnalyticsEvent"),
-    Some("AnalyticsKey"),
-    -1984_f64, -1293_f64,
-).with_pipeline("multiJoinAnalytics")),
-            key_shipments_for_multi_join: KeyByStreamConfig::from(StreamConfig::new(KEY_SHIPMENTS_FOR_MULTI_JOIN_STREAM_ID, "Key Shipments For Multi Join").with_graph(
-    ANALYTICS_SERVICE_ID, ANALYTICS_SHIPMENTS_STREAM_ID, [],
-    Some("AnalyticsEvent"),
-    Some("AnalyticsKey"),
-    -365_f64, -1315_f64,
-).with_pipeline("multiJoinAnalytics")),
-            multi_join_analytics_events: MultiJoinStreamConfig { stream: StreamConfig::new(MULTI_JOIN_ANALYTICS_EVENTS_STREAM_ID, "Multi Join Analytics Events").with_graph(
-    ANALYTICS_SERVICE_ID, KEY_ORDERS_FOR_MULTI_JOIN_STREAM_ID, [KEY_PAYMENTS_FOR_MULTI_JOIN_STREAM_ID, KEY_SHIPMENTS_FOR_MULTI_JOIN_STREAM_ID],
-    Some("AnalyticsResult"),
-    None::<String>,
-    -812_f64, -1446_f64,
-).with_pipeline("multiJoinAnalytics"), join_storage: JoinStorageType::HashMap, ttl: Duration::from_millis(60000), renew_ttl: true },
-            route_analytics_result: CaseStreamConfig::from(StreamConfig::new(ROUTE_ANALYTICS_RESULT_STREAM_ID, "Route Analytics Result").with_graph(
-    ANALYTICS_SERVICE_ID, MULTI_JOIN_ANALYTICS_EVENTS_STREAM_ID, [],
-    None::<String>,
-    None::<String>,
-    -89_f64, -1589_f64,
-).with_pipeline("multiJoinAnalytics")),
-            standard_analytics: WhenStreamConfig::from(StreamConfig::new(STANDARD_ANALYTICS_STREAM_ID, "Standard Analytics").with_graph(
-    ANALYTICS_SERVICE_ID, ROUTE_ANALYTICS_RESULT_STREAM_ID, [],
-    Some("AnalyticsResult"),
-    None::<String>,
-    463_f64, -1449_f64,
-).with_pipeline("multiJoinAnalytics")),
-            write_high_value_analytics: SinkStreamConfig { stream: StreamConfig::new(WRITE_HIGH_VALUE_ANALYTICS_STREAM_ID, "Write High Value Analytics").with_graph(
-    ANALYTICS_SERVICE_ID, HIGH_VALUE_ANALYTICS_STREAM_ID, [],
-    Some("AnalyticsResult"),
-    None::<String>,
-    820_f64, -1669_f64,
-).with_pipeline("multiJoinAnalytics"), endpoint_id: HIGH_VALUE_ANALYTICS_ENDPOINT_ID },
-            write_standard_analytics: SinkStreamConfig { stream: StreamConfig::new(WRITE_STANDARD_ANALYTICS_STREAM_ID, "Write Standard Analytics").with_graph(
-    ANALYTICS_SERVICE_ID, STANDARD_ANALYTICS_STREAM_ID, [],
-    Some("AnalyticsResult"),
-    None::<String>,
-    966_f64, -1453_f64,
-).with_pipeline("multiJoinAnalytics"), endpoint_id: STANDARD_ANALYTICS_ENDPOINT_ID },
+            analytics_schedule: InputStreamConfig {
+                stream: StreamConfig::new(ANALYTICS_SCHEDULE_STREAM_ID, "Analytics Schedule")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        0,
+                        [],
+                        Some("AutomationJob"),
+                        None::<String>,
+                        -1905_f64,
+                        -497_f64,
+                    )
+                    .with_pipeline("analytics"),
+                endpoint_id: ANALYTICS_SCHEDULE_ENDPOINT_ID,
+            },
+            consume_order_processed: InputStreamConfig {
+                stream: StreamConfig::new(
+                    CONSUME_ORDER_PROCESSED_STREAM_ID,
+                    "Consume Order Processed",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    COUNT_ORDER_PROCESSED_STREAM_ID,
+                    [],
+                    Some("OrderProcessed"),
+                    None::<String>,
+                    -1453_f64,
+                    -510_f64,
+                )
+                .with_pipeline("analytics"),
+                endpoint_id: ORDER_PROCESSED_ENDPOINT_ID,
+            },
+            count_order_processed: ProcessStreamConfig {
+                stream: StreamConfig::new(COUNT_ORDER_PROCESSED_STREAM_ID, "Count Order Processed")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        CONSUME_ORDER_PROCESSED_STREAM_ID,
+                        [],
+                        Some("OrderProcessed"),
+                        None::<String>,
+                        -1695_f64,
+                        -518_f64,
+                    )
+                    .with_pipeline("analytics"),
+                pattern: ProcessPattern::Undefined,
+            },
+            analytics_orders: InputStreamConfig {
+                stream: StreamConfig::new(ANALYTICS_ORDERS_STREAM_ID, "Analytics Orders")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        0,
+                        [],
+                        Some("AnalyticsEvent"),
+                        None::<String>,
+                        -1739_f64,
+                        -1133_f64,
+                    )
+                    .with_pipeline("analyticsSources"),
+                endpoint_id: ANALYTICS_ORDERS_ENDPOINT_ID,
+            },
+            analytics_payments: InputStreamConfig {
+                stream: StreamConfig::new(ANALYTICS_PAYMENTS_STREAM_ID, "Analytics Payments")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        0,
+                        [],
+                        Some("AnalyticsEvent"),
+                        None::<String>,
+                        -2307_f64,
+                        -767_f64,
+                    )
+                    .with_pipeline("analyticsSources"),
+                endpoint_id: ANALYTICS_PAYMENTS_ENDPOINT_ID,
+            },
+            analytics_shipments: InputStreamConfig {
+                stream: StreamConfig::new(ANALYTICS_SHIPMENTS_STREAM_ID, "Analytics Shipments")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        0,
+                        [],
+                        Some("AnalyticsEvent"),
+                        None::<String>,
+                        12_f64,
+                        -1308_f64,
+                    )
+                    .with_pipeline("analyticsSources"),
+                endpoint_id: ANALYTICS_SHIPMENTS_ENDPOINT_ID,
+            },
+            split_analytics_orders: SplitStreamConfig::from(
+                StreamConfig::new(SPLIT_ANALYTICS_ORDERS_STREAM_ID, "Split Analytics Orders")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        ANALYTICS_ORDERS_STREAM_ID,
+                        [],
+                        None::<String>,
+                        None::<String>,
+                        -1529_f64,
+                        -1100_f64,
+                    )
+                    .with_pipeline("analyticsSources"),
+            ),
+            split_analytics_payments: SplitStreamConfig::from(
+                StreamConfig::new(
+                    SPLIT_ANALYTICS_PAYMENTS_STREAM_ID,
+                    "Split Analytics Payments",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    ANALYTICS_PAYMENTS_STREAM_ID,
+                    [],
+                    None::<String>,
+                    None::<String>,
+                    -1945_f64,
+                    -776_f64,
+                )
+                .with_pipeline("analyticsSources"),
+            ),
+            advance_cycle_analytics: MapStreamConfig::from(
+                StreamConfig::new(ADVANCE_CYCLE_ANALYTICS_STREAM_ID, "Advance Cycle Analytics")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        MERGE_CYCLE_ANALYTICS_STREAM_ID,
+                        [],
+                        Some("AnalyticsEvent"),
+                        None::<String>,
+                        -1502_f64,
+                        -1648_f64,
+                    )
+                    .with_pipeline("cycleAnalytics"),
+            ),
+            complete_cycle_analytics: FilterStreamConfig::from(
+                StreamConfig::new(
+                    COMPLETE_CYCLE_ANALYTICS_STREAM_ID,
+                    "Complete Cycle Analytics",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    SPLIT_CYCLE_ANALYTICS_STREAM_ID,
+                    [],
+                    None::<String>,
+                    None::<String>,
+                    -529_f64,
+                    -1718_f64,
+                )
+                .with_pipeline("cycleAnalytics"),
+            ),
+            continue_cycle_analytics: FilterStreamConfig::from(
+                StreamConfig::new(
+                    CONTINUE_CYCLE_ANALYTICS_STREAM_ID,
+                    "Continue Cycle Analytics",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    SPLIT_CYCLE_ANALYTICS_STREAM_ID,
+                    [],
+                    None::<String>,
+                    None::<String>,
+                    -879_f64,
+                    -2196_f64,
+                )
+                .with_pipeline("cycleAnalytics"),
+            ),
+            cycle_analytics_input: InputStreamConfig {
+                stream: StreamConfig::new(CYCLE_ANALYTICS_INPUT_STREAM_ID, "Cycle Analytics Input")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        0,
+                        [],
+                        Some("AnalyticsEvent"),
+                        None::<String>,
+                        -2362_f64,
+                        -1830_f64,
+                    )
+                    .with_pipeline("cycleAnalytics"),
+                endpoint_id: CYCLE_ANALYTICS_INPUT_ENDPOINT_ID,
+            },
+            cycle_analytics_link: CycleLinkStreamConfig::from(
+                StreamConfig::new(CYCLE_ANALYTICS_LINK_STREAM_ID, "Cycle Analytics Link")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        CONTINUE_CYCLE_ANALYTICS_STREAM_ID,
+                        [],
+                        None::<String>,
+                        None::<String>,
+                        -1311_f64,
+                        -2114_f64,
+                    )
+                    .with_pipeline("cycleAnalytics"),
+            ),
+            merge_cycle_analytics: MergeStreamConfig::from(
+                StreamConfig::new(MERGE_CYCLE_ANALYTICS_STREAM_ID, "Merge Cycle Analytics")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        0,
+                        [
+                            CYCLE_ANALYTICS_INPUT_STREAM_ID,
+                            CYCLE_ANALYTICS_LINK_STREAM_ID,
+                        ],
+                        None::<String>,
+                        None::<String>,
+                        -1830_f64,
+                        -1827_f64,
+                    )
+                    .with_pipeline("cycleAnalytics"),
+            ),
+            split_cycle_analytics: SplitStreamConfig::from(
+                StreamConfig::new(SPLIT_CYCLE_ANALYTICS_STREAM_ID, "Split Cycle Analytics")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        ADVANCE_CYCLE_ANALYTICS_STREAM_ID,
+                        [],
+                        None::<String>,
+                        None::<String>,
+                        -830_f64,
+                        -1687_f64,
+                    )
+                    .with_pipeline("cycleAnalytics"),
+            ),
+            write_cycle_analytics: SinkStreamConfig {
+                stream: StreamConfig::new(WRITE_CYCLE_ANALYTICS_STREAM_ID, "Write Cycle Analytics")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        COMPLETE_CYCLE_ANALYTICS_STREAM_ID,
+                        [],
+                        Some("AnalyticsEvent"),
+                        None::<String>,
+                        -545_f64,
+                        -2204_f64,
+                    )
+                    .with_pipeline("cycleAnalytics"),
+                endpoint_id: CYCLE_ANALYTICS_RESULT_ENDPOINT_ID,
+            },
+            join_order_payment_analytics: JoinStreamConfig {
+                stream: StreamConfig::new(
+                    JOIN_ORDER_PAYMENT_ANALYTICS_STREAM_ID,
+                    "Join Order Payment Analytics",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    KEY_ORDERS_FOR_JOIN_STREAM_ID,
+                    [KEY_PAYMENTS_FOR_JOIN_STREAM_ID],
+                    Some("AnalyticsResult"),
+                    None::<String>,
+                    -637_f64,
+                    -1050_f64,
+                )
+                .with_pipeline("joinAnalytics"),
+                join_type: JoinType::Inner,
+                join_storage: JoinStorageType::HashMap,
+                ttl: Duration::from_millis(60000),
+                renew_ttl: true,
+            },
+            key_orders_for_join: KeyByStreamConfig::from(
+                StreamConfig::new(KEY_ORDERS_FOR_JOIN_STREAM_ID, "Key Orders For Join")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        SPLIT_ANALYTICS_ORDERS_STREAM_ID,
+                        [],
+                        Some("AnalyticsEvent"),
+                        Some("AnalyticsKey"),
+                        -1258_f64,
+                        -1007_f64,
+                    )
+                    .with_pipeline("joinAnalytics"),
+            ),
+            key_payments_for_join: KeyByStreamConfig::from(
+                StreamConfig::new(KEY_PAYMENTS_FOR_JOIN_STREAM_ID, "Key Payments For Join")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        SPLIT_ANALYTICS_PAYMENTS_STREAM_ID,
+                        [],
+                        Some("AnalyticsEvent"),
+                        Some("AnalyticsKey"),
+                        -1377_f64,
+                        -723_f64,
+                    )
+                    .with_pipeline("joinAnalytics"),
+            ),
+            write_joined_analytics: SinkStreamConfig {
+                stream: StreamConfig::new(
+                    WRITE_JOINED_ANALYTICS_STREAM_ID,
+                    "Write Joined Analytics",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    JOIN_ORDER_PAYMENT_ANALYTICS_STREAM_ID,
+                    [],
+                    Some("AnalyticsResult"),
+                    None::<String>,
+                    -231_f64,
+                    -1079_f64,
+                )
+                .with_pipeline("joinAnalytics"),
+                endpoint_id: JOINED_ANALYTICS_ENDPOINT_ID,
+            },
+            high_value_analytics: WhenStreamConfig::from(
+                StreamConfig::new(HIGH_VALUE_ANALYTICS_STREAM_ID, "High Value Analytics")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        ROUTE_ANALYTICS_RESULT_STREAM_ID,
+                        [],
+                        Some("AnalyticsResult"),
+                        None::<String>,
+                        398_f64,
+                        -1650_f64,
+                    )
+                    .with_pipeline("multiJoinAnalytics"),
+            ),
+            key_orders_for_multi_join: KeyByStreamConfig::from(
+                StreamConfig::new(
+                    KEY_ORDERS_FOR_MULTI_JOIN_STREAM_ID,
+                    "Key Orders For Multi Join",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    SPLIT_ANALYTICS_ORDERS_STREAM_ID,
+                    [],
+                    Some("AnalyticsEvent"),
+                    Some("AnalyticsKey"),
+                    -1325_f64,
+                    -1256_f64,
+                )
+                .with_pipeline("multiJoinAnalytics"),
+            ),
+            key_payments_for_multi_join: KeyByStreamConfig::from(
+                StreamConfig::new(
+                    KEY_PAYMENTS_FOR_MULTI_JOIN_STREAM_ID,
+                    "Key Payments For Multi Join",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    SPLIT_ANALYTICS_PAYMENTS_STREAM_ID,
+                    [],
+                    Some("AnalyticsEvent"),
+                    Some("AnalyticsKey"),
+                    -1984_f64,
+                    -1293_f64,
+                )
+                .with_pipeline("multiJoinAnalytics"),
+            ),
+            key_shipments_for_multi_join: KeyByStreamConfig::from(
+                StreamConfig::new(
+                    KEY_SHIPMENTS_FOR_MULTI_JOIN_STREAM_ID,
+                    "Key Shipments For Multi Join",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    ANALYTICS_SHIPMENTS_STREAM_ID,
+                    [],
+                    Some("AnalyticsEvent"),
+                    Some("AnalyticsKey"),
+                    -365_f64,
+                    -1315_f64,
+                )
+                .with_pipeline("multiJoinAnalytics"),
+            ),
+            multi_join_analytics_events: MultiJoinStreamConfig {
+                stream: StreamConfig::new(
+                    MULTI_JOIN_ANALYTICS_EVENTS_STREAM_ID,
+                    "Multi Join Analytics Events",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    KEY_ORDERS_FOR_MULTI_JOIN_STREAM_ID,
+                    [
+                        KEY_PAYMENTS_FOR_MULTI_JOIN_STREAM_ID,
+                        KEY_SHIPMENTS_FOR_MULTI_JOIN_STREAM_ID,
+                    ],
+                    Some("AnalyticsResult"),
+                    None::<String>,
+                    -812_f64,
+                    -1446_f64,
+                )
+                .with_pipeline("multiJoinAnalytics"),
+                join_storage: JoinStorageType::HashMap,
+                ttl: Duration::from_millis(60000),
+                renew_ttl: true,
+            },
+            route_analytics_result: CaseStreamConfig::from(
+                StreamConfig::new(ROUTE_ANALYTICS_RESULT_STREAM_ID, "Route Analytics Result")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        MULTI_JOIN_ANALYTICS_EVENTS_STREAM_ID,
+                        [],
+                        None::<String>,
+                        None::<String>,
+                        -89_f64,
+                        -1589_f64,
+                    )
+                    .with_pipeline("multiJoinAnalytics"),
+            ),
+            standard_analytics: WhenStreamConfig::from(
+                StreamConfig::new(STANDARD_ANALYTICS_STREAM_ID, "Standard Analytics")
+                    .with_graph(
+                        ANALYTICS_SERVICE_ID,
+                        ROUTE_ANALYTICS_RESULT_STREAM_ID,
+                        [],
+                        Some("AnalyticsResult"),
+                        None::<String>,
+                        463_f64,
+                        -1449_f64,
+                    )
+                    .with_pipeline("multiJoinAnalytics"),
+            ),
+            write_high_value_analytics: SinkStreamConfig {
+                stream: StreamConfig::new(
+                    WRITE_HIGH_VALUE_ANALYTICS_STREAM_ID,
+                    "Write High Value Analytics",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    HIGH_VALUE_ANALYTICS_STREAM_ID,
+                    [],
+                    Some("AnalyticsResult"),
+                    None::<String>,
+                    820_f64,
+                    -1669_f64,
+                )
+                .with_pipeline("multiJoinAnalytics"),
+                endpoint_id: HIGH_VALUE_ANALYTICS_ENDPOINT_ID,
+            },
+            write_standard_analytics: SinkStreamConfig {
+                stream: StreamConfig::new(
+                    WRITE_STANDARD_ANALYTICS_STREAM_ID,
+                    "Write Standard Analytics",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    STANDARD_ANALYTICS_STREAM_ID,
+                    [],
+                    Some("AnalyticsResult"),
+                    None::<String>,
+                    966_f64,
+                    -1453_f64,
+                )
+                .with_pipeline("multiJoinAnalytics"),
+                endpoint_id: STANDARD_ANALYTICS_ENDPOINT_ID,
+            },
+            analyze_analytics_substream: SubStreamConfig::from(
+                StreamConfig::new(
+                    ANALYZE_ANALYTICS_SUBSTREAM_STREAM_ID,
+                    "Analyze Analytics Substream",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    BUILD_SUBSTREAM_ANALYTICS_RESULT_STREAM_ID,
+                    [],
+                    Some("AnalyticsEvent"),
+                    None::<String>,
+                    -1740_f64,
+                    -2860_f64,
+                )
+                .with_pipeline("substreamAnalytics"),
+            ),
+            build_substream_analytics_result: MapStreamConfig::from(
+                StreamConfig::new(
+                    BUILD_SUBSTREAM_ANALYTICS_RESULT_STREAM_ID,
+                    "Build Substream Analytics Result",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    ANALYZE_ANALYTICS_SUBSTREAM_STREAM_ID,
+                    [],
+                    Some("AnalyticsResult"),
+                    None::<String>,
+                    -1110_f64,
+                    -2860_f64,
+                )
+                .with_pipeline("substreamAnalytics"),
+            ),
+            invoke_analytics_substream: MapStreamConfig::from(
+                StreamConfig::new(
+                    INVOKE_ANALYTICS_SUBSTREAM_STREAM_ID,
+                    "Invoke Analytics Substream",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    SUBSTREAM_ANALYTICS_INPUT_STREAM_ID,
+                    [],
+                    Some("AnalyticsResult"),
+                    None::<String>,
+                    -1740_f64,
+                    -2530_f64,
+                )
+                .with_pipeline("substreamAnalytics"),
+            ),
+            substream_analytics_input: InputStreamConfig {
+                stream: StreamConfig::new(
+                    SUBSTREAM_ANALYTICS_INPUT_STREAM_ID,
+                    "Substream Analytics Input",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    0,
+                    [],
+                    Some("AnalyticsEvent"),
+                    None::<String>,
+                    -2362_f64,
+                    -2530_f64,
+                )
+                .with_pipeline("substreamAnalytics"),
+                endpoint_id: SUBSTREAM_ANALYTICS_INPUT_ENDPOINT_ID,
+            },
+            write_substream_analytics: SinkStreamConfig {
+                stream: StreamConfig::new(
+                    WRITE_SUBSTREAM_ANALYTICS_STREAM_ID,
+                    "Write Substream Analytics",
+                )
+                .with_graph(
+                    ANALYTICS_SERVICE_ID,
+                    INVOKE_ANALYTICS_SUBSTREAM_STREAM_ID,
+                    [],
+                    Some("AnalyticsResult"),
+                    None::<String>,
+                    -1110_f64,
+                    -2530_f64,
+                )
+                .with_pipeline("substreamAnalytics"),
+                endpoint_id: SUBSTREAM_ANALYTICS_RESULT_ENDPOINT_ID,
+            },
         }
     }
 }
@@ -314,6 +673,11 @@ impl Streams {
             self.standard_analytics.clone().into(),
             self.write_high_value_analytics.clone().into(),
             self.write_standard_analytics.clone().into(),
+            self.analyze_analytics_substream.clone().into(),
+            self.build_substream_analytics_result.clone().into(),
+            self.invoke_analytics_substream.clone().into(),
+            self.substream_analytics_input.clone().into(),
+            self.write_substream_analytics.clone().into(),
         ]
     }
 }
@@ -329,6 +693,8 @@ pub struct Endpoints {
     pub high_value_analytics: CustomEndpointConfig,
     pub joined_analytics: CustomEndpointConfig,
     pub standard_analytics: CustomEndpointConfig,
+    pub substream_analytics_input: CustomEndpointConfig,
+    pub substream_analytics_result: CustomEndpointConfig,
     pub analytics_schedule: CronEndpointConfig,
     pub order_processed: KafkaEndpointConfig,
 }
@@ -337,50 +703,86 @@ impl Default for Endpoints {
     fn default() -> Self {
         Self {
             analytics_orders: CustomEndpointConfig {
-                id: ANALYTICS_ORDERS_ENDPOINT_ID, name: "Analytics Orders".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
+                id: ANALYTICS_ORDERS_ENDPOINT_ID,
+                name: "Analytics Orders".to_owned(),
+                id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             analytics_payments: CustomEndpointConfig {
-                id: ANALYTICS_PAYMENTS_ENDPOINT_ID, name: "Analytics Payments".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
+                id: ANALYTICS_PAYMENTS_ENDPOINT_ID,
+                name: "Analytics Payments".to_owned(),
+                id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             analytics_shipments: CustomEndpointConfig {
-                id: ANALYTICS_SHIPMENTS_ENDPOINT_ID, name: "Analytics Shipments".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
+                id: ANALYTICS_SHIPMENTS_ENDPOINT_ID,
+                name: "Analytics Shipments".to_owned(),
+                id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             cycle_analytics_input: CustomEndpointConfig {
-                id: CYCLE_ANALYTICS_INPUT_ENDPOINT_ID, name: "Cycle Analytics Input".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
+                id: CYCLE_ANALYTICS_INPUT_ENDPOINT_ID,
+                name: "Cycle Analytics Input".to_owned(),
+                id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             cycle_analytics_result: CustomEndpointConfig {
-                id: CYCLE_ANALYTICS_RESULT_ENDPOINT_ID, name: "Cycle Analytics Result".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
+                id: CYCLE_ANALYTICS_RESULT_ENDPOINT_ID,
+                name: "Cycle Analytics Result".to_owned(),
+                id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             high_value_analytics: CustomEndpointConfig {
-                id: HIGH_VALUE_ANALYTICS_ENDPOINT_ID, name: "High Value Analytics".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
+                id: HIGH_VALUE_ANALYTICS_ENDPOINT_ID,
+                name: "High Value Analytics".to_owned(),
+                id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             joined_analytics: CustomEndpointConfig {
-                id: JOINED_ANALYTICS_ENDPOINT_ID, name: "Joined Analytics".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
+                id: JOINED_ANALYTICS_ENDPOINT_ID,
+                name: "Joined Analytics".to_owned(),
+                id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             standard_analytics: CustomEndpointConfig {
-                id: STANDARD_ANALYTICS_ENDPOINT_ID, name: "Standard Analytics".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
+                id: STANDARD_ANALYTICS_ENDPOINT_ID,
+                name: "Standard Analytics".to_owned(),
+                id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
+                tracing_enabled: false,
+            },
+            substream_analytics_input: CustomEndpointConfig {
+                id: SUBSTREAM_ANALYTICS_INPUT_ENDPOINT_ID,
+                name: "Substream Analytics Input".to_owned(),
+                id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
+                tracing_enabled: false,
+            },
+            substream_analytics_result: CustomEndpointConfig {
+                id: SUBSTREAM_ANALYTICS_RESULT_ENDPOINT_ID,
+                name: "Substream Analytics Result".to_owned(),
+                id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             analytics_schedule: CronEndpointConfig {
-                id: ANALYTICS_SCHEDULE_ENDPOINT_ID, name: "Analytics Schedule".to_owned(), id_data_connector: LOCAL_CRON_CONNECTOR_ID,
+                id: ANALYTICS_SCHEDULE_ENDPOINT_ID,
+                name: "Analytics Schedule".to_owned(),
+                id_data_connector: LOCAL_CRON_CONNECTOR_ID,
                 tracing_enabled: false,
-                enabled: true, schedule: "*/5 * * * *".to_owned(),
+                enabled: true,
+                schedule: "*/5 * * * *".to_owned(),
                 timezone: "UTC".to_owned(),
                 overlap_policy: ScheduleOverlapPolicy::Skip,
                 missed_run_policy: ScheduleMissedRunPolicy::FireOnce,
             },
             order_processed: KafkaEndpointConfig {
-                id: ORDER_PROCESSED_ENDPOINT_ID, name: "Order Processed".to_owned(), id_data_connector: ORDER_EVENTS_CONNECTOR_ID,
+                id: ORDER_PROCESSED_ENDPOINT_ID,
+                name: "Order Processed".to_owned(),
+                id_data_connector: ORDER_EVENTS_CONNECTOR_ID,
                 tracing_enabled: false,
-                enabled: true, create_topic: true, topic: "order-processed".to_owned(),
-                partitions: 1, consumer_group: "analytics-service".to_owned(),
+                enabled: true,
+                create_topic: true,
+                topic: "order-processed".to_owned(),
+                partitions: 1,
+                consumer_group: "analytics-service".to_owned(),
                 replication_factor: 1,
             },
         }
@@ -398,6 +800,8 @@ impl Endpoints {
             self.high_value_analytics.clone().into(),
             self.joined_analytics.clone().into(),
             self.standard_analytics.clone().into(),
+            self.substream_analytics_input.clone().into(),
+            self.substream_analytics_result.clone().into(),
             self.analytics_schedule.clone().into(),
             self.order_processed.clone().into(),
         ]
@@ -489,19 +893,42 @@ impl Config {
 
 impl ServiceConfigContract for Config {
     fn apply_environment(&mut self) -> Result<(), String> {
-        apply_bool("ANALYTICS_SCHEDULE_ENABLED", &mut self.analytics_schedule_enabled)?;
+        apply_bool(
+            "ANALYTICS_SCHEDULE_ENABLED",
+            &mut self.analytics_schedule_enabled,
+        )?;
         self.endpoints.analytics_schedule.enabled = self.analytics_schedule_enabled;
-        apply_string("ANALYTICS_SCHEDULE_MISSED_RUN_POLICY", &mut self.analytics_schedule_missed_run_policy);
-        self.endpoints.analytics_schedule.missed_run_policy = parse_schedule_missed_run_policy(&self.analytics_schedule_missed_run_policy)?;
-        apply_string("ANALYTICS_SCHEDULE_OVERLAP_POLICY", &mut self.analytics_schedule_overlap_policy);
-        self.endpoints.analytics_schedule.overlap_policy = parse_schedule_overlap_policy(&self.analytics_schedule_overlap_policy)?;
-        apply_string("ANALYTICS_SCHEDULE_SCHEDULE", &mut self.analytics_schedule_schedule);
+        apply_string(
+            "ANALYTICS_SCHEDULE_MISSED_RUN_POLICY",
+            &mut self.analytics_schedule_missed_run_policy,
+        );
+        self.endpoints.analytics_schedule.missed_run_policy =
+            parse_schedule_missed_run_policy(&self.analytics_schedule_missed_run_policy)?;
+        apply_string(
+            "ANALYTICS_SCHEDULE_OVERLAP_POLICY",
+            &mut self.analytics_schedule_overlap_policy,
+        );
+        self.endpoints.analytics_schedule.overlap_policy =
+            parse_schedule_overlap_policy(&self.analytics_schedule_overlap_policy)?;
+        apply_string(
+            "ANALYTICS_SCHEDULE_SCHEDULE",
+            &mut self.analytics_schedule_schedule,
+        );
         self.endpoints.analytics_schedule.schedule = self.analytics_schedule_schedule.clone();
-        apply_string("ANALYTICS_SCHEDULE_TIMEZONE", &mut self.analytics_schedule_timezone);
+        apply_string(
+            "ANALYTICS_SCHEDULE_TIMEZONE",
+            &mut self.analytics_schedule_timezone,
+        );
         self.endpoints.analytics_schedule.timezone = self.analytics_schedule_timezone.clone();
-        apply_bool("ANALYTICS_SCHEDULE_TRACING_ENABLED", &mut self.analytics_schedule_tracing_enabled)?;
+        apply_bool(
+            "ANALYTICS_SCHEDULE_TRACING_ENABLED",
+            &mut self.analytics_schedule_tracing_enabled,
+        )?;
         self.endpoints.analytics_schedule.tracing_enabled = self.analytics_schedule_tracing_enabled;
-        apply_u64("ANALYTICS_SERVICE_DEFAULT_GRPC_TIMEOUT", &mut self.request_timeout_ms)?;
+        apply_u64(
+            "ANALYTICS_SERVICE_DEFAULT_GRPC_TIMEOUT",
+            &mut self.request_timeout_ms,
+        )?;
         apply_string("ANALYTICS_SERVICE_ENVIRONMENT", &mut self.environment);
         apply_string("ANALYTICS_SERVICE_GRPC_HOST", &mut self.grpc_host);
         apply_port("ANALYTICS_SERVICE_GRPC_PORT", &mut self.grpc_port)?;
@@ -509,8 +936,14 @@ impl ServiceConfigContract for Config {
         apply_port("ANALYTICS_SERVICE_HTTP_PORT", &mut self.http_port)?;
         apply_string("ORDER_EVENTS_BROKERS", &mut self.order_events_brokers);
         apply_string("ORDER_EVENTS_PASSWORD", &mut self.order_events_password);
-        apply_string("ORDER_EVENTS_SASL_MECHANISM", &mut self.order_events_sasl_mechanism);
-        apply_string("ORDER_EVENTS_SECURITY_PROTOCOL", &mut self.order_events_security_protocol);
+        apply_string(
+            "ORDER_EVENTS_SASL_MECHANISM",
+            &mut self.order_events_sasl_mechanism,
+        );
+        apply_string(
+            "ORDER_EVENTS_SECURITY_PROTOCOL",
+            &mut self.order_events_security_protocol,
+        );
         apply_string("ORDER_EVENTS_USERNAME", &mut self.order_events_username);
         apply_bool("ORDER_PROCESSED_ENABLED", &mut self.order_processed_enabled)?;
         self.endpoints.order_processed.enabled = self.order_processed_enabled;
@@ -528,85 +961,145 @@ impl ServiceConfigContract for Config {
     fn services(&self) -> Vec<ServiceConfig> {
         vec![self.service()]
     }
-    fn streams(&self) -> Vec<RuntimeStreamConfig> { self.streams.runtime_configs() }
+    fn streams(&self) -> Vec<RuntimeStreamConfig> {
+        self.streams.runtime_configs()
+    }
     fn data_connectors(&self) -> Vec<RuntimeDataConnectorConfig> {
         vec![
             CustomDataConnectorConfig {
-                id: ANALYTICS_FUNCTIONS_CONNECTOR_ID, name: "Analytics Functions".to_owned(),
-            }.into(),
+                id: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
+                name: "Analytics Functions".to_owned(),
+            }
+            .into(),
             CronDataConnectorConfig {
-                id: LOCAL_CRON_CONNECTOR_ID, name: "Local Cron".to_owned(),
-            }.into(),
+                id: LOCAL_CRON_CONNECTOR_ID,
+                name: "Local Cron".to_owned(),
+            }
+            .into(),
             KafkaDataConnectorConfig {
-                id: ORDER_EVENTS_CONNECTOR_ID, name: "Order Events".to_owned(),
-                brokers: self.order_events_brokers.clone(), version: "2.8.0".to_owned(),
-                dial_timeout: 5000.0, use_partitioner: false, r#async: false,
-                security_protocol: parse_kafka_security_protocol(&self.order_events_security_protocol).expect("Kafka security protocol was validated"),
-                sasl_mechanism: parse_kafka_sasl_mechanism(&self.order_events_sasl_mechanism).expect("Kafka SASL mechanism was validated"),
+                id: ORDER_EVENTS_CONNECTOR_ID,
+                name: "Order Events".to_owned(),
+                brokers: self.order_events_brokers.clone(),
+                version: "2.8.0".to_owned(),
+                dial_timeout: 5000.0,
+                use_partitioner: false,
+                r#async: false,
+                security_protocol: parse_kafka_security_protocol(
+                    &self.order_events_security_protocol,
+                )
+                .expect("Kafka security protocol was validated"),
+                sasl_mechanism: parse_kafka_sasl_mechanism(&self.order_events_sasl_mechanism)
+                    .expect("Kafka SASL mechanism was validated"),
                 username: self.order_events_username.clone(),
                 password: self.order_events_password.clone(),
-            }.into(),
+            }
+            .into(),
         ]
     }
     fn endpoints(&self) -> Vec<RuntimeEndpointConfig> {
         self.endpoints.runtime_configs()
     }
     fn pools(&self) -> Vec<PoolConfig> {
-        vec![
-        ]
+        vec![]
     }
     fn links(&self) -> Vec<LinkConfig> {
-        vec![
-        ]
+        vec![]
     }
     fn modules(&self) -> Vec<ModuleConfig> {
         vec![
-            ModuleConfig { name: "inventory_service_api".to_owned(), path: "github.com/gorundebug/rustexample-inventory-service-api".to_owned(), properties: Default::default() },
-            ModuleConfig { name: "model".to_owned(), path: "github.com/gorundebug/rustexample-model".to_owned(), properties: Default::default() },
-            ModuleConfig { name: "order_service_api".to_owned(), path: "github.com/gorundebug/rustexample-order-service-api".to_owned(), properties: Default::default() },
+            ModuleConfig {
+                name: "inventory_service_api".to_owned(),
+                path: "github.com/gorundebug/rustexample-inventory-service-api".to_owned(),
+                properties: Default::default(),
+            },
+            ModuleConfig {
+                name: "model".to_owned(),
+                path: "github.com/gorundebug/rustexample-model".to_owned(),
+                properties: Default::default(),
+            },
+            ModuleConfig {
+                name: "order_service_api".to_owned(),
+                path: "github.com/gorundebug/rustexample-order-service-api".to_owned(),
+                properties: Default::default(),
+            },
         ]
     }
     fn types(&self) -> Vec<TypeConfig> {
         vec![
             TypeConfig {
-                name: "AnalyticsEvent".to_owned(), data_type: DataType::Struct,
-                type_definition: "AnalyticsEvent".to_owned(), type_import: "crate::internal::types::analytics_event".to_owned(),
-                value_type: "".to_owned(), key_type: "".to_owned(),
-                package: "".to_owned(), module: "".to_owned(),
-                definition_format: TypeDefinitionFormat::Native, public_type: false,
-                transfer_by_value: false, use_alias: false, properties: Default::default(),
+                name: "AnalyticsEvent".to_owned(),
+                data_type: DataType::Struct,
+                type_definition: "AnalyticsEvent".to_owned(),
+                type_import: "crate::internal::types::analytics_event".to_owned(),
+                value_type: "".to_owned(),
+                key_type: "".to_owned(),
+                package: "".to_owned(),
+                module: "".to_owned(),
+                definition_format: TypeDefinitionFormat::Native,
+                public_type: false,
+                transfer_by_value: false,
+                use_alias: false,
+                properties: Default::default(),
             },
             TypeConfig {
-                name: "AnalyticsKey".to_owned(), data_type: DataType::String,
-                type_definition: "String".to_owned(), type_import: "crate::internal::types::analytics_key".to_owned(),
-                value_type: "".to_owned(), key_type: "".to_owned(),
-                package: "".to_owned(), module: "".to_owned(),
-                definition_format: TypeDefinitionFormat::Undefined, public_type: false,
-                transfer_by_value: false, use_alias: false, properties: Default::default(),
+                name: "AnalyticsKey".to_owned(),
+                data_type: DataType::String,
+                type_definition: "String".to_owned(),
+                type_import: "crate::internal::types::analytics_key".to_owned(),
+                value_type: "".to_owned(),
+                key_type: "".to_owned(),
+                package: "".to_owned(),
+                module: "".to_owned(),
+                definition_format: TypeDefinitionFormat::Undefined,
+                public_type: false,
+                transfer_by_value: false,
+                use_alias: false,
+                properties: Default::default(),
             },
             TypeConfig {
-                name: "AnalyticsResult".to_owned(), data_type: DataType::Struct,
-                type_definition: "AnalyticsResult".to_owned(), type_import: "crate::internal::types::analytics_result".to_owned(),
-                value_type: "".to_owned(), key_type: "".to_owned(),
-                package: "".to_owned(), module: "".to_owned(),
-                definition_format: TypeDefinitionFormat::Native, public_type: false,
-                transfer_by_value: false, use_alias: false, properties: Default::default(),
+                name: "AnalyticsResult".to_owned(),
+                data_type: DataType::Struct,
+                type_definition: "AnalyticsResult".to_owned(),
+                type_import: "crate::internal::types::analytics_result".to_owned(),
+                value_type: "".to_owned(),
+                key_type: "".to_owned(),
+                package: "".to_owned(),
+                module: "".to_owned(),
+                definition_format: TypeDefinitionFormat::Native,
+                public_type: false,
+                transfer_by_value: false,
+                use_alias: false,
+                properties: Default::default(),
             },
             TypeConfig {
-                name: "AutomationJob".to_owned(), data_type: DataType::String,
-                type_definition: "String".to_owned(), type_import: "example_model::types::automation_job".to_owned(),
-                value_type: "".to_owned(), key_type: "".to_owned(),
-                package: "".to_owned(), module: "model".to_owned(),
-                definition_format: TypeDefinitionFormat::Undefined, public_type: true,
-                transfer_by_value: false, use_alias: false, properties: Default::default(),
+                name: "AutomationJob".to_owned(),
+                data_type: DataType::String,
+                type_definition: "String".to_owned(),
+                type_import: "example_model::types::automation_job".to_owned(),
+                value_type: "".to_owned(),
+                key_type: "".to_owned(),
+                package: "".to_owned(),
+                module: "model".to_owned(),
+                definition_format: TypeDefinitionFormat::Undefined,
+                public_type: true,
+                transfer_by_value: false,
+                use_alias: false,
+                properties: Default::default(),
             },
             TypeConfig {
-                name: "OrderProcessed".to_owned(), data_type: DataType::Struct,
-                type_definition: "OrderProcessed".to_owned(), type_import: "example_model::types::order_processed".to_owned(),
-                value_type: "".to_owned(), key_type: "".to_owned(),
-                package: "".to_owned(), module: "model".to_owned(),
-                definition_format: TypeDefinitionFormat::Native, public_type: false,
-                transfer_by_value: false, use_alias: false, properties: Default::default(),
+                name: "OrderProcessed".to_owned(),
+                data_type: DataType::Struct,
+                type_definition: "OrderProcessed".to_owned(),
+                type_import: "example_model::types::order_processed".to_owned(),
+                value_type: "".to_owned(),
+                key_type: "".to_owned(),
+                package: "".to_owned(),
+                module: "model".to_owned(),
+                definition_format: TypeDefinitionFormat::Native,
+                public_type: false,
+                transfer_by_value: false,
+                use_alias: false,
+                properties: Default::default(),
             },
         ]
     }

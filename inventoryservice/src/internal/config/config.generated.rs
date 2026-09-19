@@ -4,31 +4,33 @@
 
 use std::time::Duration;
 
-use serde::{Deserialize, Serialize};
 use super::custom::CustomConfig;
-use servicelib::api::{DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType, KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy, ScheduleOverlapPolicy, TypeDefinitionFormat};
+use serde::{Deserialize, Serialize};
+use servicelib::api::{
+    DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType,
+    KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy,
+    ScheduleOverlapPolicy, TypeDefinitionFormat,
+};
 use servicelib::runtime::config::{
-    CallSemantics, Config as ServiceConfigContract, CycleLinkStreamConfig,
-    DelayStreamConfig, FilterStreamConfig, FlatMapIterableStreamConfig,
-    FlatMapStreamConfig, InputStreamConfig, JoinStreamConfig, KeyByStreamConfig,
-    LinkConfig, MapStreamConfig, MergeStreamConfig, MultiJoinStreamConfig,
-    ModuleConfig, PoolConfig, ProcessStreamConfig, RuntimeDataConnectorConfig,
-    RuntimeEndpointConfig, RuntimeStreamConfig, ServiceConfig, SinkStreamConfig,
-    SplitStreamConfig, StreamConfig, WhenStreamConfig, CaseStreamConfig,
-    TypeConfig, HttpDataConnectorConfig, GrpcDataConnectorConfig, KafkaDataConnectorConfig,
-    CronDataConnectorConfig,
-    CustomDataConnectorConfig, HttpEndpointConfig, GrpcEndpointConfig, KafkaEndpointConfig,
-    CustomEndpointConfig, CronEndpointConfig,
+    CallSemantics, CaseStreamConfig, Config as ServiceConfigContract, CronDataConnectorConfig,
+    CronEndpointConfig, CustomDataConnectorConfig, CustomEndpointConfig, CycleLinkStreamConfig,
+    DelayStreamConfig, FilterStreamConfig, FlatMapIterableStreamConfig, FlatMapStreamConfig,
+    GrpcDataConnectorConfig, GrpcEndpointConfig, HttpDataConnectorConfig, HttpEndpointConfig,
+    InputStreamConfig, JoinStreamConfig, KafkaDataConnectorConfig, KafkaEndpointConfig,
+    KeyByStreamConfig, LinkConfig, MapStreamConfig, MergeStreamConfig, ModuleConfig,
+    MultiJoinStreamConfig, PoolConfig, ProcessStreamConfig, RuntimeDataConnectorConfig,
+    RuntimeEndpointConfig, RuntimeStreamConfig, ServiceConfig, SinkStreamConfig, SplitStreamConfig,
+    StreamConfig, SubStreamConfig, TypeConfig, WhenStreamConfig,
 };
 
 pub const INVENTORY_SERVICE_ID: i32 = 3;
-pub const GET_INVENTORY_ITEM_DATA_STREAM_ID: i32 = 68;
-pub const MERGE_INVENTORY_RESULT_STREAM_ID: i32 = 70;
-pub const PROCESS_INVENTORY_ITEM_STREAM_ID: i32 = 71;
+pub const GET_INVENTORY_ITEM_DATA_STREAM_ID: i32 = 73;
+pub const MERGE_INVENTORY_RESULT_STREAM_ID: i32 = 75;
+pub const PROCESS_INVENTORY_ITEM_STREAM_ID: i32 = 76;
 
 pub const INVENTORY_SERVICE_API_CONNECTOR_ID: i32 = 2;
 
-pub const PROCESS_ORDER_ITEM_ENDPOINT_ID: i32 = 9;
+pub const PROCESS_ORDER_ITEM_ENDPOINT_ID: i32 = 11;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -41,24 +43,56 @@ pub struct Streams {
 impl Default for Streams {
     fn default() -> Self {
         Self {
-            get_inventory_item_data: ProcessStreamConfig { stream: StreamConfig::new(GET_INVENTORY_ITEM_DATA_STREAM_ID, "Get Inventory Item Data").with_graph(
-    INVENTORY_SERVICE_ID, PROCESS_INVENTORY_ITEM_STREAM_ID, [],
-    Some("OrderItemResult"),
-    None::<String>,
-    527_f64, -562_f64,
-).with_pipeline("inventoryItem"), pattern: ProcessPattern::Undefined },
-            merge_inventory_result: MergeStreamConfig::from(StreamConfig::new(MERGE_INVENTORY_RESULT_STREAM_ID, "Merge Inventory Result").with_graph(
-    INVENTORY_SERVICE_ID, 0, [GET_INVENTORY_ITEM_DATA_STREAM_ID, -GET_INVENTORY_ITEM_DATA_STREAM_ID],
-    None::<String>,
-    None::<String>,
-    542_f64, 33_f64,
-).with_pipeline("inventoryItem")),
-            process_inventory_item: InputStreamConfig { stream: StreamConfig::new(PROCESS_INVENTORY_ITEM_STREAM_ID, "Process Inventory Item").with_graph(
-    INVENTORY_SERVICE_ID, MERGE_INVENTORY_RESULT_STREAM_ID, [],
-    Some("OrderItem"),
-    None::<String>,
-    250_f64, -400_f64,
-).with_pipeline("inventoryItem"), endpoint_id: PROCESS_ORDER_ITEM_ENDPOINT_ID },
+            get_inventory_item_data: ProcessStreamConfig {
+                stream: StreamConfig::new(
+                    GET_INVENTORY_ITEM_DATA_STREAM_ID,
+                    "Get Inventory Item Data",
+                )
+                .with_graph(
+                    INVENTORY_SERVICE_ID,
+                    PROCESS_INVENTORY_ITEM_STREAM_ID,
+                    [],
+                    Some("OrderItemResult"),
+                    None::<String>,
+                    527_f64,
+                    -562_f64,
+                )
+                .with_pipeline("inventoryItem"),
+                pattern: ProcessPattern::Undefined,
+            },
+            merge_inventory_result: MergeStreamConfig::from(
+                StreamConfig::new(MERGE_INVENTORY_RESULT_STREAM_ID, "Merge Inventory Result")
+                    .with_graph(
+                        INVENTORY_SERVICE_ID,
+                        0,
+                        [
+                            GET_INVENTORY_ITEM_DATA_STREAM_ID,
+                            -GET_INVENTORY_ITEM_DATA_STREAM_ID,
+                        ],
+                        None::<String>,
+                        None::<String>,
+                        542_f64,
+                        33_f64,
+                    )
+                    .with_pipeline("inventoryItem"),
+            ),
+            process_inventory_item: InputStreamConfig {
+                stream: StreamConfig::new(
+                    PROCESS_INVENTORY_ITEM_STREAM_ID,
+                    "Process Inventory Item",
+                )
+                .with_graph(
+                    INVENTORY_SERVICE_ID,
+                    MERGE_INVENTORY_RESULT_STREAM_ID,
+                    [],
+                    Some("OrderItem"),
+                    None::<String>,
+                    250_f64,
+                    -400_f64,
+                )
+                .with_pipeline("inventoryItem"),
+                endpoint_id: PROCESS_ORDER_ITEM_ENDPOINT_ID,
+            },
         }
     }
 }
@@ -83,7 +117,9 @@ impl Default for Endpoints {
     fn default() -> Self {
         Self {
             process_order_item: GrpcEndpointConfig {
-                id: PROCESS_ORDER_ITEM_ENDPOINT_ID, name: "Process Order Item".to_owned(), id_data_connector: INVENTORY_SERVICE_API_CONNECTOR_ID,
+                id: PROCESS_ORDER_ITEM_ENDPOINT_ID,
+                name: "Process Order Item".to_owned(),
+                id_data_connector: INVENTORY_SERVICE_API_CONNECTOR_ID,
                 tracing_enabled: false,
                 grpc_method_type: GrpcMethodType::NoStreaming,
             },
@@ -93,9 +129,7 @@ impl Default for Endpoints {
 
 impl Endpoints {
     fn runtime_configs(&self) -> Vec<RuntimeEndpointConfig> {
-        vec![
-            self.process_order_item.clone().into(),
-        ]
+        vec![self.process_order_item.clone().into()]
     }
 }
 
@@ -166,10 +200,22 @@ impl Config {
 
 impl ServiceConfigContract for Config {
     fn apply_environment(&mut self) -> Result<(), String> {
-        apply_usize("INVENTORY_PRIORITY_WORKERS_EXECUTORS_COUNT", &mut self.inventory_priority_workers_executors_count)?;
-        apply_string("INVENTORY_SERVICE_API_ADDRESS", &mut self.inventory_service_api_address);
-        apply_usize("INVENTORY_SERVICE_API_CONNECTIONS_COUNT", &mut self.inventory_service_api_connections_count)?;
-        apply_u64("INVENTORY_SERVICE_DEFAULT_GRPC_TIMEOUT", &mut self.request_timeout_ms)?;
+        apply_usize(
+            "INVENTORY_PRIORITY_WORKERS_EXECUTORS_COUNT",
+            &mut self.inventory_priority_workers_executors_count,
+        )?;
+        apply_string(
+            "INVENTORY_SERVICE_API_ADDRESS",
+            &mut self.inventory_service_api_address,
+        );
+        apply_usize(
+            "INVENTORY_SERVICE_API_CONNECTIONS_COUNT",
+            &mut self.inventory_service_api_connections_count,
+        )?;
+        apply_u64(
+            "INVENTORY_SERVICE_DEFAULT_GRPC_TIMEOUT",
+            &mut self.request_timeout_ms,
+        )?;
         apply_string("INVENTORY_SERVICE_ENVIRONMENT", &mut self.environment);
         apply_string("INVENTORY_SERVICE_GRPC_HOST", &mut self.grpc_host);
         apply_port("INVENTORY_SERVICE_GRPC_PORT", &mut self.grpc_port)?;
@@ -190,33 +236,41 @@ impl ServiceConfigContract for Config {
     fn services(&self) -> Vec<ServiceConfig> {
         vec![self.service()]
     }
-    fn streams(&self) -> Vec<RuntimeStreamConfig> { self.streams.runtime_configs() }
+    fn streams(&self) -> Vec<RuntimeStreamConfig> {
+        self.streams.runtime_configs()
+    }
     fn data_connectors(&self) -> Vec<RuntimeDataConnectorConfig> {
         vec![
             GrpcDataConnectorConfig {
-                id: INVENTORY_SERVICE_API_CONNECTOR_ID, name: "Inventory Service API".to_owned(),
+                id: INVENTORY_SERVICE_API_CONNECTOR_ID,
+                name: "Inventory Service API".to_owned(),
                 address: self.inventory_service_api_address.clone(),
                 connections_count: self.inventory_service_api_connections_count,
-            }.into(),
+            }
+            .into(),
         ]
     }
     fn endpoints(&self) -> Vec<RuntimeEndpointConfig> {
         self.endpoints.runtime_configs()
     }
     fn pools(&self) -> Vec<PoolConfig> {
-        vec![
-            PoolConfig { name: "Inventory Priority Workers".to_owned(), executors_count: self.inventory_priority_workers_executors_count, queue_capacity: 0 },
-        ]
+        vec![PoolConfig {
+            name: "Inventory Priority Workers".to_owned(),
+            executors_count: self.inventory_priority_workers_executors_count,
+            queue_capacity: 0,
+        }]
     }
     fn links(&self) -> Vec<LinkConfig> {
         vec![
             LinkConfig {
-                from: GET_INVENTORY_ITEM_DATA_STREAM_ID, to: MERGE_INVENTORY_RESULT_STREAM_ID,
+                from: GET_INVENTORY_ITEM_DATA_STREAM_ID,
+                to: MERGE_INVENTORY_RESULT_STREAM_ID,
                 call_semantics: CallSemantics::FunctionCall,
                 r#async: false,
             },
             LinkConfig {
-                from: PROCESS_INVENTORY_ITEM_STREAM_ID, to: GET_INVENTORY_ITEM_DATA_STREAM_ID,
+                from: PROCESS_INVENTORY_ITEM_STREAM_ID,
+                to: GET_INVENTORY_ITEM_DATA_STREAM_ID,
                 call_semantics: CallSemantics::FunctionCall,
                 r#async: false,
             },
@@ -224,28 +278,54 @@ impl ServiceConfigContract for Config {
     }
     fn modules(&self) -> Vec<ModuleConfig> {
         vec![
-            ModuleConfig { name: "inventory_service_api".to_owned(), path: "github.com/gorundebug/rustexample-inventory-service-api".to_owned(), properties: Default::default() },
-            ModuleConfig { name: "model".to_owned(), path: "github.com/gorundebug/rustexample-model".to_owned(), properties: Default::default() },
-            ModuleConfig { name: "order_service_api".to_owned(), path: "github.com/gorundebug/rustexample-order-service-api".to_owned(), properties: Default::default() },
+            ModuleConfig {
+                name: "inventory_service_api".to_owned(),
+                path: "github.com/gorundebug/rustexample-inventory-service-api".to_owned(),
+                properties: Default::default(),
+            },
+            ModuleConfig {
+                name: "model".to_owned(),
+                path: "github.com/gorundebug/rustexample-model".to_owned(),
+                properties: Default::default(),
+            },
+            ModuleConfig {
+                name: "order_service_api".to_owned(),
+                path: "github.com/gorundebug/rustexample-order-service-api".to_owned(),
+                properties: Default::default(),
+            },
         ]
     }
     fn types(&self) -> Vec<TypeConfig> {
         vec![
             TypeConfig {
-                name: "OrderItem".to_owned(), data_type: DataType::Struct,
-                type_definition: "OrderItem".to_owned(), type_import: "example_model::types::order_item".to_owned(),
-                value_type: "".to_owned(), key_type: "".to_owned(),
-                package: "".to_owned(), module: "model".to_owned(),
-                definition_format: TypeDefinitionFormat::Native, public_type: false,
-                transfer_by_value: false, use_alias: false, properties: Default::default(),
+                name: "OrderItem".to_owned(),
+                data_type: DataType::Struct,
+                type_definition: "OrderItem".to_owned(),
+                type_import: "example_model::types::order_item".to_owned(),
+                value_type: "".to_owned(),
+                key_type: "".to_owned(),
+                package: "".to_owned(),
+                module: "model".to_owned(),
+                definition_format: TypeDefinitionFormat::Native,
+                public_type: false,
+                transfer_by_value: false,
+                use_alias: false,
+                properties: Default::default(),
             },
             TypeConfig {
-                name: "OrderItemResult".to_owned(), data_type: DataType::Struct,
-                type_definition: "OrderItemResult".to_owned(), type_import: "example_model::types::order_item_result".to_owned(),
-                value_type: "".to_owned(), key_type: "".to_owned(),
-                package: "".to_owned(), module: "model".to_owned(),
-                definition_format: TypeDefinitionFormat::Native, public_type: false,
-                transfer_by_value: false, use_alias: false, properties: Default::default(),
+                name: "OrderItemResult".to_owned(),
+                data_type: DataType::Struct,
+                type_definition: "OrderItemResult".to_owned(),
+                type_import: "example_model::types::order_item_result".to_owned(),
+                value_type: "".to_owned(),
+                key_type: "".to_owned(),
+                package: "".to_owned(),
+                module: "model".to_owned(),
+                definition_format: TypeDefinitionFormat::Native,
+                public_type: false,
+                transfer_by_value: false,
+                use_alias: false,
+                properties: Default::default(),
             },
         ]
     }

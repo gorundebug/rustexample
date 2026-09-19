@@ -1,4 +1,4 @@
-# Task 13/22: `KeyPaymentsForJoin`
+# Task 13/26: `KeyPaymentsForJoin`
 
 > Rules: [`spec/rules.md`](../rules.md)
 

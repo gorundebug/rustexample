@@ -1,4 +1,4 @@
-# Task 16/22: `KeyOrdersForMultiJoin`
+# Task 16/26: `KeyOrdersForMultiJoin`
 
 > Rules: [`spec/rules.md`](../rules.md)
 

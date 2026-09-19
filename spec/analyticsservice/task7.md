@@ -1,4 +1,4 @@
-# Task 7/22: `CycleAnalyticsInputSource`
+# Task 7/26: `CycleAnalyticsInputSource`
 
 > Rules: [`spec/rules.md`](../rules.md)
 

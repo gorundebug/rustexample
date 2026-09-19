@@ -4,43 +4,45 @@
 
 use std::time::Duration;
 
-use serde::{Deserialize, Serialize};
 use super::custom::CustomConfig;
-use servicelib::api::{DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType, KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy, ScheduleOverlapPolicy, TypeDefinitionFormat};
+use serde::{Deserialize, Serialize};
+use servicelib::api::{
+    DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType,
+    KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy,
+    ScheduleOverlapPolicy, TypeDefinitionFormat,
+};
 use servicelib::runtime::config::{
-    CallSemantics, Config as ServiceConfigContract, CycleLinkStreamConfig,
-    DelayStreamConfig, FilterStreamConfig, FlatMapIterableStreamConfig,
-    FlatMapStreamConfig, InputStreamConfig, JoinStreamConfig, KeyByStreamConfig,
-    LinkConfig, MapStreamConfig, MergeStreamConfig, MultiJoinStreamConfig,
-    ModuleConfig, PoolConfig, ProcessStreamConfig, RuntimeDataConnectorConfig,
-    RuntimeEndpointConfig, RuntimeStreamConfig, ServiceConfig, SinkStreamConfig,
-    SplitStreamConfig, StreamConfig, WhenStreamConfig, CaseStreamConfig,
-    TypeConfig, HttpDataConnectorConfig, GrpcDataConnectorConfig, KafkaDataConnectorConfig,
-    CronDataConnectorConfig,
-    CustomDataConnectorConfig, HttpEndpointConfig, GrpcEndpointConfig, KafkaEndpointConfig,
-    CustomEndpointConfig, CronEndpointConfig,
+    CallSemantics, CaseStreamConfig, Config as ServiceConfigContract, CronDataConnectorConfig,
+    CronEndpointConfig, CustomDataConnectorConfig, CustomEndpointConfig, CycleLinkStreamConfig,
+    DelayStreamConfig, FilterStreamConfig, FlatMapIterableStreamConfig, FlatMapStreamConfig,
+    GrpcDataConnectorConfig, GrpcEndpointConfig, HttpDataConnectorConfig, HttpEndpointConfig,
+    InputStreamConfig, JoinStreamConfig, KafkaDataConnectorConfig, KafkaEndpointConfig,
+    KeyByStreamConfig, LinkConfig, MapStreamConfig, MergeStreamConfig, ModuleConfig,
+    MultiJoinStreamConfig, PoolConfig, ProcessStreamConfig, RuntimeDataConnectorConfig,
+    RuntimeEndpointConfig, RuntimeStreamConfig, ServiceConfig, SinkStreamConfig, SplitStreamConfig,
+    StreamConfig, SubStreamConfig, TypeConfig, WhenStreamConfig,
 };
 
 pub const ORDER_SERVICE_ID: i32 = 4;
-pub const MAP_ORDER_ITEM_RESULT_TO_ORDER_STATE_STREAM_ID: i32 = 73;
-pub const MAP_TO_ORDER_PROCESSED_STREAM_ID: i32 = 74;
-pub const MAP_TO_ORDER_STATE_STREAM_ID: i32 = 75;
-pub const MERGE_RESULTS_STREAM_ID: i32 = 76;
-pub const PROCESS_ORDER_STREAM_ID: i32 = 77;
-pub const PROCESS_ORDER_ITEM_STREAM_ID: i32 = 78;
-pub const PROCESS_ORDER_ITEMS_STREAM_ID: i32 = 79;
-pub const PUBLISH_ORDER_PROCESSED_STREAM_ID: i32 = 80;
-pub const SOFT_DEADLINE_STREAM_ID: i32 = 81;
-pub const SPLIT_ORDER_RESULT_STREAM_ID: i32 = 82;
-pub const SPLIT_PIPELINE_STREAM_ID: i32 = 83;
+pub const MAP_ORDER_ITEM_RESULT_TO_ORDER_STATE_STREAM_ID: i32 = 78;
+pub const MAP_TO_ORDER_PROCESSED_STREAM_ID: i32 = 79;
+pub const MAP_TO_ORDER_STATE_STREAM_ID: i32 = 80;
+pub const MERGE_RESULTS_STREAM_ID: i32 = 81;
+pub const PROCESS_ORDER_STREAM_ID: i32 = 82;
+pub const PROCESS_ORDER_ITEM_STREAM_ID: i32 = 83;
+pub const PROCESS_ORDER_ITEMS_STREAM_ID: i32 = 84;
+pub const PUBLISH_ORDER_PROCESSED_STREAM_ID: i32 = 85;
+pub const SOFT_DEADLINE_STREAM_ID: i32 = 86;
+pub const SPLIT_ORDER_RESULT_STREAM_ID: i32 = 87;
+pub const SPLIT_PIPELINE_STREAM_ID: i32 = 88;
 
 pub const INVENTORY_SERVICE_API_CONNECTOR_ID: i32 = 2;
 pub const ORDER_EVENTS_CONNECTOR_ID: i32 = 4;
 pub const ORDER_SERVICE_API_CONNECTOR_ID: i32 = 5;
 
-pub const PROCESS_ORDER_ITEM_ENDPOINT_ID: i32 = 9;
-pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 12;
-pub const PROCESS_ORDER_ENDPOINT_ID: i32 = 13;
+pub const PROCESS_ORDER_ITEM_ENDPOINT_ID: i32 = 11;
+pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 14;
+pub const PROCESS_ORDER_ENDPOINT_ID: i32 = 15;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -61,72 +63,163 @@ pub struct Streams {
 impl Default for Streams {
     fn default() -> Self {
         Self {
-            map_order_item_result_to_order_state: MapStreamConfig::from(StreamConfig::new(MAP_ORDER_ITEM_RESULT_TO_ORDER_STATE_STREAM_ID, "Map Order Item Result To Order State").with_graph(
-    ORDER_SERVICE_ID, PROCESS_ORDER_ITEM_STREAM_ID, [],
-    Some("OrderState"),
-    None::<String>,
-    103_f64, -52_f64,
-).with_pipeline("order")),
-            map_to_order_processed: MapStreamConfig::from(StreamConfig::new(MAP_TO_ORDER_PROCESSED_STREAM_ID, "MapToOrderProcessed").with_graph(
-    ORDER_SERVICE_ID, SPLIT_ORDER_RESULT_STREAM_ID, [],
-    Some("OrderProcessed"),
-    None::<String>,
-    -821_f64, -26_f64,
-).with_pipeline("order")),
-            map_to_order_state: MapStreamConfig::from(StreamConfig::new(MAP_TO_ORDER_STATE_STREAM_ID, "Map to Order State").with_graph(
-    ORDER_SERVICE_ID, SOFT_DEADLINE_STREAM_ID, [],
-    Some("OrderState"),
-    None::<String>,
-    -368_f64, -227_f64,
-).with_pipeline("order")),
-            merge_results: MergeStreamConfig::from(StreamConfig::new(MERGE_RESULTS_STREAM_ID, "Merge Results").with_graph(
-    ORDER_SERVICE_ID, 0, [MAP_TO_ORDER_STATE_STREAM_ID, MAP_ORDER_ITEM_RESULT_TO_ORDER_STATE_STREAM_ID, -PROCESS_ORDER_ITEM_STREAM_ID],
-    None::<String>,
-    None::<String>,
-    -228_f64, 130_f64,
-).with_pipeline("order")),
-            process_order: InputStreamConfig { stream: StreamConfig::new(PROCESS_ORDER_STREAM_ID, "Process Order").with_graph(
-    ORDER_SERVICE_ID, SPLIT_ORDER_RESULT_STREAM_ID, [],
-    Some("Order"),
-    None::<String>,
-    -760_f64, -367_f64,
-).with_pipeline("order"), endpoint_id: PROCESS_ORDER_ENDPOINT_ID },
-            process_order_item: SinkStreamConfig { stream: StreamConfig::new(PROCESS_ORDER_ITEM_STREAM_ID, "Process Order Item").with_graph(
-    ORDER_SERVICE_ID, PROCESS_ORDER_ITEMS_STREAM_ID, [],
-    Some("OrderItemResult"),
-    None::<String>,
-    -60_f64, -375_f64,
-).with_pipeline("order"), endpoint_id: PROCESS_ORDER_ITEM_ENDPOINT_ID },
-            process_order_items: FlatMapStreamConfig::from(StreamConfig::new(PROCESS_ORDER_ITEMS_STREAM_ID, "Process Order Items").with_graph(
-    ORDER_SERVICE_ID, SPLIT_PIPELINE_STREAM_ID, [],
-    Some("OrderItem"),
-    None::<String>,
-    -198_f64, -662_f64,
-).with_pipeline("order")),
-            publish_order_processed: SinkStreamConfig { stream: StreamConfig::new(PUBLISH_ORDER_PROCESSED_STREAM_ID, "Publish Order Processed").with_graph(
-    ORDER_SERVICE_ID, MAP_TO_ORDER_PROCESSED_STREAM_ID, [],
-    Some("OrderProcessed"),
-    None::<String>,
-    -944_f64, -255_f64,
-).with_pipeline("order"), endpoint_id: ORDER_PROCESSED_ENDPOINT_ID },
-            soft_deadline: DelayStreamConfig { stream: StreamConfig::new(SOFT_DEADLINE_STREAM_ID, "Soft Deadline").with_graph(
-    ORDER_SERVICE_ID, SPLIT_PIPELINE_STREAM_ID, [],
-    None::<String>,
-    None::<String>,
-    -477_f64, -444_f64,
-).with_pipeline("order"), duration: Duration::from_millis(1000) },
-            split_order_result: SplitStreamConfig::from(StreamConfig::new(SPLIT_ORDER_RESULT_STREAM_ID, "Split Order Result").with_graph(
-    ORDER_SERVICE_ID, MERGE_RESULTS_STREAM_ID, [],
-    None::<String>,
-    None::<String>,
-    -671_f64, -129_f64,
-).with_pipeline("order")),
-            split_pipeline: SplitStreamConfig::from(StreamConfig::new(SPLIT_PIPELINE_STREAM_ID, "Split Pipeline").with_graph(
-    ORDER_SERVICE_ID, PROCESS_ORDER_STREAM_ID, [],
-    None::<String>,
-    None::<String>,
-    -640_f64, -597_f64,
-).with_pipeline("order")),
+            map_order_item_result_to_order_state: MapStreamConfig::from(
+                StreamConfig::new(
+                    MAP_ORDER_ITEM_RESULT_TO_ORDER_STATE_STREAM_ID,
+                    "Map Order Item Result To Order State",
+                )
+                .with_graph(
+                    ORDER_SERVICE_ID,
+                    PROCESS_ORDER_ITEM_STREAM_ID,
+                    [],
+                    Some("OrderState"),
+                    None::<String>,
+                    103_f64,
+                    -52_f64,
+                )
+                .with_pipeline("order"),
+            ),
+            map_to_order_processed: MapStreamConfig::from(
+                StreamConfig::new(MAP_TO_ORDER_PROCESSED_STREAM_ID, "MapToOrderProcessed")
+                    .with_graph(
+                        ORDER_SERVICE_ID,
+                        SPLIT_ORDER_RESULT_STREAM_ID,
+                        [],
+                        Some("OrderProcessed"),
+                        None::<String>,
+                        -821_f64,
+                        -26_f64,
+                    )
+                    .with_pipeline("order"),
+            ),
+            map_to_order_state: MapStreamConfig::from(
+                StreamConfig::new(MAP_TO_ORDER_STATE_STREAM_ID, "Map to Order State")
+                    .with_graph(
+                        ORDER_SERVICE_ID,
+                        SOFT_DEADLINE_STREAM_ID,
+                        [],
+                        Some("OrderState"),
+                        None::<String>,
+                        -368_f64,
+                        -227_f64,
+                    )
+                    .with_pipeline("order"),
+            ),
+            merge_results: MergeStreamConfig::from(
+                StreamConfig::new(MERGE_RESULTS_STREAM_ID, "Merge Results")
+                    .with_graph(
+                        ORDER_SERVICE_ID,
+                        0,
+                        [
+                            MAP_TO_ORDER_STATE_STREAM_ID,
+                            MAP_ORDER_ITEM_RESULT_TO_ORDER_STATE_STREAM_ID,
+                            -PROCESS_ORDER_ITEM_STREAM_ID,
+                        ],
+                        None::<String>,
+                        None::<String>,
+                        -228_f64,
+                        130_f64,
+                    )
+                    .with_pipeline("order"),
+            ),
+            process_order: InputStreamConfig {
+                stream: StreamConfig::new(PROCESS_ORDER_STREAM_ID, "Process Order")
+                    .with_graph(
+                        ORDER_SERVICE_ID,
+                        SPLIT_ORDER_RESULT_STREAM_ID,
+                        [],
+                        Some("Order"),
+                        None::<String>,
+                        -760_f64,
+                        -367_f64,
+                    )
+                    .with_pipeline("order"),
+                endpoint_id: PROCESS_ORDER_ENDPOINT_ID,
+            },
+            process_order_item: SinkStreamConfig {
+                stream: StreamConfig::new(PROCESS_ORDER_ITEM_STREAM_ID, "Process Order Item")
+                    .with_graph(
+                        ORDER_SERVICE_ID,
+                        PROCESS_ORDER_ITEMS_STREAM_ID,
+                        [],
+                        Some("OrderItemResult"),
+                        None::<String>,
+                        -60_f64,
+                        -375_f64,
+                    )
+                    .with_pipeline("order"),
+                endpoint_id: PROCESS_ORDER_ITEM_ENDPOINT_ID,
+            },
+            process_order_items: FlatMapStreamConfig::from(
+                StreamConfig::new(PROCESS_ORDER_ITEMS_STREAM_ID, "Process Order Items")
+                    .with_graph(
+                        ORDER_SERVICE_ID,
+                        SPLIT_PIPELINE_STREAM_ID,
+                        [],
+                        Some("OrderItem"),
+                        None::<String>,
+                        -198_f64,
+                        -662_f64,
+                    )
+                    .with_pipeline("order"),
+            ),
+            publish_order_processed: SinkStreamConfig {
+                stream: StreamConfig::new(
+                    PUBLISH_ORDER_PROCESSED_STREAM_ID,
+                    "Publish Order Processed",
+                )
+                .with_graph(
+                    ORDER_SERVICE_ID,
+                    MAP_TO_ORDER_PROCESSED_STREAM_ID,
+                    [],
+                    Some("OrderProcessed"),
+                    None::<String>,
+                    -944_f64,
+                    -255_f64,
+                )
+                .with_pipeline("order"),
+                endpoint_id: ORDER_PROCESSED_ENDPOINT_ID,
+            },
+            soft_deadline: DelayStreamConfig {
+                stream: StreamConfig::new(SOFT_DEADLINE_STREAM_ID, "Soft Deadline")
+                    .with_graph(
+                        ORDER_SERVICE_ID,
+                        SPLIT_PIPELINE_STREAM_ID,
+                        [],
+                        None::<String>,
+                        None::<String>,
+                        -477_f64,
+                        -444_f64,
+                    )
+                    .with_pipeline("order"),
+                duration: Duration::from_millis(1000),
+            },
+            split_order_result: SplitStreamConfig::from(
+                StreamConfig::new(SPLIT_ORDER_RESULT_STREAM_ID, "Split Order Result")
+                    .with_graph(
+                        ORDER_SERVICE_ID,
+                        MERGE_RESULTS_STREAM_ID,
+                        [],
+                        None::<String>,
+                        None::<String>,
+                        -671_f64,
+                        -129_f64,
+                    )
+                    .with_pipeline("order"),
+            ),
+            split_pipeline: SplitStreamConfig::from(
+                StreamConfig::new(SPLIT_PIPELINE_STREAM_ID, "Split Pipeline")
+                    .with_graph(
+                        ORDER_SERVICE_ID,
+                        PROCESS_ORDER_STREAM_ID,
+                        [],
+                        None::<String>,
+                        None::<String>,
+                        -640_f64,
+                        -597_f64,
+                    )
+                    .with_pipeline("order"),
+            ),
         }
     }
 }
@@ -161,21 +254,31 @@ impl Default for Endpoints {
     fn default() -> Self {
         Self {
             process_order_item: GrpcEndpointConfig {
-                id: PROCESS_ORDER_ITEM_ENDPOINT_ID, name: "Process Order Item".to_owned(), id_data_connector: INVENTORY_SERVICE_API_CONNECTOR_ID,
+                id: PROCESS_ORDER_ITEM_ENDPOINT_ID,
+                name: "Process Order Item".to_owned(),
+                id_data_connector: INVENTORY_SERVICE_API_CONNECTOR_ID,
                 tracing_enabled: false,
                 grpc_method_type: GrpcMethodType::NoStreaming,
             },
             order_processed: KafkaEndpointConfig {
-                id: ORDER_PROCESSED_ENDPOINT_ID, name: "Order Processed".to_owned(), id_data_connector: ORDER_EVENTS_CONNECTOR_ID,
+                id: ORDER_PROCESSED_ENDPOINT_ID,
+                name: "Order Processed".to_owned(),
+                id_data_connector: ORDER_EVENTS_CONNECTOR_ID,
                 tracing_enabled: false,
-                enabled: true, create_topic: true, topic: "order-processed".to_owned(),
-                partitions: 1, consumer_group: "analytics-service".to_owned(),
+                enabled: true,
+                create_topic: true,
+                topic: "order-processed".to_owned(),
+                partitions: 1,
+                consumer_group: "analytics-service".to_owned(),
                 replication_factor: 1,
             },
             process_order: HttpEndpointConfig {
-                id: PROCESS_ORDER_ENDPOINT_ID, name: "Process Order".to_owned(), id_data_connector: ORDER_SERVICE_API_CONNECTOR_ID,
+                id: PROCESS_ORDER_ENDPOINT_ID,
+                name: "Process Order".to_owned(),
+                id_data_connector: ORDER_SERVICE_API_CONNECTOR_ID,
                 tracing_enabled: false,
-                http_method_type: HTTPMethodType::POST, path: "/v1/processorder".to_owned(),
+                http_method_type: HTTPMethodType::POST,
+                path: "/v1/processorder".to_owned(),
             },
         }
     }
@@ -272,17 +375,32 @@ impl Config {
 
 impl ServiceConfigContract for Config {
     fn apply_environment(&mut self) -> Result<(), String> {
-        apply_usize("DEFAULT_POOL_EXECUTORS_COUNT", &mut self.default_pool_executors_count)?;
+        apply_usize(
+            "DEFAULT_POOL_EXECUTORS_COUNT",
+            &mut self.default_pool_executors_count,
+        )?;
         apply_string("INVENTORY_SERVICE_API_ADDRESS", &mut self.inventory_address);
-        apply_usize("INVENTORY_SERVICE_API_CONNECTIONS_COUNT", &mut self.inventory_service_api_connections_count)?;
+        apply_usize(
+            "INVENTORY_SERVICE_API_CONNECTIONS_COUNT",
+            &mut self.inventory_service_api_connections_count,
+        )?;
         apply_string("ORDER_EVENTS_BROKERS", &mut self.order_events_brokers);
         apply_string("ORDER_EVENTS_PASSWORD", &mut self.order_events_password);
-        apply_string("ORDER_EVENTS_SASL_MECHANISM", &mut self.order_events_sasl_mechanism);
-        apply_string("ORDER_EVENTS_SECURITY_PROTOCOL", &mut self.order_events_security_protocol);
+        apply_string(
+            "ORDER_EVENTS_SASL_MECHANISM",
+            &mut self.order_events_sasl_mechanism,
+        );
+        apply_string(
+            "ORDER_EVENTS_SECURITY_PROTOCOL",
+            &mut self.order_events_security_protocol,
+        );
         apply_string("ORDER_EVENTS_USERNAME", &mut self.order_events_username);
         apply_bool("ORDER_PROCESSED_ENABLED", &mut self.order_processed_enabled)?;
         self.endpoints.order_processed.enabled = self.order_processed_enabled;
-        apply_u64("ORDER_SERVICE_DEFAULT_GRPC_TIMEOUT", &mut self.request_timeout_ms)?;
+        apply_u64(
+            "ORDER_SERVICE_DEFAULT_GRPC_TIMEOUT",
+            &mut self.request_timeout_ms,
+        )?;
         apply_string("ORDER_SERVICE_ENVIRONMENT", &mut self.environment);
         apply_string("ORDER_SERVICE_GRPC_HOST", &mut self.grpc_host);
         apply_port("ORDER_SERVICE_GRPC_PORT", &mut self.grpc_port)?;
@@ -310,58 +428,80 @@ impl ServiceConfigContract for Config {
     fn services(&self) -> Vec<ServiceConfig> {
         vec![self.service()]
     }
-    fn streams(&self) -> Vec<RuntimeStreamConfig> { self.streams.runtime_configs() }
+    fn streams(&self) -> Vec<RuntimeStreamConfig> {
+        self.streams.runtime_configs()
+    }
     fn data_connectors(&self) -> Vec<RuntimeDataConnectorConfig> {
         vec![
             GrpcDataConnectorConfig {
-                id: INVENTORY_SERVICE_API_CONNECTOR_ID, name: "Inventory Service API".to_owned(),
+                id: INVENTORY_SERVICE_API_CONNECTOR_ID,
+                name: "Inventory Service API".to_owned(),
                 address: self.inventory_address.clone(),
                 connections_count: self.inventory_service_api_connections_count,
-            }.into(),
+            }
+            .into(),
             KafkaDataConnectorConfig {
-                id: ORDER_EVENTS_CONNECTOR_ID, name: "Order Events".to_owned(),
-                brokers: self.order_events_brokers.clone(), version: "2.8.0".to_owned(),
-                dial_timeout: 5000.0, use_partitioner: false, r#async: false,
-                security_protocol: parse_kafka_security_protocol(&self.order_events_security_protocol).expect("Kafka security protocol was validated"),
-                sasl_mechanism: parse_kafka_sasl_mechanism(&self.order_events_sasl_mechanism).expect("Kafka SASL mechanism was validated"),
+                id: ORDER_EVENTS_CONNECTOR_ID,
+                name: "Order Events".to_owned(),
+                brokers: self.order_events_brokers.clone(),
+                version: "2.8.0".to_owned(),
+                dial_timeout: 5000.0,
+                use_partitioner: false,
+                r#async: false,
+                security_protocol: parse_kafka_security_protocol(
+                    &self.order_events_security_protocol,
+                )
+                .expect("Kafka security protocol was validated"),
+                sasl_mechanism: parse_kafka_sasl_mechanism(&self.order_events_sasl_mechanism)
+                    .expect("Kafka SASL mechanism was validated"),
                 username: self.order_events_username.clone(),
                 password: self.order_events_password.clone(),
-            }.into(),
+            }
+            .into(),
             HttpDataConnectorConfig {
-                id: ORDER_SERVICE_API_CONNECTOR_ID, name: "Order Service API".to_owned(),
-                host: self.http_host.clone(), port: self.http_port,
+                id: ORDER_SERVICE_API_CONNECTOR_ID,
+                name: "Order Service API".to_owned(),
+                host: self.http_host.clone(),
+                port: self.http_port,
                 address: "".to_owned(),
                 use_dedicated_listener: false,
-            }.into(),
+            }
+            .into(),
         ]
     }
     fn endpoints(&self) -> Vec<RuntimeEndpointConfig> {
         self.endpoints.runtime_configs()
     }
     fn pools(&self) -> Vec<PoolConfig> {
-        vec![
-            PoolConfig { name: "Default Pool".to_owned(), executors_count: self.default_pool_executors_count, queue_capacity: 0 },
-        ]
+        vec![PoolConfig {
+            name: "Default Pool".to_owned(),
+            executors_count: self.default_pool_executors_count,
+            queue_capacity: 0,
+        }]
     }
     fn links(&self) -> Vec<LinkConfig> {
         vec![
             LinkConfig {
-                from: MERGE_RESULTS_STREAM_ID, to: SPLIT_ORDER_RESULT_STREAM_ID,
+                from: MERGE_RESULTS_STREAM_ID,
+                to: SPLIT_ORDER_RESULT_STREAM_ID,
                 call_semantics: CallSemantics::FunctionCall,
                 r#async: false,
             },
             LinkConfig {
-                from: PROCESS_ORDER_STREAM_ID, to: SPLIT_PIPELINE_STREAM_ID,
+                from: PROCESS_ORDER_STREAM_ID,
+                to: SPLIT_PIPELINE_STREAM_ID,
                 call_semantics: CallSemantics::FunctionCall,
                 r#async: false,
             },
             LinkConfig {
-                from: SPLIT_PIPELINE_STREAM_ID, to: PROCESS_ORDER_ITEMS_STREAM_ID,
+                from: SPLIT_PIPELINE_STREAM_ID,
+                to: PROCESS_ORDER_ITEMS_STREAM_ID,
                 call_semantics: CallSemantics::FunctionCall,
                 r#async: false,
             },
             LinkConfig {
-                from: SPLIT_PIPELINE_STREAM_ID, to: SOFT_DEADLINE_STREAM_ID,
+                from: SPLIT_PIPELINE_STREAM_ID,
+                to: SOFT_DEADLINE_STREAM_ID,
                 call_semantics: CallSemantics::FunctionCall,
                 r#async: true,
             },
@@ -369,52 +509,99 @@ impl ServiceConfigContract for Config {
     }
     fn modules(&self) -> Vec<ModuleConfig> {
         vec![
-            ModuleConfig { name: "inventory_service_api".to_owned(), path: "github.com/gorundebug/rustexample-inventory-service-api".to_owned(), properties: Default::default() },
-            ModuleConfig { name: "model".to_owned(), path: "github.com/gorundebug/rustexample-model".to_owned(), properties: Default::default() },
-            ModuleConfig { name: "order_service_api".to_owned(), path: "github.com/gorundebug/rustexample-order-service-api".to_owned(), properties: Default::default() },
+            ModuleConfig {
+                name: "inventory_service_api".to_owned(),
+                path: "github.com/gorundebug/rustexample-inventory-service-api".to_owned(),
+                properties: Default::default(),
+            },
+            ModuleConfig {
+                name: "model".to_owned(),
+                path: "github.com/gorundebug/rustexample-model".to_owned(),
+                properties: Default::default(),
+            },
+            ModuleConfig {
+                name: "order_service_api".to_owned(),
+                path: "github.com/gorundebug/rustexample-order-service-api".to_owned(),
+                properties: Default::default(),
+            },
         ]
     }
     fn types(&self) -> Vec<TypeConfig> {
         vec![
             TypeConfig {
-                name: "Order".to_owned(), data_type: DataType::Struct,
-                type_definition: "Order".to_owned(), type_import: "crate::internal::types::order".to_owned(),
-                value_type: "".to_owned(), key_type: "".to_owned(),
-                package: "".to_owned(), module: "".to_owned(),
-                definition_format: TypeDefinitionFormat::Native, public_type: false,
-                transfer_by_value: false, use_alias: false, properties: Default::default(),
+                name: "Order".to_owned(),
+                data_type: DataType::Struct,
+                type_definition: "Order".to_owned(),
+                type_import: "crate::internal::types::order".to_owned(),
+                value_type: "".to_owned(),
+                key_type: "".to_owned(),
+                package: "".to_owned(),
+                module: "".to_owned(),
+                definition_format: TypeDefinitionFormat::Native,
+                public_type: false,
+                transfer_by_value: false,
+                use_alias: false,
+                properties: Default::default(),
             },
             TypeConfig {
-                name: "OrderItem".to_owned(), data_type: DataType::Struct,
-                type_definition: "OrderItem".to_owned(), type_import: "example_model::types::order_item".to_owned(),
-                value_type: "".to_owned(), key_type: "".to_owned(),
-                package: "".to_owned(), module: "model".to_owned(),
-                definition_format: TypeDefinitionFormat::Native, public_type: false,
-                transfer_by_value: false, use_alias: false, properties: Default::default(),
+                name: "OrderItem".to_owned(),
+                data_type: DataType::Struct,
+                type_definition: "OrderItem".to_owned(),
+                type_import: "example_model::types::order_item".to_owned(),
+                value_type: "".to_owned(),
+                key_type: "".to_owned(),
+                package: "".to_owned(),
+                module: "model".to_owned(),
+                definition_format: TypeDefinitionFormat::Native,
+                public_type: false,
+                transfer_by_value: false,
+                use_alias: false,
+                properties: Default::default(),
             },
             TypeConfig {
-                name: "OrderItemResult".to_owned(), data_type: DataType::Struct,
-                type_definition: "OrderItemResult".to_owned(), type_import: "example_model::types::order_item_result".to_owned(),
-                value_type: "".to_owned(), key_type: "".to_owned(),
-                package: "".to_owned(), module: "model".to_owned(),
-                definition_format: TypeDefinitionFormat::Native, public_type: false,
-                transfer_by_value: false, use_alias: false, properties: Default::default(),
+                name: "OrderItemResult".to_owned(),
+                data_type: DataType::Struct,
+                type_definition: "OrderItemResult".to_owned(),
+                type_import: "example_model::types::order_item_result".to_owned(),
+                value_type: "".to_owned(),
+                key_type: "".to_owned(),
+                package: "".to_owned(),
+                module: "model".to_owned(),
+                definition_format: TypeDefinitionFormat::Native,
+                public_type: false,
+                transfer_by_value: false,
+                use_alias: false,
+                properties: Default::default(),
             },
             TypeConfig {
-                name: "OrderProcessed".to_owned(), data_type: DataType::Struct,
-                type_definition: "OrderProcessed".to_owned(), type_import: "example_model::types::order_processed".to_owned(),
-                value_type: "".to_owned(), key_type: "".to_owned(),
-                package: "".to_owned(), module: "model".to_owned(),
-                definition_format: TypeDefinitionFormat::Native, public_type: false,
-                transfer_by_value: false, use_alias: false, properties: Default::default(),
+                name: "OrderProcessed".to_owned(),
+                data_type: DataType::Struct,
+                type_definition: "OrderProcessed".to_owned(),
+                type_import: "example_model::types::order_processed".to_owned(),
+                value_type: "".to_owned(),
+                key_type: "".to_owned(),
+                package: "".to_owned(),
+                module: "model".to_owned(),
+                definition_format: TypeDefinitionFormat::Native,
+                public_type: false,
+                transfer_by_value: false,
+                use_alias: false,
+                properties: Default::default(),
             },
             TypeConfig {
-                name: "OrderState".to_owned(), data_type: DataType::Struct,
-                type_definition: "OrderState".to_owned(), type_import: "crate::internal::types::order_state".to_owned(),
-                value_type: "".to_owned(), key_type: "".to_owned(),
-                package: "".to_owned(), module: "".to_owned(),
-                definition_format: TypeDefinitionFormat::Native, public_type: false,
-                transfer_by_value: false, use_alias: false, properties: Default::default(),
+                name: "OrderState".to_owned(),
+                data_type: DataType::Struct,
+                type_definition: "OrderState".to_owned(),
+                type_import: "crate::internal::types::order_state".to_owned(),
+                value_type: "".to_owned(),
+                key_type: "".to_owned(),
+                package: "".to_owned(),
+                module: "".to_owned(),
+                definition_format: TypeDefinitionFormat::Native,
+                public_type: false,
+                transfer_by_value: false,
+                use_alias: false,
+                properties: Default::default(),
             },
         ]
     }

@@ -1,4 +1,4 @@
-# Task 17/22: `KeyPaymentsForMultiJoin`
+# Task 17/26: `KeyPaymentsForMultiJoin`
 
 > Rules: [`spec/rules.md`](../rules.md)
 

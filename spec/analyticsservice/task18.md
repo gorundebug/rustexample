@@ -1,4 +1,4 @@
-# Task 18/22: `KeyShipmentsForMultiJoin`
+# Task 18/26: `KeyShipmentsForMultiJoin`
 
 > Rules: [`spec/rules.md`](../rules.md)
 

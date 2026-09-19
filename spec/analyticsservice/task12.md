@@ -1,4 +1,4 @@
-# Task 12/22: `KeyOrdersForJoin`
+# Task 12/26: `KeyOrdersForJoin`
 
 > Rules: [`spec/rules.md`](../rules.md)
 

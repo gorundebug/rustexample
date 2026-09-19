@@ -1,4 +1,15 @@
-httpHost: 0.0.0.0
-httpPort: 9092
-grpcHost: 0.0.0.0
-grpcPort: 9202
+dataConnectors:
+  inventoryServiceApi:
+    address: $inventoryServiceApiAddress
+    connectionsCount: $inventoryServiceApiConnectionsCount
+pools:
+  inventoryPriorityWorkers:
+    executorsCount: $inventoryPriorityWorkersExecutorsCount
+services:
+  inventoryService:
+    defaultGrpcTimeout: $inventoryServiceDefaultGrpcTimeout
+    environment: $inventoryServiceEnvironment
+    grpcHost: $inventoryServiceGrpcHost
+    grpcPort: $inventoryServiceGrpcPort
+    httpHost: $inventoryServiceHttpHost
+    httpPort: $inventoryServiceHttpPort

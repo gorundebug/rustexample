@@ -2,50 +2,42 @@
 
 #![allow(dead_code, unused_imports)]
 
-use std::{future::Future, pin::Pin, sync::{Arc, OnceLock, Weak, mpsc}};
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::{Arc, OnceLock, Weak, mpsc},
+};
 
+use example_model::types::*;
 use servicelib::{
-    MessageContext, Stream,
-    operators::{InputStream, SinkStream, SinkStreamWithResult, MultiJoinStream, TypedCaseStream, LinkStream},
+    CallableSubStream, MessageContext, Stream, SubStream, SubStreamCollector,
+    operators::{
+        InputStream, LinkStream, MultiJoinStream, SinkStream, SinkStreamWithResult, TypedCaseStream,
+    },
     runtime::{
         config::{
-            ConfigLoader, RuntimeDataConnectorConfig,
-            CaseStreamConfig,
-            CronEndpointConfig,
-            CustomEndpointConfig,
-            FilterStreamConfig,
-            JoinStreamConfig,
-            KafkaEndpointConfig,
-            KeyByStreamConfig,
-            MapStreamConfig,
-            MultiJoinStreamConfig,
-            ProcessStreamConfig,
-            KafkaDataConnectorConfig,
-            CronDataConnectorConfig,
+            CaseStreamConfig, ConfigLoader, CronDataConnectorConfig, CronEndpointConfig,
+            CustomEndpointConfig, FilterStreamConfig, JoinStreamConfig, KafkaDataConnectorConfig,
+            KafkaEndpointConfig, KeyByStreamConfig, MapStreamConfig, MultiJoinStreamConfig,
+            ProcessStreamConfig, RuntimeDataConnectorConfig,
         },
-        environment::{RuntimeEnvironment, RuntimeError, RuntimeResult},
         datastruct::KeyValue,
+        environment::{RuntimeEnvironment, RuntimeError, RuntimeResult},
         serviceapp::ServiceApp,
     },
 };
-use example_model::types::*;
-
-
 
 use servicelib::datasource::kafka::RdkafkaKafkaDataSource;
 
 use servicelib::datasource::cron::{CronDataSource, make_croner_endpoint_consumer};
 
-use servicelib::datasource::localsource::{CustomDataSource, make_custom_endpoint_consumer as make_custom_source_endpoint_consumer};
+use servicelib::datasource::localsource::{
+    CustomDataSource, make_custom_endpoint_consumer as make_custom_source_endpoint_consumer,
+};
 
 use servicelib::datasink::localsink::make_custom_endpoint_consumer as make_custom_sink_endpoint_consumer;
 
-
-
 use crate::internal::{config::Config, functions::*, types::*};
-
-
-
 
 pub struct ServiceStreams {
     pub analytics_schedule: Arc<InputStream<String, (), String>>,
@@ -54,6 +46,7 @@ pub struct ServiceStreams {
     pub analytics_payments: Arc<InputStream<AnalyticsEvent, (), String>>,
     pub analytics_shipments: Arc<InputStream<AnalyticsEvent, (), String>>,
     pub cycle_analytics_input: Arc<InputStream<AnalyticsEvent, (), String>>,
+    pub substream_analytics_input: Arc<InputStream<AnalyticsEvent, (), String>>,
     pub cycle_analytics_link: Arc<LinkStream<AnalyticsEvent>>,
     pub count_order_processed: Stream<OrderProcessed>,
     pub split_analytics_orders: [Stream<AnalyticsEvent>; 2],
@@ -71,22 +64,130 @@ pub struct ServiceStreams {
     pub key_orders_for_multi_join: Stream<KeyValue<String, AnalyticsEvent>>,
     pub key_payments_for_multi_join: Stream<KeyValue<String, AnalyticsEvent>>,
     pub key_shipments_for_multi_join: Stream<KeyValue<String, AnalyticsEvent>>,
-    pub multi_join_analytics_events: Arc<MultiJoinStream<String, AnalyticsResult, MultiJoinAnalyticsEvents>>,
+    pub multi_join_analytics_events:
+        Arc<MultiJoinStream<String, AnalyticsResult, MultiJoinAnalyticsEvents>>,
     pub route_analytics_result: TypedCaseStream<AnalyticsResult, RouteAnalyticsResult>,
     pub high_value_analytics: Stream<AnalyticsResult>,
     pub standard_analytics: Stream<AnalyticsResult>,
     pub write_high_value_analytics: Arc<SinkStream<AnalyticsResult, String>>,
     pub write_standard_analytics: Arc<SinkStream<AnalyticsResult, String>>,
+    pub analyze_analytics_substream: Arc<SubStream<AnalyticsEvent, AnalyticsResult>>,
+    pub build_substream_analytics_result: Stream<AnalyticsResult>,
+    pub invoke_analytics_substream: Stream<AnalyticsResult>,
+    pub write_substream_analytics: Arc<SinkStream<AnalyticsResult, String>>,
+}
+struct SubStreamHandle<T: Send + Sync + 'static, R: Send + Sync + 'static> {
+    // Makers may retain handles without creating an Arc cycle through the graph.
+    target: OnceLock<Weak<SubStream<T, R>>>,
 }
 
-pub struct ServiceHandlers {
+#[async_trait::async_trait]
+impl<T: Send + Sync + 'static, R: Send + Sync + 'static> CallableSubStream<T, R>
+    for SubStreamHandle<T, R>
+{
+    async fn consume(
+        &self,
+        context: MessageContext,
+        value: T,
+        collector: Arc<dyn SubStreamCollector<R>>,
+    ) -> RuntimeResult<()> {
+        let target = self.target.get().and_then(Weak::upgrade).ok_or_else(|| {
+            RuntimeError::InvalidConfiguration(
+                "SubStream graph is not initialized or has stopped".to_owned(),
+            )
+        })?;
+        target.consume(context, value, collector).await
+    }
 }
+
+#[derive(Clone)]
+pub struct ServiceSubStreams {
+    analyze_analytics_substream: Arc<SubStreamHandle<AnalyticsEvent, AnalyticsResult>>,
+}
+
+impl Default for ServiceSubStreams {
+    fn default() -> Self {
+        Self {
+            analyze_analytics_substream: Arc::new(SubStreamHandle {
+                target: OnceLock::new(),
+            }),
+        }
+    }
+}
+
+impl ServiceSubStreams {
+    pub fn get_analyze_analytics_substream_substream(
+        &self,
+    ) -> Arc<dyn CallableSubStream<AnalyticsEvent, AnalyticsResult>> {
+        self.analyze_analytics_substream.clone()
+    }
+
+    pub fn bind(&self, streams: &ServiceStreams) -> RuntimeResult<()> {
+        self.analyze_analytics_substream
+            .target
+            .set(Arc::downgrade(&streams.analyze_analytics_substream))
+            .map_err(|_| {
+                RuntimeError::DuplicateResource(
+                    "SubStream analyze_analytics_substream binding".to_owned(),
+                )
+            })?;
+        Ok(())
+    }
+}
+
+pub struct ServiceHandlers {}
 
 pub struct ServiceDataConnectors {
-    pub analytics_orders_data_source: Arc<CustomDataSource<(), AnalyticsEvent, (), String, AnalyticsOrdersSource, AnalyticsOrdersSource>>,
-    pub analytics_payments_data_source: Arc<CustomDataSource<(), AnalyticsEvent, (), String, AnalyticsPaymentsSource, AnalyticsPaymentsSource>>,
-    pub analytics_shipments_data_source: Arc<CustomDataSource<(), AnalyticsEvent, (), String, AnalyticsShipmentsSource, AnalyticsShipmentsSource>>,
-    pub cycle_analytics_input_data_source: Arc<CustomDataSource<(), AnalyticsEvent, (), String, CycleAnalyticsInputSource, CycleAnalyticsInputSource>>,
+    pub analytics_orders_data_source: Arc<
+        CustomDataSource<
+            (),
+            AnalyticsEvent,
+            (),
+            String,
+            AnalyticsOrdersSource,
+            AnalyticsOrdersSource,
+        >,
+    >,
+    pub analytics_payments_data_source: Arc<
+        CustomDataSource<
+            (),
+            AnalyticsEvent,
+            (),
+            String,
+            AnalyticsPaymentsSource,
+            AnalyticsPaymentsSource,
+        >,
+    >,
+    pub analytics_shipments_data_source: Arc<
+        CustomDataSource<
+            (),
+            AnalyticsEvent,
+            (),
+            String,
+            AnalyticsShipmentsSource,
+            AnalyticsShipmentsSource,
+        >,
+    >,
+    pub cycle_analytics_input_data_source: Arc<
+        CustomDataSource<
+            (),
+            AnalyticsEvent,
+            (),
+            String,
+            CycleAnalyticsInputSource,
+            CycleAnalyticsInputSource,
+        >,
+    >,
+    pub substream_analytics_input_data_source: Arc<
+        CustomDataSource<
+            (),
+            AnalyticsEvent,
+            (),
+            String,
+            SubstreamAnalyticsInputSource,
+            SubstreamAnalyticsInputSource,
+        >,
+    >,
     pub order_events_data_source: Arc<RdkafkaKafkaDataSource>,
     pub local_cron_data_source: Arc<CronDataSource>,
 }
@@ -104,6 +205,7 @@ pub struct ServiceInfrastructure {
 
 struct GeneratedServiceInner {
     runtime: ServiceRuntime,
+    substreams: ServiceSubStreams,
     app: OnceLock<Arc<ServiceApp>>,
 }
 
@@ -114,194 +216,416 @@ pub struct GeneratedService {
 
 #[derive(Clone)]
 pub struct ServiceMakers {
-    pub advance_cycle_analytics: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a MapStreamConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<AdvanceCycleAnalytics>> + Send + 'a>> + Send + Sync>,
-    pub analytics_orders_source: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a CustomEndpointConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<AnalyticsOrdersSource>> + Send + 'a>> + Send + Sync>,
-    pub analytics_payments_source: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a CustomEndpointConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<AnalyticsPaymentsSource>> + Send + 'a>> + Send + Sync>,
-    pub analytics_schedule_source: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a CronEndpointConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<AnalyticsScheduleSource>> + Send + 'a>> + Send + Sync>,
-    pub analytics_shipments_source: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a CustomEndpointConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<AnalyticsShipmentsSource>> + Send + 'a>> + Send + Sync>,
-    pub complete_cycle_analytics: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a FilterStreamConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<CompleteCycleAnalytics>> + Send + 'a>> + Send + Sync>,
-    pub continue_cycle_analytics: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a FilterStreamConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<ContinueCycleAnalytics>> + Send + 'a>> + Send + Sync>,
-    pub count_order_processed: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a ProcessStreamConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<CountOrderProcessed>> + Send + 'a>> + Send + Sync>,
-    pub cycle_analytics_input_source: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a CustomEndpointConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<CycleAnalyticsInputSource>> + Send + 'a>> + Send + Sync>,
-    pub cycle_analytics_result_sink: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a CustomEndpointConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<CycleAnalyticsResultSink>> + Send + 'a>> + Send + Sync>,
-    pub high_value_analytics_sink: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a CustomEndpointConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<HighValueAnalyticsSink>> + Send + 'a>> + Send + Sync>,
-    pub join_order_payment_analytics: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a JoinStreamConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<JoinOrderPaymentAnalytics>> + Send + 'a>> + Send + Sync>,
-    pub joined_analytics_sink: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a CustomEndpointConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<JoinedAnalyticsSink>> + Send + 'a>> + Send + Sync>,
-    pub key_orders_for_join: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a KeyByStreamConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<KeyOrdersForJoin>> + Send + 'a>> + Send + Sync>,
-    pub key_orders_for_multi_join: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a KeyByStreamConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<KeyOrdersForMultiJoin>> + Send + 'a>> + Send + Sync>,
-    pub key_payments_for_join: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a KeyByStreamConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<KeyPaymentsForJoin>> + Send + 'a>> + Send + Sync>,
-    pub key_payments_for_multi_join: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a KeyByStreamConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<KeyPaymentsForMultiJoin>> + Send + 'a>> + Send + Sync>,
-    pub key_shipments_for_multi_join: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a KeyByStreamConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<KeyShipmentsForMultiJoin>> + Send + 'a>> + Send + Sync>,
-    pub multi_join_analytics_events: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a MultiJoinStreamConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<MultiJoinAnalyticsEvents>> + Send + 'a>> + Send + Sync>,
-    pub order_processed_endpoint_source: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a KafkaEndpointConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<OrderProcessedEndpointSource>> + Send + 'a>> + Send + Sync>,
-    pub route_analytics_result: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a CaseStreamConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<RouteAnalyticsResult>> + Send + 'a>> + Send + Sync>,
-    pub standard_analytics_sink: Arc<dyn for<'a> Fn(
-        MessageContext,
-        RuntimeEnvironment,
-        &'a CustomEndpointConfig,
-    ) -> Pin<Box<dyn Future<Output = RuntimeResult<StandardAnalyticsSink>> + Send + 'a>> + Send + Sync>,
-    pub order_events_data_source: ServiceInfrastructureMaker<KafkaDataConnectorConfig, Arc<RdkafkaKafkaDataSource>>,
-    pub local_cron_data_source: ServiceInfrastructureMaker<CronDataConnectorConfig, Arc<CronDataSource>>,
+    pub substreams: ServiceSubStreams,
+    pub advance_cycle_analytics: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a MapStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<AdvanceCycleAnalytics>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub analytics_orders_source: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a CustomEndpointConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<AnalyticsOrdersSource>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub analytics_payments_source: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a CustomEndpointConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<AnalyticsPaymentsSource>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub analytics_schedule_source: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a CronEndpointConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<AnalyticsScheduleSource>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub analytics_shipments_source: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a CustomEndpointConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<AnalyticsShipmentsSource>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub build_substream_analytics_result: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a MapStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<BuildSubstreamAnalyticsResult>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub complete_cycle_analytics: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a FilterStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<CompleteCycleAnalytics>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub continue_cycle_analytics: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a FilterStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<ContinueCycleAnalytics>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub count_order_processed: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a ProcessStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<CountOrderProcessed>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub cycle_analytics_input_source: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a CustomEndpointConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<CycleAnalyticsInputSource>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub cycle_analytics_result_sink: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a CustomEndpointConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<CycleAnalyticsResultSink>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub high_value_analytics_sink: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a CustomEndpointConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<HighValueAnalyticsSink>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub invoke_analytics_substream: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a MapStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<InvokeAnalyticsSubstream>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub join_order_payment_analytics: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a JoinStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<JoinOrderPaymentAnalytics>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub joined_analytics_sink: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a CustomEndpointConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<JoinedAnalyticsSink>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub key_orders_for_join: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a KeyByStreamConfig,
+            )
+                -> Pin<Box<dyn Future<Output = RuntimeResult<KeyOrdersForJoin>> + Send + 'a>>
+            + Send
+            + Sync,
+    >,
+    pub key_orders_for_multi_join: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a KeyByStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<KeyOrdersForMultiJoin>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub key_payments_for_join: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a KeyByStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<KeyPaymentsForJoin>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub key_payments_for_multi_join: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a KeyByStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<KeyPaymentsForMultiJoin>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub key_shipments_for_multi_join: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a KeyByStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<KeyShipmentsForMultiJoin>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub multi_join_analytics_events: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a MultiJoinStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<MultiJoinAnalyticsEvents>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub order_processed_endpoint_source: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a KafkaEndpointConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<OrderProcessedEndpointSource>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub route_analytics_result: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a CaseStreamConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<RouteAnalyticsResult>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub standard_analytics_sink: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a CustomEndpointConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<StandardAnalyticsSink>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub substream_analytics_input_source: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a CustomEndpointConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<SubstreamAnalyticsInputSource>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub substream_analytics_result_sink: Arc<
+        dyn for<'a> Fn(
+                MessageContext,
+                RuntimeEnvironment,
+                &'a CustomEndpointConfig,
+            ) -> Pin<
+                Box<dyn Future<Output = RuntimeResult<SubstreamAnalyticsResultSink>> + Send + 'a>,
+            > + Send
+            + Sync,
+    >,
+    pub order_events_data_source:
+        ServiceInfrastructureMaker<KafkaDataConnectorConfig, Arc<RdkafkaKafkaDataSource>>,
+    pub local_cron_data_source:
+        ServiceInfrastructureMaker<CronDataConnectorConfig, Arc<CronDataSource>>,
 }
 
-pub type ServiceInfrastructureMaker<C, T> = Arc<dyn for<'a> Fn(
-    MessageContext,
-    RuntimeEnvironment,
-    &'a C,
-) -> Pin<Box<dyn Future<Output = RuntimeResult<T>> + Send + 'a>> + Send + Sync>;
+pub type ServiceInfrastructureMaker<C, T> = Arc<
+    dyn for<'a> Fn(
+            MessageContext,
+            RuntimeEnvironment,
+            &'a C,
+        ) -> Pin<Box<dyn Future<Output = RuntimeResult<T>> + Send + 'a>>
+        + Send
+        + Sync,
+>;
 
 impl Default for ServiceMakers {
     fn default() -> Self {
         Self {
+            substreams: ServiceSubStreams::default(),
             advance_cycle_analytics: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_advance_cycle_analytics(context, environment, config).await })
+                Box::pin(
+                    async move { make_advance_cycle_analytics(context, environment, config).await },
+                )
             }),
             analytics_orders_source: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_analytics_orders_source(context, environment, config).await })
+                Box::pin(
+                    async move { make_analytics_orders_source(context, environment, config).await },
+                )
             }),
             analytics_payments_source: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_analytics_payments_source(context, environment, config).await })
+                Box::pin(async move {
+                    make_analytics_payments_source(context, environment, config).await
+                })
             }),
             analytics_schedule_source: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_analytics_schedule_source(context, environment, config).await })
+                Box::pin(async move {
+                    make_analytics_schedule_source(context, environment, config).await
+                })
             }),
             analytics_shipments_source: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_analytics_shipments_source(context, environment, config).await })
+                Box::pin(async move {
+                    make_analytics_shipments_source(context, environment, config).await
+                })
+            }),
+            build_substream_analytics_result: Arc::new(|context, environment, config| {
+                Box::pin(async move {
+                    make_build_substream_analytics_result(context, environment, config).await
+                })
             }),
             complete_cycle_analytics: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_complete_cycle_analytics(context, environment, config).await })
+                Box::pin(async move {
+                    make_complete_cycle_analytics(context, environment, config).await
+                })
             }),
             continue_cycle_analytics: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_continue_cycle_analytics(context, environment, config).await })
+                Box::pin(async move {
+                    make_continue_cycle_analytics(context, environment, config).await
+                })
             }),
             count_order_processed: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_count_order_processed(context, environment, config).await })
+                Box::pin(
+                    async move { make_count_order_processed(context, environment, config).await },
+                )
             }),
             cycle_analytics_input_source: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_cycle_analytics_input_source(context, environment, config).await })
+                Box::pin(async move {
+                    make_cycle_analytics_input_source(context, environment, config).await
+                })
             }),
             cycle_analytics_result_sink: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_cycle_analytics_result_sink(context, environment, config).await })
+                Box::pin(async move {
+                    make_cycle_analytics_result_sink(context, environment, config).await
+                })
             }),
             high_value_analytics_sink: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_high_value_analytics_sink(context, environment, config).await })
+                Box::pin(async move {
+                    make_high_value_analytics_sink(context, environment, config).await
+                })
+            }),
+            invoke_analytics_substream: Arc::new(|context, environment, config| {
+                Box::pin(async move {
+                    make_invoke_analytics_substream(context, environment, config).await
+                })
             }),
             join_order_payment_analytics: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_join_order_payment_analytics(context, environment, config).await })
+                Box::pin(async move {
+                    make_join_order_payment_analytics(context, environment, config).await
+                })
             }),
             joined_analytics_sink: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_joined_analytics_sink(context, environment, config).await })
+                Box::pin(
+                    async move { make_joined_analytics_sink(context, environment, config).await },
+                )
             }),
             key_orders_for_join: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_key_orders_for_join(context, environment, config).await })
+                Box::pin(
+                    async move { make_key_orders_for_join(context, environment, config).await },
+                )
             }),
             key_orders_for_multi_join: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_key_orders_for_multi_join(context, environment, config).await })
+                Box::pin(async move {
+                    make_key_orders_for_multi_join(context, environment, config).await
+                })
             }),
             key_payments_for_join: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_key_payments_for_join(context, environment, config).await })
+                Box::pin(
+                    async move { make_key_payments_for_join(context, environment, config).await },
+                )
             }),
             key_payments_for_multi_join: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_key_payments_for_multi_join(context, environment, config).await })
+                Box::pin(async move {
+                    make_key_payments_for_multi_join(context, environment, config).await
+                })
             }),
             key_shipments_for_multi_join: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_key_shipments_for_multi_join(context, environment, config).await })
+                Box::pin(async move {
+                    make_key_shipments_for_multi_join(context, environment, config).await
+                })
             }),
             multi_join_analytics_events: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_multi_join_analytics_events(context, environment, config).await })
+                Box::pin(async move {
+                    make_multi_join_analytics_events(context, environment, config).await
+                })
             }),
             order_processed_endpoint_source: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_order_processed_endpoint_source(context, environment, config).await })
+                Box::pin(async move {
+                    make_order_processed_endpoint_source(context, environment, config).await
+                })
             }),
             route_analytics_result: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_route_analytics_result(context, environment, config).await })
+                Box::pin(
+                    async move { make_route_analytics_result(context, environment, config).await },
+                )
             }),
             standard_analytics_sink: Arc::new(|context, environment, config| {
-                Box::pin(async move { make_standard_analytics_sink(context, environment, config).await })
+                Box::pin(
+                    async move { make_standard_analytics_sink(context, environment, config).await },
+                )
+            }),
+            substream_analytics_input_source: Arc::new(|context, environment, config| {
+                Box::pin(async move {
+                    make_substream_analytics_input_source(context, environment, config).await
+                })
+            }),
+            substream_analytics_result_sink: Arc::new(|context, environment, config| {
+                Box::pin(async move {
+                    make_substream_analytics_result_sink(context, environment, config).await
+                })
             }),
             order_events_data_source: Arc::new(|_context, environment, config| {
                 Box::pin(async move { RdkafkaKafkaDataSource::from_config(environment, config) })
@@ -317,13 +641,19 @@ fn connector_config(
     environment: &RuntimeEnvironment,
     connector_id: i32,
 ) -> RuntimeResult<Arc<RuntimeDataConnectorConfig>> {
-    environment.runtime_config().data_connector_by_id(connector_id).ok_or_else(||
-        RuntimeError::InvalidConfiguration(format!(
-            "data connector {connector_id} is not configured"
-        ))
-    )
+    environment
+        .runtime_config()
+        .data_connector_by_id(connector_id)
+        .ok_or_else(|| {
+            RuntimeError::InvalidConfiguration(format!(
+                "data connector {connector_id} is not configured"
+            ))
+        })
 }
-fn kafka_connector_config(environment: &RuntimeEnvironment, connector_id: i32) -> RuntimeResult<KafkaDataConnectorConfig> {
+fn kafka_connector_config(
+    environment: &RuntimeEnvironment,
+    connector_id: i32,
+) -> RuntimeResult<KafkaDataConnectorConfig> {
     match connector_config(environment, connector_id)?.as_ref() {
         RuntimeDataConnectorConfig::Kafka(config) => Ok(config.clone()),
         _ => Err(RuntimeError::InvalidConfiguration(format!(
@@ -331,7 +661,10 @@ fn kafka_connector_config(environment: &RuntimeEnvironment, connector_id: i32) -
         ))),
     }
 }
-fn cron_connector_config(environment: &RuntimeEnvironment, connector_id: i32) -> RuntimeResult<CronDataConnectorConfig> {
+fn cron_connector_config(
+    environment: &RuntimeEnvironment,
+    connector_id: i32,
+) -> RuntimeResult<CronDataConnectorConfig> {
     match connector_config(environment, connector_id)?.as_ref() {
         RuntimeDataConnectorConfig::Cron(config) => Ok(config.clone()),
         _ => Err(RuntimeError::InvalidConfiguration(format!(
@@ -346,12 +679,14 @@ pub struct ServiceFunctions {
     pub analytics_payments_source: AnalyticsPaymentsSource,
     pub analytics_schedule_source: AnalyticsScheduleSource,
     pub analytics_shipments_source: AnalyticsShipmentsSource,
+    pub build_substream_analytics_result: BuildSubstreamAnalyticsResult,
     pub complete_cycle_analytics: CompleteCycleAnalytics,
     pub continue_cycle_analytics: ContinueCycleAnalytics,
     pub count_order_processed: CountOrderProcessed,
     pub cycle_analytics_input_source: CycleAnalyticsInputSource,
     pub cycle_analytics_result_sink: CycleAnalyticsResultSink,
     pub high_value_analytics_sink: HighValueAnalyticsSink,
+    pub invoke_analytics_substream: InvokeAnalyticsSubstream,
     pub join_order_payment_analytics: JoinOrderPaymentAnalytics,
     pub joined_analytics_sink: JoinedAnalyticsSink,
     pub key_orders_for_join: KeyOrdersForJoin,
@@ -363,6 +698,8 @@ pub struct ServiceFunctions {
     pub order_processed_endpoint_source: OrderProcessedEndpointSource,
     pub route_analytics_result: RouteAnalyticsResult,
     pub standard_analytics_sink: StandardAnalyticsSink,
+    pub substream_analytics_input_source: SubstreamAnalyticsInputSource,
+    pub substream_analytics_result_sink: SubstreamAnalyticsResultSink,
 }
 
 pub async fn init_functions(
@@ -373,502 +710,618 @@ pub async fn init_functions(
 ) -> RuntimeResult<ServiceFunctions> {
     let maker_group_context = context.child();
     let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
-        let advance_cycle_analytics_maker = makers.advance_cycle_analytics.clone();
-        let advance_cycle_analytics_context = maker_group_context.clone();
-        let advance_cycle_analytics_group_context = maker_group_context.clone();
-        let advance_cycle_analytics_environment = environment.clone();
-        let advance_cycle_analytics_error_sender = maker_error_sender.clone();
-        let advance_cycle_analytics_future = async move {
-            let result = (advance_cycle_analytics_maker)(
-                    advance_cycle_analytics_context,
-                    advance_cycle_analytics_environment,
-                    &config.streams.advance_cycle_analytics,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    advance_cycle_analytics_group_context.cancel();
-                    advance_cycle_analytics_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+    let advance_cycle_analytics_maker = makers.advance_cycle_analytics.clone();
+    let advance_cycle_analytics_context = maker_group_context.clone();
+    let advance_cycle_analytics_group_context = maker_group_context.clone();
+    let advance_cycle_analytics_environment = environment.clone();
+    let advance_cycle_analytics_error_sender = maker_error_sender.clone();
+    let advance_cycle_analytics_future = async move {
+        let result = (advance_cycle_analytics_maker)(
+            advance_cycle_analytics_context,
+            advance_cycle_analytics_environment,
+            &config.streams.advance_cycle_analytics,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                advance_cycle_analytics_group_context.cancel();
+                advance_cycle_analytics_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let analytics_orders_source_maker = makers.analytics_orders_source.clone();
-        let analytics_orders_source_context = maker_group_context.clone();
-        let analytics_orders_source_group_context = maker_group_context.clone();
-        let analytics_orders_source_environment = environment.clone();
-        let analytics_orders_source_error_sender = maker_error_sender.clone();
-        let analytics_orders_source_future = async move {
-            let result = (analytics_orders_source_maker)(
-                    analytics_orders_source_context,
-                    analytics_orders_source_environment,
-                    &config.endpoints.analytics_orders,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    analytics_orders_source_group_context.cancel();
-                    analytics_orders_source_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let analytics_orders_source_maker = makers.analytics_orders_source.clone();
+    let analytics_orders_source_context = maker_group_context.clone();
+    let analytics_orders_source_group_context = maker_group_context.clone();
+    let analytics_orders_source_environment = environment.clone();
+    let analytics_orders_source_error_sender = maker_error_sender.clone();
+    let analytics_orders_source_future = async move {
+        let result = (analytics_orders_source_maker)(
+            analytics_orders_source_context,
+            analytics_orders_source_environment,
+            &config.endpoints.analytics_orders,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                analytics_orders_source_group_context.cancel();
+                analytics_orders_source_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let analytics_payments_source_maker = makers.analytics_payments_source.clone();
-        let analytics_payments_source_context = maker_group_context.clone();
-        let analytics_payments_source_group_context = maker_group_context.clone();
-        let analytics_payments_source_environment = environment.clone();
-        let analytics_payments_source_error_sender = maker_error_sender.clone();
-        let analytics_payments_source_future = async move {
-            let result = (analytics_payments_source_maker)(
-                    analytics_payments_source_context,
-                    analytics_payments_source_environment,
-                    &config.endpoints.analytics_payments,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    analytics_payments_source_group_context.cancel();
-                    analytics_payments_source_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let analytics_payments_source_maker = makers.analytics_payments_source.clone();
+    let analytics_payments_source_context = maker_group_context.clone();
+    let analytics_payments_source_group_context = maker_group_context.clone();
+    let analytics_payments_source_environment = environment.clone();
+    let analytics_payments_source_error_sender = maker_error_sender.clone();
+    let analytics_payments_source_future = async move {
+        let result = (analytics_payments_source_maker)(
+            analytics_payments_source_context,
+            analytics_payments_source_environment,
+            &config.endpoints.analytics_payments,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                analytics_payments_source_group_context.cancel();
+                analytics_payments_source_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let analytics_schedule_source_maker = makers.analytics_schedule_source.clone();
-        let analytics_schedule_source_context = maker_group_context.clone();
-        let analytics_schedule_source_group_context = maker_group_context.clone();
-        let analytics_schedule_source_environment = environment.clone();
-        let analytics_schedule_source_error_sender = maker_error_sender.clone();
-        let analytics_schedule_source_future = async move {
-            let result = (analytics_schedule_source_maker)(
-                    analytics_schedule_source_context,
-                    analytics_schedule_source_environment,
-                    &config.endpoints.analytics_schedule,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    analytics_schedule_source_group_context.cancel();
-                    analytics_schedule_source_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let analytics_schedule_source_maker = makers.analytics_schedule_source.clone();
+    let analytics_schedule_source_context = maker_group_context.clone();
+    let analytics_schedule_source_group_context = maker_group_context.clone();
+    let analytics_schedule_source_environment = environment.clone();
+    let analytics_schedule_source_error_sender = maker_error_sender.clone();
+    let analytics_schedule_source_future = async move {
+        let result = (analytics_schedule_source_maker)(
+            analytics_schedule_source_context,
+            analytics_schedule_source_environment,
+            &config.endpoints.analytics_schedule,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                analytics_schedule_source_group_context.cancel();
+                analytics_schedule_source_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let analytics_shipments_source_maker = makers.analytics_shipments_source.clone();
-        let analytics_shipments_source_context = maker_group_context.clone();
-        let analytics_shipments_source_group_context = maker_group_context.clone();
-        let analytics_shipments_source_environment = environment.clone();
-        let analytics_shipments_source_error_sender = maker_error_sender.clone();
-        let analytics_shipments_source_future = async move {
-            let result = (analytics_shipments_source_maker)(
-                    analytics_shipments_source_context,
-                    analytics_shipments_source_environment,
-                    &config.endpoints.analytics_shipments,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    analytics_shipments_source_group_context.cancel();
-                    analytics_shipments_source_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let analytics_shipments_source_maker = makers.analytics_shipments_source.clone();
+    let analytics_shipments_source_context = maker_group_context.clone();
+    let analytics_shipments_source_group_context = maker_group_context.clone();
+    let analytics_shipments_source_environment = environment.clone();
+    let analytics_shipments_source_error_sender = maker_error_sender.clone();
+    let analytics_shipments_source_future = async move {
+        let result = (analytics_shipments_source_maker)(
+            analytics_shipments_source_context,
+            analytics_shipments_source_environment,
+            &config.endpoints.analytics_shipments,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                analytics_shipments_source_group_context.cancel();
+                analytics_shipments_source_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let complete_cycle_analytics_maker = makers.complete_cycle_analytics.clone();
-        let complete_cycle_analytics_context = maker_group_context.clone();
-        let complete_cycle_analytics_group_context = maker_group_context.clone();
-        let complete_cycle_analytics_environment = environment.clone();
-        let complete_cycle_analytics_error_sender = maker_error_sender.clone();
-        let complete_cycle_analytics_future = async move {
-            let result = (complete_cycle_analytics_maker)(
-                    complete_cycle_analytics_context,
-                    complete_cycle_analytics_environment,
-                    &config.streams.complete_cycle_analytics,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    complete_cycle_analytics_group_context.cancel();
-                    complete_cycle_analytics_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let build_substream_analytics_result_maker = makers.build_substream_analytics_result.clone();
+    let build_substream_analytics_result_context = maker_group_context.clone();
+    let build_substream_analytics_result_group_context = maker_group_context.clone();
+    let build_substream_analytics_result_environment = environment.clone();
+    let build_substream_analytics_result_error_sender = maker_error_sender.clone();
+    let build_substream_analytics_result_future = async move {
+        let result = (build_substream_analytics_result_maker)(
+            build_substream_analytics_result_context,
+            build_substream_analytics_result_environment,
+            &config.streams.build_substream_analytics_result,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                build_substream_analytics_result_group_context.cancel();
+                build_substream_analytics_result_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let continue_cycle_analytics_maker = makers.continue_cycle_analytics.clone();
-        let continue_cycle_analytics_context = maker_group_context.clone();
-        let continue_cycle_analytics_group_context = maker_group_context.clone();
-        let continue_cycle_analytics_environment = environment.clone();
-        let continue_cycle_analytics_error_sender = maker_error_sender.clone();
-        let continue_cycle_analytics_future = async move {
-            let result = (continue_cycle_analytics_maker)(
-                    continue_cycle_analytics_context,
-                    continue_cycle_analytics_environment,
-                    &config.streams.continue_cycle_analytics,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    continue_cycle_analytics_group_context.cancel();
-                    continue_cycle_analytics_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let complete_cycle_analytics_maker = makers.complete_cycle_analytics.clone();
+    let complete_cycle_analytics_context = maker_group_context.clone();
+    let complete_cycle_analytics_group_context = maker_group_context.clone();
+    let complete_cycle_analytics_environment = environment.clone();
+    let complete_cycle_analytics_error_sender = maker_error_sender.clone();
+    let complete_cycle_analytics_future = async move {
+        let result = (complete_cycle_analytics_maker)(
+            complete_cycle_analytics_context,
+            complete_cycle_analytics_environment,
+            &config.streams.complete_cycle_analytics,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                complete_cycle_analytics_group_context.cancel();
+                complete_cycle_analytics_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let count_order_processed_maker = makers.count_order_processed.clone();
-        let count_order_processed_context = maker_group_context.clone();
-        let count_order_processed_group_context = maker_group_context.clone();
-        let count_order_processed_environment = environment.clone();
-        let count_order_processed_error_sender = maker_error_sender.clone();
-        let count_order_processed_future = async move {
-            let result = (count_order_processed_maker)(
-                    count_order_processed_context,
-                    count_order_processed_environment,
-                    &config.streams.count_order_processed,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    count_order_processed_group_context.cancel();
-                    count_order_processed_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let continue_cycle_analytics_maker = makers.continue_cycle_analytics.clone();
+    let continue_cycle_analytics_context = maker_group_context.clone();
+    let continue_cycle_analytics_group_context = maker_group_context.clone();
+    let continue_cycle_analytics_environment = environment.clone();
+    let continue_cycle_analytics_error_sender = maker_error_sender.clone();
+    let continue_cycle_analytics_future = async move {
+        let result = (continue_cycle_analytics_maker)(
+            continue_cycle_analytics_context,
+            continue_cycle_analytics_environment,
+            &config.streams.continue_cycle_analytics,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                continue_cycle_analytics_group_context.cancel();
+                continue_cycle_analytics_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let cycle_analytics_input_source_maker = makers.cycle_analytics_input_source.clone();
-        let cycle_analytics_input_source_context = maker_group_context.clone();
-        let cycle_analytics_input_source_group_context = maker_group_context.clone();
-        let cycle_analytics_input_source_environment = environment.clone();
-        let cycle_analytics_input_source_error_sender = maker_error_sender.clone();
-        let cycle_analytics_input_source_future = async move {
-            let result = (cycle_analytics_input_source_maker)(
-                    cycle_analytics_input_source_context,
-                    cycle_analytics_input_source_environment,
-                    &config.endpoints.cycle_analytics_input,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    cycle_analytics_input_source_group_context.cancel();
-                    cycle_analytics_input_source_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let count_order_processed_maker = makers.count_order_processed.clone();
+    let count_order_processed_context = maker_group_context.clone();
+    let count_order_processed_group_context = maker_group_context.clone();
+    let count_order_processed_environment = environment.clone();
+    let count_order_processed_error_sender = maker_error_sender.clone();
+    let count_order_processed_future = async move {
+        let result = (count_order_processed_maker)(
+            count_order_processed_context,
+            count_order_processed_environment,
+            &config.streams.count_order_processed,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                count_order_processed_group_context.cancel();
+                count_order_processed_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let cycle_analytics_result_sink_maker = makers.cycle_analytics_result_sink.clone();
-        let cycle_analytics_result_sink_context = maker_group_context.clone();
-        let cycle_analytics_result_sink_group_context = maker_group_context.clone();
-        let cycle_analytics_result_sink_environment = environment.clone();
-        let cycle_analytics_result_sink_error_sender = maker_error_sender.clone();
-        let cycle_analytics_result_sink_future = async move {
-            let result = (cycle_analytics_result_sink_maker)(
-                    cycle_analytics_result_sink_context,
-                    cycle_analytics_result_sink_environment,
-                    &config.endpoints.cycle_analytics_result,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    cycle_analytics_result_sink_group_context.cancel();
-                    cycle_analytics_result_sink_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let cycle_analytics_input_source_maker = makers.cycle_analytics_input_source.clone();
+    let cycle_analytics_input_source_context = maker_group_context.clone();
+    let cycle_analytics_input_source_group_context = maker_group_context.clone();
+    let cycle_analytics_input_source_environment = environment.clone();
+    let cycle_analytics_input_source_error_sender = maker_error_sender.clone();
+    let cycle_analytics_input_source_future = async move {
+        let result = (cycle_analytics_input_source_maker)(
+            cycle_analytics_input_source_context,
+            cycle_analytics_input_source_environment,
+            &config.endpoints.cycle_analytics_input,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                cycle_analytics_input_source_group_context.cancel();
+                cycle_analytics_input_source_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let high_value_analytics_sink_maker = makers.high_value_analytics_sink.clone();
-        let high_value_analytics_sink_context = maker_group_context.clone();
-        let high_value_analytics_sink_group_context = maker_group_context.clone();
-        let high_value_analytics_sink_environment = environment.clone();
-        let high_value_analytics_sink_error_sender = maker_error_sender.clone();
-        let high_value_analytics_sink_future = async move {
-            let result = (high_value_analytics_sink_maker)(
-                    high_value_analytics_sink_context,
-                    high_value_analytics_sink_environment,
-                    &config.endpoints.high_value_analytics,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    high_value_analytics_sink_group_context.cancel();
-                    high_value_analytics_sink_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let cycle_analytics_result_sink_maker = makers.cycle_analytics_result_sink.clone();
+    let cycle_analytics_result_sink_context = maker_group_context.clone();
+    let cycle_analytics_result_sink_group_context = maker_group_context.clone();
+    let cycle_analytics_result_sink_environment = environment.clone();
+    let cycle_analytics_result_sink_error_sender = maker_error_sender.clone();
+    let cycle_analytics_result_sink_future = async move {
+        let result = (cycle_analytics_result_sink_maker)(
+            cycle_analytics_result_sink_context,
+            cycle_analytics_result_sink_environment,
+            &config.endpoints.cycle_analytics_result,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                cycle_analytics_result_sink_group_context.cancel();
+                cycle_analytics_result_sink_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let join_order_payment_analytics_maker = makers.join_order_payment_analytics.clone();
-        let join_order_payment_analytics_context = maker_group_context.clone();
-        let join_order_payment_analytics_group_context = maker_group_context.clone();
-        let join_order_payment_analytics_environment = environment.clone();
-        let join_order_payment_analytics_error_sender = maker_error_sender.clone();
-        let join_order_payment_analytics_future = async move {
-            let result = (join_order_payment_analytics_maker)(
-                    join_order_payment_analytics_context,
-                    join_order_payment_analytics_environment,
-                    &config.streams.join_order_payment_analytics,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    join_order_payment_analytics_group_context.cancel();
-                    join_order_payment_analytics_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let high_value_analytics_sink_maker = makers.high_value_analytics_sink.clone();
+    let high_value_analytics_sink_context = maker_group_context.clone();
+    let high_value_analytics_sink_group_context = maker_group_context.clone();
+    let high_value_analytics_sink_environment = environment.clone();
+    let high_value_analytics_sink_error_sender = maker_error_sender.clone();
+    let high_value_analytics_sink_future = async move {
+        let result = (high_value_analytics_sink_maker)(
+            high_value_analytics_sink_context,
+            high_value_analytics_sink_environment,
+            &config.endpoints.high_value_analytics,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                high_value_analytics_sink_group_context.cancel();
+                high_value_analytics_sink_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let joined_analytics_sink_maker = makers.joined_analytics_sink.clone();
-        let joined_analytics_sink_context = maker_group_context.clone();
-        let joined_analytics_sink_group_context = maker_group_context.clone();
-        let joined_analytics_sink_environment = environment.clone();
-        let joined_analytics_sink_error_sender = maker_error_sender.clone();
-        let joined_analytics_sink_future = async move {
-            let result = (joined_analytics_sink_maker)(
-                    joined_analytics_sink_context,
-                    joined_analytics_sink_environment,
-                    &config.endpoints.joined_analytics,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    joined_analytics_sink_group_context.cancel();
-                    joined_analytics_sink_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let invoke_analytics_substream_maker = makers.invoke_analytics_substream.clone();
+    let invoke_analytics_substream_context = maker_group_context.clone();
+    let invoke_analytics_substream_group_context = maker_group_context.clone();
+    let invoke_analytics_substream_environment = environment.clone();
+    let invoke_analytics_substream_error_sender = maker_error_sender.clone();
+    let invoke_analytics_substream_future = async move {
+        let result = (invoke_analytics_substream_maker)(
+            invoke_analytics_substream_context,
+            invoke_analytics_substream_environment,
+            &config.streams.invoke_analytics_substream,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                invoke_analytics_substream_group_context.cancel();
+                invoke_analytics_substream_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let key_orders_for_join_maker = makers.key_orders_for_join.clone();
-        let key_orders_for_join_context = maker_group_context.clone();
-        let key_orders_for_join_group_context = maker_group_context.clone();
-        let key_orders_for_join_environment = environment.clone();
-        let key_orders_for_join_error_sender = maker_error_sender.clone();
-        let key_orders_for_join_future = async move {
-            let result = (key_orders_for_join_maker)(
-                    key_orders_for_join_context,
-                    key_orders_for_join_environment,
-                    &config.streams.key_orders_for_join,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    key_orders_for_join_group_context.cancel();
-                    key_orders_for_join_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let join_order_payment_analytics_maker = makers.join_order_payment_analytics.clone();
+    let join_order_payment_analytics_context = maker_group_context.clone();
+    let join_order_payment_analytics_group_context = maker_group_context.clone();
+    let join_order_payment_analytics_environment = environment.clone();
+    let join_order_payment_analytics_error_sender = maker_error_sender.clone();
+    let join_order_payment_analytics_future = async move {
+        let result = (join_order_payment_analytics_maker)(
+            join_order_payment_analytics_context,
+            join_order_payment_analytics_environment,
+            &config.streams.join_order_payment_analytics,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                join_order_payment_analytics_group_context.cancel();
+                join_order_payment_analytics_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let key_orders_for_multi_join_maker = makers.key_orders_for_multi_join.clone();
-        let key_orders_for_multi_join_context = maker_group_context.clone();
-        let key_orders_for_multi_join_group_context = maker_group_context.clone();
-        let key_orders_for_multi_join_environment = environment.clone();
-        let key_orders_for_multi_join_error_sender = maker_error_sender.clone();
-        let key_orders_for_multi_join_future = async move {
-            let result = (key_orders_for_multi_join_maker)(
-                    key_orders_for_multi_join_context,
-                    key_orders_for_multi_join_environment,
-                    &config.streams.key_orders_for_multi_join,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    key_orders_for_multi_join_group_context.cancel();
-                    key_orders_for_multi_join_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let joined_analytics_sink_maker = makers.joined_analytics_sink.clone();
+    let joined_analytics_sink_context = maker_group_context.clone();
+    let joined_analytics_sink_group_context = maker_group_context.clone();
+    let joined_analytics_sink_environment = environment.clone();
+    let joined_analytics_sink_error_sender = maker_error_sender.clone();
+    let joined_analytics_sink_future = async move {
+        let result = (joined_analytics_sink_maker)(
+            joined_analytics_sink_context,
+            joined_analytics_sink_environment,
+            &config.endpoints.joined_analytics,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                joined_analytics_sink_group_context.cancel();
+                joined_analytics_sink_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let key_payments_for_join_maker = makers.key_payments_for_join.clone();
-        let key_payments_for_join_context = maker_group_context.clone();
-        let key_payments_for_join_group_context = maker_group_context.clone();
-        let key_payments_for_join_environment = environment.clone();
-        let key_payments_for_join_error_sender = maker_error_sender.clone();
-        let key_payments_for_join_future = async move {
-            let result = (key_payments_for_join_maker)(
-                    key_payments_for_join_context,
-                    key_payments_for_join_environment,
-                    &config.streams.key_payments_for_join,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    key_payments_for_join_group_context.cancel();
-                    key_payments_for_join_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let key_orders_for_join_maker = makers.key_orders_for_join.clone();
+    let key_orders_for_join_context = maker_group_context.clone();
+    let key_orders_for_join_group_context = maker_group_context.clone();
+    let key_orders_for_join_environment = environment.clone();
+    let key_orders_for_join_error_sender = maker_error_sender.clone();
+    let key_orders_for_join_future = async move {
+        let result = (key_orders_for_join_maker)(
+            key_orders_for_join_context,
+            key_orders_for_join_environment,
+            &config.streams.key_orders_for_join,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                key_orders_for_join_group_context.cancel();
+                key_orders_for_join_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let key_payments_for_multi_join_maker = makers.key_payments_for_multi_join.clone();
-        let key_payments_for_multi_join_context = maker_group_context.clone();
-        let key_payments_for_multi_join_group_context = maker_group_context.clone();
-        let key_payments_for_multi_join_environment = environment.clone();
-        let key_payments_for_multi_join_error_sender = maker_error_sender.clone();
-        let key_payments_for_multi_join_future = async move {
-            let result = (key_payments_for_multi_join_maker)(
-                    key_payments_for_multi_join_context,
-                    key_payments_for_multi_join_environment,
-                    &config.streams.key_payments_for_multi_join,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    key_payments_for_multi_join_group_context.cancel();
-                    key_payments_for_multi_join_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let key_orders_for_multi_join_maker = makers.key_orders_for_multi_join.clone();
+    let key_orders_for_multi_join_context = maker_group_context.clone();
+    let key_orders_for_multi_join_group_context = maker_group_context.clone();
+    let key_orders_for_multi_join_environment = environment.clone();
+    let key_orders_for_multi_join_error_sender = maker_error_sender.clone();
+    let key_orders_for_multi_join_future = async move {
+        let result = (key_orders_for_multi_join_maker)(
+            key_orders_for_multi_join_context,
+            key_orders_for_multi_join_environment,
+            &config.streams.key_orders_for_multi_join,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                key_orders_for_multi_join_group_context.cancel();
+                key_orders_for_multi_join_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let key_shipments_for_multi_join_maker = makers.key_shipments_for_multi_join.clone();
-        let key_shipments_for_multi_join_context = maker_group_context.clone();
-        let key_shipments_for_multi_join_group_context = maker_group_context.clone();
-        let key_shipments_for_multi_join_environment = environment.clone();
-        let key_shipments_for_multi_join_error_sender = maker_error_sender.clone();
-        let key_shipments_for_multi_join_future = async move {
-            let result = (key_shipments_for_multi_join_maker)(
-                    key_shipments_for_multi_join_context,
-                    key_shipments_for_multi_join_environment,
-                    &config.streams.key_shipments_for_multi_join,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    key_shipments_for_multi_join_group_context.cancel();
-                    key_shipments_for_multi_join_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let key_payments_for_join_maker = makers.key_payments_for_join.clone();
+    let key_payments_for_join_context = maker_group_context.clone();
+    let key_payments_for_join_group_context = maker_group_context.clone();
+    let key_payments_for_join_environment = environment.clone();
+    let key_payments_for_join_error_sender = maker_error_sender.clone();
+    let key_payments_for_join_future = async move {
+        let result = (key_payments_for_join_maker)(
+            key_payments_for_join_context,
+            key_payments_for_join_environment,
+            &config.streams.key_payments_for_join,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                key_payments_for_join_group_context.cancel();
+                key_payments_for_join_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let multi_join_analytics_events_maker = makers.multi_join_analytics_events.clone();
-        let multi_join_analytics_events_context = maker_group_context.clone();
-        let multi_join_analytics_events_group_context = maker_group_context.clone();
-        let multi_join_analytics_events_environment = environment.clone();
-        let multi_join_analytics_events_error_sender = maker_error_sender.clone();
-        let multi_join_analytics_events_future = async move {
-            let result = (multi_join_analytics_events_maker)(
-                    multi_join_analytics_events_context,
-                    multi_join_analytics_events_environment,
-                    &config.streams.multi_join_analytics_events,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    multi_join_analytics_events_group_context.cancel();
-                    multi_join_analytics_events_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let key_payments_for_multi_join_maker = makers.key_payments_for_multi_join.clone();
+    let key_payments_for_multi_join_context = maker_group_context.clone();
+    let key_payments_for_multi_join_group_context = maker_group_context.clone();
+    let key_payments_for_multi_join_environment = environment.clone();
+    let key_payments_for_multi_join_error_sender = maker_error_sender.clone();
+    let key_payments_for_multi_join_future = async move {
+        let result = (key_payments_for_multi_join_maker)(
+            key_payments_for_multi_join_context,
+            key_payments_for_multi_join_environment,
+            &config.streams.key_payments_for_multi_join,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                key_payments_for_multi_join_group_context.cancel();
+                key_payments_for_multi_join_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let order_processed_endpoint_source_maker = makers.order_processed_endpoint_source.clone();
-        let order_processed_endpoint_source_context = maker_group_context.clone();
-        let order_processed_endpoint_source_group_context = maker_group_context.clone();
-        let order_processed_endpoint_source_environment = environment.clone();
-        let order_processed_endpoint_source_error_sender = maker_error_sender.clone();
-        let order_processed_endpoint_source_future = async move {
-            let result = (order_processed_endpoint_source_maker)(
-                    order_processed_endpoint_source_context,
-                    order_processed_endpoint_source_environment,
-                    &config.endpoints.order_processed,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    order_processed_endpoint_source_group_context.cancel();
-                    order_processed_endpoint_source_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let key_shipments_for_multi_join_maker = makers.key_shipments_for_multi_join.clone();
+    let key_shipments_for_multi_join_context = maker_group_context.clone();
+    let key_shipments_for_multi_join_group_context = maker_group_context.clone();
+    let key_shipments_for_multi_join_environment = environment.clone();
+    let key_shipments_for_multi_join_error_sender = maker_error_sender.clone();
+    let key_shipments_for_multi_join_future = async move {
+        let result = (key_shipments_for_multi_join_maker)(
+            key_shipments_for_multi_join_context,
+            key_shipments_for_multi_join_environment,
+            &config.streams.key_shipments_for_multi_join,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                key_shipments_for_multi_join_group_context.cancel();
+                key_shipments_for_multi_join_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let route_analytics_result_maker = makers.route_analytics_result.clone();
-        let route_analytics_result_context = maker_group_context.clone();
-        let route_analytics_result_group_context = maker_group_context.clone();
-        let route_analytics_result_environment = environment.clone();
-        let route_analytics_result_error_sender = maker_error_sender.clone();
-        let route_analytics_result_future = async move {
-            let result = (route_analytics_result_maker)(
-                    route_analytics_result_context,
-                    route_analytics_result_environment,
-                    &config.streams.route_analytics_result,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    route_analytics_result_group_context.cancel();
-                    route_analytics_result_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let multi_join_analytics_events_maker = makers.multi_join_analytics_events.clone();
+    let multi_join_analytics_events_context = maker_group_context.clone();
+    let multi_join_analytics_events_group_context = maker_group_context.clone();
+    let multi_join_analytics_events_environment = environment.clone();
+    let multi_join_analytics_events_error_sender = maker_error_sender.clone();
+    let multi_join_analytics_events_future = async move {
+        let result = (multi_join_analytics_events_maker)(
+            multi_join_analytics_events_context,
+            multi_join_analytics_events_environment,
+            &config.streams.multi_join_analytics_events,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                multi_join_analytics_events_group_context.cancel();
+                multi_join_analytics_events_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
-        let standard_analytics_sink_maker = makers.standard_analytics_sink.clone();
-        let standard_analytics_sink_context = maker_group_context.clone();
-        let standard_analytics_sink_group_context = maker_group_context.clone();
-        let standard_analytics_sink_environment = environment.clone();
-        let standard_analytics_sink_error_sender = maker_error_sender.clone();
-        let standard_analytics_sink_future = async move {
-            let result = (standard_analytics_sink_maker)(
-                    standard_analytics_sink_context,
-                    standard_analytics_sink_environment,
-                    &config.endpoints.standard_analytics,
-                ).await;
-            match result {
-                Ok(value) => Some(value),
-                Err(error) => {
-                    standard_analytics_sink_group_context.cancel();
-                    standard_analytics_sink_error_sender
-                        .send(error)
-                        .expect("function maker error receiver was dropped");
-                    None
-                }
+        }
+    };
+    let order_processed_endpoint_source_maker = makers.order_processed_endpoint_source.clone();
+    let order_processed_endpoint_source_context = maker_group_context.clone();
+    let order_processed_endpoint_source_group_context = maker_group_context.clone();
+    let order_processed_endpoint_source_environment = environment.clone();
+    let order_processed_endpoint_source_error_sender = maker_error_sender.clone();
+    let order_processed_endpoint_source_future = async move {
+        let result = (order_processed_endpoint_source_maker)(
+            order_processed_endpoint_source_context,
+            order_processed_endpoint_source_environment,
+            &config.endpoints.order_processed,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                order_processed_endpoint_source_group_context.cancel();
+                order_processed_endpoint_source_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
             }
-        };
+        }
+    };
+    let route_analytics_result_maker = makers.route_analytics_result.clone();
+    let route_analytics_result_context = maker_group_context.clone();
+    let route_analytics_result_group_context = maker_group_context.clone();
+    let route_analytics_result_environment = environment.clone();
+    let route_analytics_result_error_sender = maker_error_sender.clone();
+    let route_analytics_result_future = async move {
+        let result = (route_analytics_result_maker)(
+            route_analytics_result_context,
+            route_analytics_result_environment,
+            &config.streams.route_analytics_result,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                route_analytics_result_group_context.cancel();
+                route_analytics_result_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
+            }
+        }
+    };
+    let standard_analytics_sink_maker = makers.standard_analytics_sink.clone();
+    let standard_analytics_sink_context = maker_group_context.clone();
+    let standard_analytics_sink_group_context = maker_group_context.clone();
+    let standard_analytics_sink_environment = environment.clone();
+    let standard_analytics_sink_error_sender = maker_error_sender.clone();
+    let standard_analytics_sink_future = async move {
+        let result = (standard_analytics_sink_maker)(
+            standard_analytics_sink_context,
+            standard_analytics_sink_environment,
+            &config.endpoints.standard_analytics,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                standard_analytics_sink_group_context.cancel();
+                standard_analytics_sink_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
+            }
+        }
+    };
+    let substream_analytics_input_source_maker = makers.substream_analytics_input_source.clone();
+    let substream_analytics_input_source_context = maker_group_context.clone();
+    let substream_analytics_input_source_group_context = maker_group_context.clone();
+    let substream_analytics_input_source_environment = environment.clone();
+    let substream_analytics_input_source_error_sender = maker_error_sender.clone();
+    let substream_analytics_input_source_future = async move {
+        let result = (substream_analytics_input_source_maker)(
+            substream_analytics_input_source_context,
+            substream_analytics_input_source_environment,
+            &config.endpoints.substream_analytics_input,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                substream_analytics_input_source_group_context.cancel();
+                substream_analytics_input_source_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
+            }
+        }
+    };
+    let substream_analytics_result_sink_maker = makers.substream_analytics_result_sink.clone();
+    let substream_analytics_result_sink_context = maker_group_context.clone();
+    let substream_analytics_result_sink_group_context = maker_group_context.clone();
+    let substream_analytics_result_sink_environment = environment.clone();
+    let substream_analytics_result_sink_error_sender = maker_error_sender.clone();
+    let substream_analytics_result_sink_future = async move {
+        let result = (substream_analytics_result_sink_maker)(
+            substream_analytics_result_sink_context,
+            substream_analytics_result_sink_environment,
+            &config.endpoints.substream_analytics_result,
+        )
+        .await;
+        match result {
+            Ok(value) => Some(value),
+            Err(error) => {
+                substream_analytics_result_sink_group_context.cancel();
+                substream_analytics_result_sink_error_sender
+                    .send(error)
+                    .expect("function maker error receiver was dropped");
+                None
+            }
+        }
+    };
     let (
         advance_cycle_analytics,
         analytics_orders_source,
         analytics_payments_source,
         analytics_schedule_source,
         analytics_shipments_source,
+        build_substream_analytics_result,
         complete_cycle_analytics,
         continue_cycle_analytics,
         count_order_processed,
         cycle_analytics_input_source,
         cycle_analytics_result_sink,
         high_value_analytics_sink,
+        invoke_analytics_substream,
         join_order_payment_analytics,
         joined_analytics_sink,
         key_orders_for_join,
@@ -880,18 +1333,22 @@ pub async fn init_functions(
         order_processed_endpoint_source,
         route_analytics_result,
         standard_analytics_sink,
+        substream_analytics_input_source,
+        substream_analytics_result_sink,
     ) = tokio::join!(
         advance_cycle_analytics_future,
         analytics_orders_source_future,
         analytics_payments_source_future,
         analytics_schedule_source_future,
         analytics_shipments_source_future,
+        build_substream_analytics_result_future,
         complete_cycle_analytics_future,
         continue_cycle_analytics_future,
         count_order_processed_future,
         cycle_analytics_input_source_future,
         cycle_analytics_result_sink_future,
         high_value_analytics_sink_future,
+        invoke_analytics_substream_future,
         join_order_payment_analytics_future,
         joined_analytics_sink_future,
         key_orders_for_join_future,
@@ -903,90 +1360,158 @@ pub async fn init_functions(
         order_processed_endpoint_source_future,
         route_analytics_result_future,
         standard_analytics_sink_future,
+        substream_analytics_input_source_future,
+        substream_analytics_result_sink_future,
     );
     maker_group_context.cancel();
     drop(maker_error_sender);
     if let Ok(error) = maker_error_receiver.try_recv() {
         return Err(error);
     }
-    let advance_cycle_analytics = advance_cycle_analytics.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker advance_cycle_analytics failed without an error".to_string(),
-    ))?;
-    let analytics_orders_source = analytics_orders_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker analytics_orders_source failed without an error".to_string(),
-    ))?;
-    let analytics_payments_source = analytics_payments_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker analytics_payments_source failed without an error".to_string(),
-    ))?;
-    let analytics_schedule_source = analytics_schedule_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker analytics_schedule_source failed without an error".to_string(),
-    ))?;
-    let analytics_shipments_source = analytics_shipments_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker analytics_shipments_source failed without an error".to_string(),
-    ))?;
-    let complete_cycle_analytics = complete_cycle_analytics.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker complete_cycle_analytics failed without an error".to_string(),
-    ))?;
-    let continue_cycle_analytics = continue_cycle_analytics.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker continue_cycle_analytics failed without an error".to_string(),
-    ))?;
-    let count_order_processed = count_order_processed.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker count_order_processed failed without an error".to_string(),
-    ))?;
-    let cycle_analytics_input_source = cycle_analytics_input_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker cycle_analytics_input_source failed without an error".to_string(),
-    ))?;
-    let cycle_analytics_result_sink = cycle_analytics_result_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker cycle_analytics_result_sink failed without an error".to_string(),
-    ))?;
-    let high_value_analytics_sink = high_value_analytics_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker high_value_analytics_sink failed without an error".to_string(),
-    ))?;
-    let join_order_payment_analytics = join_order_payment_analytics.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker join_order_payment_analytics failed without an error".to_string(),
-    ))?;
-    let joined_analytics_sink = joined_analytics_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker joined_analytics_sink failed without an error".to_string(),
-    ))?;
-    let key_orders_for_join = key_orders_for_join.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker key_orders_for_join failed without an error".to_string(),
-    ))?;
-    let key_orders_for_multi_join = key_orders_for_multi_join.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker key_orders_for_multi_join failed without an error".to_string(),
-    ))?;
-    let key_payments_for_join = key_payments_for_join.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker key_payments_for_join failed without an error".to_string(),
-    ))?;
-    let key_payments_for_multi_join = key_payments_for_multi_join.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker key_payments_for_multi_join failed without an error".to_string(),
-    ))?;
-    let key_shipments_for_multi_join = key_shipments_for_multi_join.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker key_shipments_for_multi_join failed without an error".to_string(),
-    ))?;
-    let multi_join_analytics_events = multi_join_analytics_events.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker multi_join_analytics_events failed without an error".to_string(),
-    ))?;
-    let order_processed_endpoint_source = order_processed_endpoint_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker order_processed_endpoint_source failed without an error".to_string(),
-    ))?;
-    let route_analytics_result = route_analytics_result.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker route_analytics_result failed without an error".to_string(),
-    ))?;
-    let standard_analytics_sink = standard_analytics_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
-        "function maker standard_analytics_sink failed without an error".to_string(),
-    ))?;
+    let advance_cycle_analytics = advance_cycle_analytics.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker advance_cycle_analytics failed without an error".to_string(),
+        )
+    })?;
+    let analytics_orders_source = analytics_orders_source.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker analytics_orders_source failed without an error".to_string(),
+        )
+    })?;
+    let analytics_payments_source = analytics_payments_source.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker analytics_payments_source failed without an error".to_string(),
+        )
+    })?;
+    let analytics_schedule_source = analytics_schedule_source.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker analytics_schedule_source failed without an error".to_string(),
+        )
+    })?;
+    let analytics_shipments_source = analytics_shipments_source.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker analytics_shipments_source failed without an error".to_string(),
+        )
+    })?;
+    let build_substream_analytics_result = build_substream_analytics_result.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker build_substream_analytics_result failed without an error".to_string(),
+        )
+    })?;
+    let complete_cycle_analytics = complete_cycle_analytics.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker complete_cycle_analytics failed without an error".to_string(),
+        )
+    })?;
+    let continue_cycle_analytics = continue_cycle_analytics.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker continue_cycle_analytics failed without an error".to_string(),
+        )
+    })?;
+    let count_order_processed = count_order_processed.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker count_order_processed failed without an error".to_string(),
+        )
+    })?;
+    let cycle_analytics_input_source = cycle_analytics_input_source.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker cycle_analytics_input_source failed without an error".to_string(),
+        )
+    })?;
+    let cycle_analytics_result_sink = cycle_analytics_result_sink.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker cycle_analytics_result_sink failed without an error".to_string(),
+        )
+    })?;
+    let high_value_analytics_sink = high_value_analytics_sink.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker high_value_analytics_sink failed without an error".to_string(),
+        )
+    })?;
+    let invoke_analytics_substream = invoke_analytics_substream.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker invoke_analytics_substream failed without an error".to_string(),
+        )
+    })?;
+    let join_order_payment_analytics = join_order_payment_analytics.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker join_order_payment_analytics failed without an error".to_string(),
+        )
+    })?;
+    let joined_analytics_sink = joined_analytics_sink.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker joined_analytics_sink failed without an error".to_string(),
+        )
+    })?;
+    let key_orders_for_join = key_orders_for_join.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker key_orders_for_join failed without an error".to_string(),
+        )
+    })?;
+    let key_orders_for_multi_join = key_orders_for_multi_join.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker key_orders_for_multi_join failed without an error".to_string(),
+        )
+    })?;
+    let key_payments_for_join = key_payments_for_join.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker key_payments_for_join failed without an error".to_string(),
+        )
+    })?;
+    let key_payments_for_multi_join = key_payments_for_multi_join.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker key_payments_for_multi_join failed without an error".to_string(),
+        )
+    })?;
+    let key_shipments_for_multi_join = key_shipments_for_multi_join.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker key_shipments_for_multi_join failed without an error".to_string(),
+        )
+    })?;
+    let multi_join_analytics_events = multi_join_analytics_events.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker multi_join_analytics_events failed without an error".to_string(),
+        )
+    })?;
+    let order_processed_endpoint_source = order_processed_endpoint_source.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker order_processed_endpoint_source failed without an error".to_string(),
+        )
+    })?;
+    let route_analytics_result = route_analytics_result.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker route_analytics_result failed without an error".to_string(),
+        )
+    })?;
+    let standard_analytics_sink = standard_analytics_sink.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker standard_analytics_sink failed without an error".to_string(),
+        )
+    })?;
+    let substream_analytics_input_source = substream_analytics_input_source.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker substream_analytics_input_source failed without an error".to_string(),
+        )
+    })?;
+    let substream_analytics_result_sink = substream_analytics_result_sink.ok_or_else(|| {
+        RuntimeError::InvalidConfiguration(
+            "function maker substream_analytics_result_sink failed without an error".to_string(),
+        )
+    })?;
     Ok(ServiceFunctions {
         advance_cycle_analytics,
         analytics_orders_source,
         analytics_payments_source,
         analytics_schedule_source,
         analytics_shipments_source,
+        build_substream_analytics_result,
         complete_cycle_analytics,
         continue_cycle_analytics,
         count_order_processed,
         cycle_analytics_input_source,
         cycle_analytics_result_sink,
         high_value_analytics_sink,
+        invoke_analytics_substream,
         join_order_payment_analytics,
         joined_analytics_sink,
         key_orders_for_join,
@@ -998,10 +1523,12 @@ pub async fn init_functions(
         order_processed_endpoint_source,
         route_analytics_result,
         standard_analytics_sink,
+        substream_analytics_input_source,
+        substream_analytics_result_sink,
     })
 }
 macro_rules! infrastructure_maker_future {
-    ($maker:expr, $context:expr, $environment:expr, $config:expr, $group:expr, $errors:expr) => ({
+    ($maker:expr, $context:expr, $environment:expr, $config:expr, $group:expr, $errors:expr) => {{
         let maker = $maker.clone();
         let context = $context.clone();
         let environment = $environment.clone();
@@ -1013,12 +1540,14 @@ macro_rules! infrastructure_maker_future {
                 Ok(value) => Some(value),
                 Err(error) => {
                     group.cancel();
-                    errors.send(error).expect("infrastructure maker error receiver was dropped");
+                    errors
+                        .send(error)
+                        .expect("infrastructure maker error receiver was dropped");
                     None
                 }
             }
         }
-    });
+    }};
 }
 
 pub async fn init_infrastructure(
@@ -1029,17 +1558,22 @@ pub async fn init_infrastructure(
     let maker_group_context = context.child();
     let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
     let order_events_data_source_future = infrastructure_maker_future!(
-        makers.order_events_data_source, maker_group_context, environment,
-        kafka_connector_config(&environment, 4)?, maker_group_context, maker_error_sender
+        makers.order_events_data_source,
+        maker_group_context,
+        environment,
+        kafka_connector_config(&environment, 4)?,
+        maker_group_context,
+        maker_error_sender
     );
     let local_cron_data_source_future = infrastructure_maker_future!(
-        makers.local_cron_data_source, maker_group_context, environment,
-        cron_connector_config(&environment, 3)?, maker_group_context, maker_error_sender
+        makers.local_cron_data_source,
+        maker_group_context,
+        environment,
+        cron_connector_config(&environment, 3)?,
+        maker_group_context,
+        maker_error_sender
     );
-    let (
-        order_events_data_source,
-        local_cron_data_source,
-    ) = tokio::join!(
+    let (order_events_data_source, local_cron_data_source) = tokio::join!(
         order_events_data_source_future,
         local_cron_data_source_future,
     );
@@ -1049,8 +1583,16 @@ pub async fn init_infrastructure(
         return Err(error);
     }
     Ok(ServiceInfrastructure {
-        order_events_data_source: order_events_data_source.ok_or_else(|| RuntimeError::InvalidConfiguration("infrastructure maker order_events_data_source failed without an error".to_owned()))?,
-        local_cron_data_source: local_cron_data_source.ok_or_else(|| RuntimeError::InvalidConfiguration("infrastructure maker local_cron_data_source failed without an error".to_owned()))?,
+        order_events_data_source: order_events_data_source.ok_or_else(|| {
+            RuntimeError::InvalidConfiguration(
+                "infrastructure maker order_events_data_source failed without an error".to_owned(),
+            )
+        })?,
+        local_cron_data_source: local_cron_data_source.ok_or_else(|| {
+            RuntimeError::InvalidConfiguration(
+                "infrastructure maker local_cron_data_source failed without an error".to_owned(),
+            )
+        })?,
     })
 }
 
@@ -1059,121 +1601,254 @@ pub fn init_runtime(
     environment: RuntimeEnvironment,
     functions: ServiceFunctions,
     infrastructure: ServiceInfrastructure,
-) -> RuntimeResult<ServiceRuntime>  {
-    let cycle_analytics_link = LinkStream::<AnalyticsEvent>::make(&config.streams.cycle_analytics_link, environment.clone());
-    let analytics_schedule = Arc::new(InputStream::<String, (), String>::new(&config.streams.analytics_schedule, environment.clone()));
-    let consume_order_processed = Arc::new(InputStream::<OrderProcessed, OrderProcessed, String>::new(&config.streams.consume_order_processed, environment.clone()));
-    let (count_order_processed, count_order_processed_error) = consume_order_processed.stream().process(&config.streams.count_order_processed, functions.count_order_processed)?;
+) -> RuntimeResult<ServiceRuntime> {
+    let _ = &infrastructure;
+    let cycle_analytics_link = LinkStream::<AnalyticsEvent>::make(
+        &config.streams.cycle_analytics_link,
+        environment.clone(),
+    );
+    let analytics_schedule = Arc::new(InputStream::<String, (), String>::new(
+        &config.streams.analytics_schedule,
+        environment.clone(),
+    ));
+    let consume_order_processed =
+        Arc::new(InputStream::<OrderProcessed, OrderProcessed, String>::new(
+            &config.streams.consume_order_processed,
+            environment.clone(),
+        ));
+    let (count_order_processed, count_order_processed_error) =
+        consume_order_processed.stream().process(
+            &config.streams.count_order_processed,
+            functions.count_order_processed,
+        )?;
     let _ = &count_order_processed_error;
-    let analytics_orders = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.analytics_orders, environment.clone()));
-    let analytics_payments = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.analytics_payments, environment.clone()));
-    let analytics_shipments = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.analytics_shipments, environment.clone()));
-    let split_analytics_orders = analytics_orders.stream().split(&config.streams.split_analytics_orders)?;
-    let [key_orders_for_join_branch, key_orders_for_multi_join_branch] = split_analytics_orders.clone();
-    let split_analytics_payments = analytics_payments.stream().split(&config.streams.split_analytics_payments)?;
-    let [key_payments_for_join_branch, key_payments_for_multi_join_branch] = split_analytics_payments.clone();
-    let cycle_analytics_input = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.cycle_analytics_input, environment.clone()));
-    let merge_cycle_analytics = cycle_analytics_input.stream().merge(&config.streams.merge_cycle_analytics, &[cycle_analytics_link.stream().clone()])?;
-    let advance_cycle_analytics = merge_cycle_analytics.map(&config.streams.advance_cycle_analytics, functions.advance_cycle_analytics)?;
-    let split_cycle_analytics = advance_cycle_analytics.split(&config.streams.split_cycle_analytics)?;
-    let [complete_cycle_analytics_branch, continue_cycle_analytics_branch] = split_cycle_analytics.clone();
-    let complete_cycle_analytics = complete_cycle_analytics_branch.filter(&config.streams.complete_cycle_analytics, functions.complete_cycle_analytics)?;
-    let continue_cycle_analytics = continue_cycle_analytics_branch.filter(&config.streams.continue_cycle_analytics, functions.continue_cycle_analytics)?;
-    let write_cycle_analytics = complete_cycle_analytics.sink::<String>(&config.streams.write_cycle_analytics)?;
-    let key_orders_for_join = key_orders_for_join_branch.key_by(&config.streams.key_orders_for_join, functions.key_orders_for_join)?;
-    let key_payments_for_join = key_payments_for_join_branch.key_by(&config.streams.key_payments_for_join, functions.key_payments_for_join)?;
-    let join_order_payment_analytics = key_orders_for_join.join(&config.streams.join_order_payment_analytics, &key_payments_for_join, functions.join_order_payment_analytics)?;
-    let write_joined_analytics = join_order_payment_analytics.sink::<String>(&config.streams.write_joined_analytics)?;
-    let key_orders_for_multi_join = key_orders_for_multi_join_branch.key_by(&config.streams.key_orders_for_multi_join, functions.key_orders_for_multi_join)?;
-    let key_payments_for_multi_join = key_payments_for_multi_join_branch.key_by(&config.streams.key_payments_for_multi_join, functions.key_payments_for_multi_join)?;
-    let key_shipments_for_multi_join = analytics_shipments.stream().key_by(&config.streams.key_shipments_for_multi_join, functions.key_shipments_for_multi_join)?;
-    let multi_join_analytics_events = key_orders_for_multi_join.multi_join(&config.streams.multi_join_analytics_events, functions.multi_join_analytics_events)?;
+    let analytics_orders = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(
+        &config.streams.analytics_orders,
+        environment.clone(),
+    ));
+    let analytics_payments = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(
+        &config.streams.analytics_payments,
+        environment.clone(),
+    ));
+    let analytics_shipments = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(
+        &config.streams.analytics_shipments,
+        environment.clone(),
+    ));
+    let split_analytics_orders = analytics_orders
+        .stream()
+        .split(&config.streams.split_analytics_orders)?;
+    let [key_orders_for_join_branch, key_orders_for_multi_join_branch] =
+        split_analytics_orders.clone();
+    let split_analytics_payments = analytics_payments
+        .stream()
+        .split(&config.streams.split_analytics_payments)?;
+    let [
+        key_payments_for_join_branch,
+        key_payments_for_multi_join_branch,
+    ] = split_analytics_payments.clone();
+    let cycle_analytics_input = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(
+        &config.streams.cycle_analytics_input,
+        environment.clone(),
+    ));
+    let merge_cycle_analytics = cycle_analytics_input.stream().merge(
+        &config.streams.merge_cycle_analytics,
+        &[cycle_analytics_link.stream().clone()],
+    )?;
+    let advance_cycle_analytics = merge_cycle_analytics.map(
+        &config.streams.advance_cycle_analytics,
+        functions.advance_cycle_analytics,
+    )?;
+    let split_cycle_analytics =
+        advance_cycle_analytics.split(&config.streams.split_cycle_analytics)?;
+    let [
+        complete_cycle_analytics_branch,
+        continue_cycle_analytics_branch,
+    ] = split_cycle_analytics.clone();
+    let complete_cycle_analytics = complete_cycle_analytics_branch.filter(
+        &config.streams.complete_cycle_analytics,
+        functions.complete_cycle_analytics,
+    )?;
+    let continue_cycle_analytics = continue_cycle_analytics_branch.filter(
+        &config.streams.continue_cycle_analytics,
+        functions.continue_cycle_analytics,
+    )?;
+    let write_cycle_analytics =
+        complete_cycle_analytics.sink::<String>(&config.streams.write_cycle_analytics)?;
+    let key_orders_for_join = key_orders_for_join_branch.key_by(
+        &config.streams.key_orders_for_join,
+        functions.key_orders_for_join,
+    )?;
+    let key_payments_for_join = key_payments_for_join_branch.key_by(
+        &config.streams.key_payments_for_join,
+        functions.key_payments_for_join,
+    )?;
+    let join_order_payment_analytics = key_orders_for_join.join(
+        &config.streams.join_order_payment_analytics,
+        &key_payments_for_join,
+        functions.join_order_payment_analytics,
+    )?;
+    let write_joined_analytics =
+        join_order_payment_analytics.sink::<String>(&config.streams.write_joined_analytics)?;
+    let key_orders_for_multi_join = key_orders_for_multi_join_branch.key_by(
+        &config.streams.key_orders_for_multi_join,
+        functions.key_orders_for_multi_join,
+    )?;
+    let key_payments_for_multi_join = key_payments_for_multi_join_branch.key_by(
+        &config.streams.key_payments_for_multi_join,
+        functions.key_payments_for_multi_join,
+    )?;
+    let key_shipments_for_multi_join = analytics_shipments.stream().key_by(
+        &config.streams.key_shipments_for_multi_join,
+        functions.key_shipments_for_multi_join,
+    )?;
+    let multi_join_analytics_events = key_orders_for_multi_join.multi_join(
+        &config.streams.multi_join_analytics_events,
+        functions.multi_join_analytics_events,
+    )?;
     multi_join_analytics_events.add(&key_payments_for_multi_join)?;
     multi_join_analytics_events.add(&key_shipments_for_multi_join)?;
-    let route_analytics_result = multi_join_analytics_events.stream().clone().case(&config.streams.route_analytics_result, functions.route_analytics_result)?;
+    let route_analytics_result = multi_join_analytics_events.stream().clone().case(
+        &config.streams.route_analytics_result,
+        functions.route_analytics_result,
+    )?;
     let high_value_analytics = route_analytics_result.when(&config.streams.high_value_analytics);
     let standard_analytics = route_analytics_result.when(&config.streams.standard_analytics);
-    let write_high_value_analytics = high_value_analytics.sink::<String>(&config.streams.write_high_value_analytics)?;
-    let write_standard_analytics = standard_analytics.sink::<String>(&config.streams.write_standard_analytics)?;
+    let write_high_value_analytics =
+        high_value_analytics.sink::<String>(&config.streams.write_high_value_analytics)?;
+    let write_standard_analytics =
+        standard_analytics.sink::<String>(&config.streams.write_standard_analytics)?;
+    let analyze_analytics_substream = Arc::new(SubStream::<AnalyticsEvent, AnalyticsResult>::new(
+        &config.streams.analyze_analytics_substream,
+        environment.clone(),
+    ));
+    let build_substream_analytics_result = analyze_analytics_substream.stream().map(
+        &config.streams.build_substream_analytics_result,
+        functions.build_substream_analytics_result,
+    )?;
+    let substream_analytics_input = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(
+        &config.streams.substream_analytics_input,
+        environment.clone(),
+    ));
+    let invoke_analytics_substream = substream_analytics_input.stream().map(
+        &config.streams.invoke_analytics_substream,
+        functions.invoke_analytics_substream,
+    )?;
+    let write_substream_analytics =
+        invoke_analytics_substream.sink::<String>(&config.streams.write_substream_analytics)?;
     consume_order_processed.set_source(&count_order_processed)?;
     cycle_analytics_link.set_source(&continue_cycle_analytics)?;
+    analyze_analytics_substream.set_source(&build_substream_analytics_result)?;
     infrastructure.order_events_data_source.add_endpoint(
         consume_order_processed.as_ref().clone(),
         functions.order_processed_endpoint_source,
     )?;
     make_croner_endpoint_consumer(
-        &infrastructure.local_cron_data_source, &analytics_schedule, functions.analytics_schedule_source,
+        &infrastructure.local_cron_data_source,
+        &analytics_schedule,
+        functions.analytics_schedule_source,
     )?;
     let analytics_orders_data_source = make_custom_source_endpoint_consumer(
-        analytics_orders.as_ref().clone(), &config.endpoints.analytics_orders,
-        functions.analytics_orders_source.clone(), functions.analytics_orders_source,
+        analytics_orders.as_ref().clone(),
+        &config.endpoints.analytics_orders,
+        functions.analytics_orders_source.clone(),
+        functions.analytics_orders_source,
     )?;
     let analytics_payments_data_source = make_custom_source_endpoint_consumer(
-        analytics_payments.as_ref().clone(), &config.endpoints.analytics_payments,
-        functions.analytics_payments_source.clone(), functions.analytics_payments_source,
+        analytics_payments.as_ref().clone(),
+        &config.endpoints.analytics_payments,
+        functions.analytics_payments_source.clone(),
+        functions.analytics_payments_source,
     )?;
     let analytics_shipments_data_source = make_custom_source_endpoint_consumer(
-        analytics_shipments.as_ref().clone(), &config.endpoints.analytics_shipments,
-        functions.analytics_shipments_source.clone(), functions.analytics_shipments_source,
+        analytics_shipments.as_ref().clone(),
+        &config.endpoints.analytics_shipments,
+        functions.analytics_shipments_source.clone(),
+        functions.analytics_shipments_source,
     )?;
     let cycle_analytics_input_data_source = make_custom_source_endpoint_consumer(
-        cycle_analytics_input.as_ref().clone(), &config.endpoints.cycle_analytics_input,
-        functions.cycle_analytics_input_source.clone(), functions.cycle_analytics_input_source,
+        cycle_analytics_input.as_ref().clone(),
+        &config.endpoints.cycle_analytics_input,
+        functions.cycle_analytics_input_source.clone(),
+        functions.cycle_analytics_input_source,
+    )?;
+    let substream_analytics_input_data_source = make_custom_source_endpoint_consumer(
+        substream_analytics_input.as_ref().clone(),
+        &config.endpoints.substream_analytics_input,
+        functions.substream_analytics_input_source.clone(),
+        functions.substream_analytics_input_source,
     )?;
     make_custom_sink_endpoint_consumer(
-        &write_cycle_analytics, &config.endpoints.cycle_analytics_result, functions.cycle_analytics_result_sink,
+        &write_cycle_analytics,
+        &config.endpoints.cycle_analytics_result,
+        functions.cycle_analytics_result_sink,
     )?;
     make_custom_sink_endpoint_consumer(
-        &write_joined_analytics, &config.endpoints.joined_analytics, functions.joined_analytics_sink,
+        &write_joined_analytics,
+        &config.endpoints.joined_analytics,
+        functions.joined_analytics_sink,
     )?;
     make_custom_sink_endpoint_consumer(
-        &write_high_value_analytics, &config.endpoints.high_value_analytics, functions.high_value_analytics_sink,
+        &write_high_value_analytics,
+        &config.endpoints.high_value_analytics,
+        functions.high_value_analytics_sink,
     )?;
     make_custom_sink_endpoint_consumer(
-        &write_standard_analytics, &config.endpoints.standard_analytics, functions.standard_analytics_sink,
+        &write_standard_analytics,
+        &config.endpoints.standard_analytics,
+        functions.standard_analytics_sink,
+    )?;
+    make_custom_sink_endpoint_consumer(
+        &write_substream_analytics,
+        &config.endpoints.substream_analytics_result,
+        functions.substream_analytics_result_sink,
     )?;
     Ok(ServiceRuntime {
-      streams: ServiceStreams {
-        analytics_schedule: analytics_schedule.clone(),
-        order_processed: consume_order_processed.clone(),
-        analytics_orders: analytics_orders.clone(),
-        analytics_payments: analytics_payments.clone(),
-        analytics_shipments: analytics_shipments.clone(),
-        cycle_analytics_input: cycle_analytics_input.clone(),
-        cycle_analytics_link: cycle_analytics_link,
-        count_order_processed,
-        split_analytics_orders,
-        split_analytics_payments,
-        merge_cycle_analytics,
-        advance_cycle_analytics,
-        split_cycle_analytics,
-        complete_cycle_analytics,
-        continue_cycle_analytics,
-        write_cycle_analytics,
-        key_orders_for_join,
-        key_payments_for_join,
-        join_order_payment_analytics,
-        write_joined_analytics,
-        key_orders_for_multi_join,
-        key_payments_for_multi_join,
-        key_shipments_for_multi_join,
-        multi_join_analytics_events,
-        route_analytics_result,
-        high_value_analytics,
-        standard_analytics,
-        write_high_value_analytics,
-        write_standard_analytics,
-      },
-      handlers: ServiceHandlers {
-      },
-      data_connectors: ServiceDataConnectors {
-        analytics_orders_data_source,
-        analytics_payments_data_source,
-        analytics_shipments_data_source,
-        cycle_analytics_input_data_source,
-        order_events_data_source: infrastructure.order_events_data_source,
-        local_cron_data_source: infrastructure.local_cron_data_source,
-      },
+        streams: ServiceStreams {
+            analytics_schedule: analytics_schedule.clone(),
+            order_processed: consume_order_processed.clone(),
+            analytics_orders: analytics_orders.clone(),
+            analytics_payments: analytics_payments.clone(),
+            analytics_shipments: analytics_shipments.clone(),
+            cycle_analytics_input: cycle_analytics_input.clone(),
+            substream_analytics_input: substream_analytics_input.clone(),
+            cycle_analytics_link: cycle_analytics_link,
+            count_order_processed,
+            split_analytics_orders,
+            split_analytics_payments,
+            merge_cycle_analytics,
+            advance_cycle_analytics,
+            split_cycle_analytics,
+            complete_cycle_analytics,
+            continue_cycle_analytics,
+            write_cycle_analytics,
+            key_orders_for_join,
+            key_payments_for_join,
+            join_order_payment_analytics,
+            write_joined_analytics,
+            key_orders_for_multi_join,
+            key_payments_for_multi_join,
+            key_shipments_for_multi_join,
+            multi_join_analytics_events,
+            route_analytics_result,
+            high_value_analytics,
+            standard_analytics,
+            write_high_value_analytics,
+            write_standard_analytics,
+            analyze_analytics_substream,
+            build_substream_analytics_result,
+            invoke_analytics_substream,
+            write_substream_analytics,
+        },
+        handlers: ServiceHandlers {},
+        data_connectors: ServiceDataConnectors {
+            analytics_orders_data_source,
+            analytics_payments_data_source,
+            analytics_shipments_data_source,
+            cycle_analytics_input_data_source,
+            substream_analytics_input_data_source,
+            order_events_data_source: infrastructure.order_events_data_source,
+            local_cron_data_source: infrastructure.local_cron_data_source,
+        },
     })
 }
 
@@ -1189,26 +1864,39 @@ impl GeneratedService {
         let context = MessageContext::new();
         let mut makers = ServiceMakers::default();
         custom_makers_init(context.clone(), &mut makers)?;
-        let mut functions = init_functions(
-            context.clone(), config, app.environment().clone(), &makers,
-        ).await?;
+        let mut functions =
+            init_functions(context.clone(), config, app.environment().clone(), &makers).await?;
         custom_functions_init(context, &mut functions)?;
-        let infrastructure = init_infrastructure(
-            MessageContext::new(), app.environment().clone(), &makers,
-        ).await?;
-        let runtime = init_runtime(
-            config, app.environment().clone(), functions, infrastructure,
-        )?;
-        app.register_data_source(Arc::clone(&runtime.data_connectors.order_events_data_source))?;
+        let infrastructure =
+            init_infrastructure(MessageContext::new(), app.environment().clone(), &makers).await?;
+        let runtime = init_runtime(config, app.environment().clone(), functions, infrastructure)?;
+        makers.substreams.bind(&runtime.streams)?;
+        app.register_data_source(Arc::clone(
+            &runtime.data_connectors.order_events_data_source,
+        ))?;
         app.register_data_source(Arc::clone(&runtime.data_connectors.local_cron_data_source))?;
-        app.register_data_source(Arc::clone(&runtime.data_connectors.analytics_orders_data_source))?;
-        app.register_data_source(Arc::clone(&runtime.data_connectors.analytics_payments_data_source))?;
-        app.register_data_source(Arc::clone(&runtime.data_connectors.analytics_shipments_data_source))?;
-        app.register_data_source(Arc::clone(&runtime.data_connectors.cycle_analytics_input_data_source))?;
+        app.register_data_source(Arc::clone(
+            &runtime.data_connectors.analytics_orders_data_source,
+        ))?;
+        app.register_data_source(Arc::clone(
+            &runtime.data_connectors.analytics_payments_data_source,
+        ))?;
+        app.register_data_source(Arc::clone(
+            &runtime.data_connectors.analytics_shipments_data_source,
+        ))?;
+        app.register_data_source(Arc::clone(
+            &runtime.data_connectors.cycle_analytics_input_data_source,
+        ))?;
+        app.register_data_source(Arc::clone(
+            &runtime
+                .data_connectors
+                .substream_analytics_input_data_source,
+        ))?;
 
         let service = Self {
             inner: Arc::new(GeneratedServiceInner {
                 runtime,
+                substreams: makers.substreams,
                 app: OnceLock::new(),
             }),
         };
@@ -1218,9 +1906,10 @@ impl GeneratedService {
             let Some(inner) = weak.upgrade() else {
                 return Ok(());
             };
-            let app = inner.app.get().ok_or_else(||
-                "service application is not initialized".to_owned()
-            )?;
+            let app = inner
+                .app
+                .get()
+                .ok_or_else(|| "service application is not initialized".to_owned())?;
             app.validate_reload(&config.service())
                 .map_err(|error| error.to_string())?;
             app.environment().publish_runtime_config(runtime_config);
@@ -1228,22 +1917,32 @@ impl GeneratedService {
         });
         app.add_component(Arc::new(config_loader))?;
         let app = Arc::new(app);
-        service.inner.app.set(app).map_err(|_| {
-            "service application initialized twice".to_owned()
-        })?;
+        service
+            .inner
+            .app
+            .set(app)
+            .map_err(|_| "service application initialized twice".to_owned())?;
         Ok(service)
+    }
+    pub fn get_analyze_analytics_substream_substream(
+        &self,
+    ) -> Arc<dyn CallableSubStream<AnalyticsEvent, AnalyticsResult>> {
+        self.inner
+            .substreams
+            .get_analyze_analytics_substream_substream()
     }
 
     pub async fn run(self) -> Result<(), Box<dyn std::error::Error>> {
-        let app = self.inner.app.get().ok_or_else(||
-            "service application is not initialized".to_owned()
-        )?;
+        let app = self
+            .inner
+            .app
+            .get()
+            .ok_or_else(|| "service application is not initialized".to_owned())?;
         app.start(MessageContext::new()).await?;
         #[cfg(unix)]
         {
-            let mut terminate = tokio::signal::unix::signal(
-                tokio::signal::unix::SignalKind::terminate(),
-            )?;
+            let mut terminate =
+                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
             tokio::select! {
                 result = tokio::signal::ctrl_c() => result?,
                 _ = terminate.recv() => {},
