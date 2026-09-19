@@ -10,6 +10,7 @@ use super::service_generated::{
     GeneratedService, ServiceFunctions, ServiceMakers,
 };
 use crate::internal::config::Config;
+use crate::internal::functions::InvokeAnalyticsSubstream;
 
 /// User-owned service extension surface. Generated graph and transport wiring
 /// live in `service.generated.rs`, so graph changes never add concrete entity
@@ -27,8 +28,14 @@ impl Service {
         _context: MessageContext,
         makers: &mut ServiceMakers,
     ) -> RuntimeResult<()> {
-        // Replace generated makers here. This file survives regeneration.
-        let _ = makers;
+        let substream = makers
+            .substreams
+            .get_analyze_analytics_substream_substream();
+        makers.substream_analytics.invoke_analytics_substream =
+            std::sync::Arc::new(move |_context, _environment, _config| {
+                let substream = substream.clone();
+                Box::pin(async move { Ok(InvokeAnalyticsSubstream::new(substream)) })
+            });
         Ok(())
     }
 

@@ -1,4 +1,4 @@
-# Task 2/2: `GetInventoryItemData`
+# Task 2/3: `GetInventoryItemData`
 
 > Rules: [`spec/rules.md`](../rules.md)
 

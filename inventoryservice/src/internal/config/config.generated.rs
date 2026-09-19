@@ -23,8 +23,9 @@ use servicelib::runtime::config::{
 
 pub const INVENTORY_SERVICE_ID: i32 = 3;
 pub const GET_INVENTORY_ITEM_DATA_STREAM_ID: i32 = 73;
-pub const MERGE_INVENTORY_RESULT_STREAM_ID: i32 = 75;
-pub const PROCESS_INVENTORY_ITEM_STREAM_ID: i32 = 76;
+pub const MAP_INVENTORY_ITEM_ERROR_STREAM_ID: i32 = 75;
+pub const MERGE_INVENTORY_RESULT_STREAM_ID: i32 = 76;
+pub const PROCESS_INVENTORY_ITEM_STREAM_ID: i32 = 77;
 
 pub const INVENTORY_SERVICE_API_CONNECTOR_ID: i32 = 2;
 
@@ -34,6 +35,7 @@ pub const PROCESS_ORDER_ITEM_ENDPOINT_ID: i32 = 11;
 #[serde(default, rename_all = "camelCase")]
 pub struct Streams {
     pub get_inventory_item_data: ProcessStreamConfig,
+    pub map_inventory_item_error: MapStreamConfig,
     pub merge_inventory_result: MergeStreamConfig,
     pub process_inventory_item: InputStreamConfig,
 }
@@ -47,8 +49,14 @@ impl Default for Streams {
     None::<String>,
     527_f64, -562_f64,
 ).with_pipeline("inventoryItem"), pattern: ProcessPattern::Undefined },
+            map_inventory_item_error: MapStreamConfig::from(StreamConfig::new(MAP_INVENTORY_ITEM_ERROR_STREAM_ID, "Map Inventory Item Error").with_graph(
+    INVENTORY_SERVICE_ID, -GET_INVENTORY_ITEM_DATA_STREAM_ID, [],
+    Some("OrderItemResult"),
+    None::<String>,
+    733_f64, -263_f64,
+).with_pipeline("inventoryItem")),
             merge_inventory_result: MergeStreamConfig::from(StreamConfig::new(MERGE_INVENTORY_RESULT_STREAM_ID, "Merge Inventory Result").with_graph(
-    INVENTORY_SERVICE_ID, 0, [GET_INVENTORY_ITEM_DATA_STREAM_ID, -GET_INVENTORY_ITEM_DATA_STREAM_ID],
+    INVENTORY_SERVICE_ID, 0, [GET_INVENTORY_ITEM_DATA_STREAM_ID, MAP_INVENTORY_ITEM_ERROR_STREAM_ID],
     None::<String>,
     None::<String>,
     542_f64, 33_f64,
@@ -67,6 +75,7 @@ impl Streams {
     fn runtime_configs(&self) -> Vec<RuntimeStreamConfig> {
         vec![
             self.get_inventory_item_data.clone().into(),
+            self.map_inventory_item_error.clone().into(),
             self.merge_inventory_result.clone().into(),
             self.process_inventory_item.clone().into(),
         ]
@@ -212,12 +221,12 @@ impl ServiceConfigContract for Config {
         vec![
             LinkConfig {
                 from: GET_INVENTORY_ITEM_DATA_STREAM_ID, to: MERGE_INVENTORY_RESULT_STREAM_ID,
-                call_semantics: CallSemantics::FunctionCall,
+                call_semantics: CallSemantics::ParallelCall,
                 r#async: false,
             },
             LinkConfig {
                 from: PROCESS_INVENTORY_ITEM_STREAM_ID, to: GET_INVENTORY_ITEM_DATA_STREAM_ID,
-                call_semantics: CallSemantics::FunctionCall,
+                call_semantics: CallSemantics::PriorityTaskPool { pool_name: "Inventory Priority Workers".to_owned(), priority: 10 },
                 r#async: false,
             },
         ]
@@ -231,6 +240,14 @@ impl ServiceConfigContract for Config {
     }
     fn types(&self) -> Vec<TypeConfig> {
         vec![
+            TypeConfig {
+                name: "InventoryFailure".to_owned(), data_type: DataType::Error,
+                type_definition: "String".to_owned(), type_import: "crate::internal::types::inventory_failure".to_owned(),
+                value_type: "".to_owned(), key_type: "".to_owned(),
+                package: "".to_owned(), module: "".to_owned(),
+                definition_format: TypeDefinitionFormat::Undefined, public_type: false,
+                transfer_by_value: false, use_alias: false, properties: Default::default(),
+            },
             TypeConfig {
                 name: "OrderItem".to_owned(), data_type: DataType::Struct,
                 type_definition: "OrderItem".to_owned(), type_import: "example_model::types::order_item".to_owned(),

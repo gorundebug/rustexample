@@ -22,17 +22,17 @@ use servicelib::runtime::config::{
 };
 
 pub const ORDER_SERVICE_ID: i32 = 4;
-pub const MAP_ORDER_ITEM_RESULT_TO_ORDER_STATE_STREAM_ID: i32 = 78;
-pub const MAP_TO_ORDER_PROCESSED_STREAM_ID: i32 = 79;
-pub const MAP_TO_ORDER_STATE_STREAM_ID: i32 = 80;
-pub const MERGE_RESULTS_STREAM_ID: i32 = 81;
-pub const PROCESS_ORDER_STREAM_ID: i32 = 82;
-pub const PROCESS_ORDER_ITEM_STREAM_ID: i32 = 83;
-pub const PROCESS_ORDER_ITEMS_STREAM_ID: i32 = 84;
-pub const PUBLISH_ORDER_PROCESSED_STREAM_ID: i32 = 85;
-pub const SOFT_DEADLINE_STREAM_ID: i32 = 86;
-pub const SPLIT_ORDER_RESULT_STREAM_ID: i32 = 87;
-pub const SPLIT_PIPELINE_STREAM_ID: i32 = 88;
+pub const MAP_ORDER_ITEM_RESULT_TO_ORDER_STATE_STREAM_ID: i32 = 79;
+pub const MAP_TO_ORDER_PROCESSED_STREAM_ID: i32 = 80;
+pub const MAP_TO_ORDER_STATE_STREAM_ID: i32 = 81;
+pub const MERGE_RESULTS_STREAM_ID: i32 = 82;
+pub const PROCESS_ORDER_STREAM_ID: i32 = 83;
+pub const PROCESS_ORDER_ITEM_STREAM_ID: i32 = 84;
+pub const PROCESS_ORDER_ITEMS_STREAM_ID: i32 = 85;
+pub const PUBLISH_ORDER_PROCESSED_STREAM_ID: i32 = 86;
+pub const SOFT_DEADLINE_STREAM_ID: i32 = 87;
+pub const SPLIT_ORDER_RESULT_STREAM_ID: i32 = 88;
+pub const SPLIT_PIPELINE_STREAM_ID: i32 = 89;
 
 pub const INVENTORY_SERVICE_API_CONNECTOR_ID: i32 = 2;
 pub const ORDER_EVENTS_CONNECTOR_ID: i32 = 4;
@@ -352,18 +352,18 @@ impl ServiceConfigContract for Config {
             },
             LinkConfig {
                 from: PROCESS_ORDER_STREAM_ID, to: SPLIT_PIPELINE_STREAM_ID,
-                call_semantics: CallSemantics::FunctionCall,
+                call_semantics: CallSemantics::TaskPool { pool_name: "Default Pool".to_owned() },
                 r#async: false,
             },
             LinkConfig {
                 from: SPLIT_PIPELINE_STREAM_ID, to: PROCESS_ORDER_ITEMS_STREAM_ID,
-                call_semantics: CallSemantics::FunctionCall,
+                call_semantics: CallSemantics::ParallelCall,
                 r#async: false,
             },
             LinkConfig {
                 from: SPLIT_PIPELINE_STREAM_ID, to: SOFT_DEADLINE_STREAM_ID,
-                call_semantics: CallSemantics::FunctionCall,
-                r#async: true,
+                call_semantics: CallSemantics::ParallelCall,
+                r#async: false,
             },
         ]
     }

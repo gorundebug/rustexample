@@ -1,4 +1,4 @@
-# Task 1/2: `ProcessOrderItemSource`
+# Task 1/3: `ProcessOrderItemSource`
 
 > Rules: [`spec/rules.md`](../rules.md)
 

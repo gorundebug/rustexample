@@ -5,6 +5,7 @@ use std::{
 
 use async_trait::async_trait;
 use example_model::types::{OrderItem, OrderItemResult};
+use serde::Serialize;
 use servicelib::{
     Collector, MessageContext,
     operators::process::ProcessFunction,
@@ -31,15 +32,25 @@ impl Default for GetInventoryItemData {
     }
 }
 
+#[derive(Serialize)]
+struct InventoryFailurePayload<'a> {
+    order_id: &'a str,
+    item_id: &'a str,
+    sku: &'a str,
+    requested_qty: i32,
+    available_qty: i32,
+    unit_price: f64,
+}
+
 #[async_trait]
-impl ProcessFunction<OrderItem, OrderItemResult, OrderItemResult> for GetInventoryItemData {
+impl ProcessFunction<OrderItem, OrderItemResult, String> for GetInventoryItemData {
     async fn process(
         &self,
         context: MessageContext,
         _stream: &dyn RuntimeStream,
         value: &OrderItem,
         out: &Collector<OrderItemResult>,
-        error: &Collector<OrderItemResult>,
+        error: &Collector<String>,
     ) {
         let (available, reserved) = reserve(self.stock.get(&value.sku), value.quantity);
         let result = OrderItemResult {
@@ -60,7 +71,17 @@ impl ProcessFunction<OrderItem, OrderItemResult, OrderItemResult> for GetInvento
         if reserved {
             out.collect(context, result).await;
         } else {
-            error.collect(context, result).await;
+            let failure = InventoryFailurePayload {
+                order_id: &value.order_id,
+                item_id: &value.item_id,
+                sku: &value.sku,
+                requested_qty: value.quantity,
+                available_qty: available,
+                unit_price: value.unit_price,
+            };
+            let encoded = serde_json::to_string(&failure)
+                .unwrap_or_else(|serialize_error| serialize_error.to_string());
+            error.collect(context, encoded).await;
         }
     }
 }
