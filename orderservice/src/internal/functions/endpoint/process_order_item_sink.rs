@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use example_model::types::{OrderItem, OrderItemResult};
-use inventory_service_api::processorderitem::{ProcessOrderItemRequest, ProcessOrderItemResponse};
+use inventory_service_api::inventoryserviceapi::processorderitem::{
+    ProcessOrderItemRequest, ProcessOrderItemResponse,
+};
 use servicelib::{
     MessageContext, Payload,
     datasink::grpc::{EndpointHandler, HandlerResult, ResultContext, Sender, StreamContext},
