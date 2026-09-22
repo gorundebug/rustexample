@@ -7,7 +7,6 @@ use servicelib::{
     },
     runtime::{
         common::{Consumer, Payload},
-        config::CustomEndpointConfig,
         datasource::StreamContext,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
@@ -86,7 +85,6 @@ impl EndpointHandler<(), AnalyticsEvent, (), String> for AnalyticsPaymentsSource
 pub async fn make_analytics_payments_source(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &CustomEndpointConfig,
 ) -> RuntimeResult<AnalyticsPaymentsSource> {
     Ok(AnalyticsPaymentsSource)
 }

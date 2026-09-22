@@ -5,7 +5,6 @@ use servicelib::{
     operators::{MultiJoinFunction, downcast_join_values},
     runtime::{
         common::RuntimeStream,
-        config::MultiJoinStreamConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
         store::JoinValues,
     },
@@ -49,7 +48,6 @@ impl MultiJoinFunction<String, AnalyticsResult> for MultiJoinAnalyticsEvents {
 pub async fn make_multi_join_analytics_events(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &MultiJoinStreamConfig,
 ) -> RuntimeResult<MultiJoinAnalyticsEvents> {
     Ok(MultiJoinAnalyticsEvents)
 }

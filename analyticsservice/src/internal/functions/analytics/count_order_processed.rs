@@ -10,7 +10,6 @@ use servicelib::{
     operators::ProcessFunction,
     runtime::{
         common::RuntimeStream,
-        config::ProcessStreamConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -49,7 +48,6 @@ impl ProcessFunction<OrderProcessed, OrderProcessed, String> for CountOrderProce
 pub async fn make_count_order_processed(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &ProcessStreamConfig,
 ) -> RuntimeResult<CountOrderProcessed> {
     Ok(CountOrderProcessed::default())
 }

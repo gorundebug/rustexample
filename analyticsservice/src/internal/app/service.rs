@@ -31,8 +31,8 @@ impl Service {
         let substream = makers
             .substreams
             .get_analyze_analytics_substream_substream();
-        makers.substream_analytics.invoke_analytics_substream =
-            std::sync::Arc::new(move |_context, _environment, _config| {
+        makers.invoke_analytics_substream =
+            std::sync::Arc::new(move |_context, _environment| {
                 let substream = substream.clone();
                 Box::pin(async move { Ok(InvokeAnalyticsSubstream::new(substream)) })
             });

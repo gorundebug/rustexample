@@ -1,5 +1,5 @@
 syntax = "proto3";
-package processorderitem;
+package inventoryserviceapi.processorderitem;
 
 option go_package = "github.com/gorundebug/inventory_service_api/pkg/generated/proto/inventoryserviceapi/processorderitem";
 

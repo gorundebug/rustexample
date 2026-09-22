@@ -9,7 +9,6 @@ use servicelib::{
         ResultContext, StreamContext,
     },
     runtime::{
-        config::KafkaEndpointConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -84,7 +83,6 @@ impl EndpointHandler<(), OrderProcessed, OrderProcessed, String> for OrderProces
 pub async fn make_order_processed_endpoint_source(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &KafkaEndpointConfig,
 ) -> RuntimeResult<OrderProcessedEndpointSource> {
     Ok(OrderProcessedEndpointSource)
 }

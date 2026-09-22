@@ -8,7 +8,6 @@ use servicelib::{
     },
     runtime::{
         common::{Consumer, Payload},
-        config::CustomEndpointConfig,
         datasource::StreamContext,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
@@ -92,7 +91,6 @@ impl EndpointHandler<(), AnalyticsEvent, (), String> for CycleAnalyticsInputSour
 pub async fn make_cycle_analytics_input_source(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &CustomEndpointConfig,
 ) -> RuntimeResult<CycleAnalyticsInputSource> {
     Ok(CycleAnalyticsInputSource)
 }

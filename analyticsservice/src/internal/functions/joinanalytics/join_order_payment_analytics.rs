@@ -4,7 +4,6 @@ use servicelib::{
     operators::JoinFunction,
     runtime::{
         common::RuntimeStream,
-        config::JoinStreamConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -46,7 +45,6 @@ impl JoinFunction<String, AnalyticsEvent, AnalyticsEvent, AnalyticsResult>
 pub async fn make_join_order_payment_analytics(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &JoinStreamConfig,
 ) -> RuntimeResult<JoinOrderPaymentAnalytics> {
     Ok(JoinOrderPaymentAnalytics)
 }

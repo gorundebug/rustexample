@@ -653,7 +653,7 @@ impl ServiceConfigContract for Config {
             },
             TypeConfig {
                 name: "AutomationJob".to_owned(), data_type: DataType::String,
-                type_definition: "String".to_owned(), type_import: "example_model::types::automation_job".to_owned(),
+                type_definition: "String".to_owned(), type_import: "example_model::model_types::automation_job".to_owned(),
                 value_type: "".to_owned(), key_type: "".to_owned(),
                 package: "".to_owned(), module: "model".to_owned(),
                 definition_format: TypeDefinitionFormat::Undefined, public_type: true,
@@ -661,7 +661,7 @@ impl ServiceConfigContract for Config {
             },
             TypeConfig {
                 name: "OrderProcessed".to_owned(), data_type: DataType::Struct,
-                type_definition: "OrderProcessed".to_owned(), type_import: "example_model::types::order_processed".to_owned(),
+                type_definition: "OrderProcessed".to_owned(), type_import: "example_model::model_types::order_processed".to_owned(),
                 value_type: "".to_owned(), key_type: "".to_owned(),
                 package: "".to_owned(), module: "model".to_owned(),
                 definition_format: TypeDefinitionFormat::Native, public_type: false,

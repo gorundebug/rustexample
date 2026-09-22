@@ -5,6 +5,7 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 tmp="${TMPDIR:-/tmp}/order_service_api-openapi"
 rm -rf "$tmp"
 openapi-generator generate -g rust-axum -i "$root/openapi/orderserviceapi/orderserviceapi.generated.yaml" -o "$tmp" \
+  --generate-alias-as-model \
   --additional-properties=packageName=order_service_api
 mkdir -p "$root/src/generated/apis"
 cp "$tmp/src/header.rs" "$root/src/generated/header.generated.rs"

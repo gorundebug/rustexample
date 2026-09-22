@@ -4,7 +4,6 @@ use servicelib::{
     operators::FilterFunction,
     runtime::{
         common::RuntimeStream,
-        config::FilterStreamConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -29,7 +28,6 @@ impl FilterFunction<AnalyticsEvent> for ContinueCycleAnalytics {
 pub async fn make_continue_cycle_analytics(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &FilterStreamConfig,
 ) -> RuntimeResult<ContinueCycleAnalytics> {
     Ok(ContinueCycleAnalytics)
 }

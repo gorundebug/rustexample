@@ -4,7 +4,6 @@ use servicelib::{
     datasink::localsink::{EndpointHandler, HandlerResult},
     runtime::{
         common::{Payload, RuntimeStream},
-        config::CustomEndpointConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
         stream::Stream,
     },
@@ -55,7 +54,6 @@ impl EndpointHandler<(), AnalyticsResult, String> for SubstreamAnalyticsResultSi
 pub async fn make_substream_analytics_result_sink(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &CustomEndpointConfig,
 ) -> RuntimeResult<SubstreamAnalyticsResultSink> {
     Ok(SubstreamAnalyticsResultSink)
 }

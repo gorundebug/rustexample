@@ -1,7 +1,9 @@
 pub mod inventoryserviceapi {
     tonic::include_proto!("inventoryserviceapi");
+
+    pub mod processorderitem {
+        tonic::include_proto!("inventoryserviceapi.processorderitem");
+    }
 }
 
-pub mod processorderitem {
-    tonic::include_proto!("processorderitem");
-}
+pub use inventoryserviceapi::processorderitem;

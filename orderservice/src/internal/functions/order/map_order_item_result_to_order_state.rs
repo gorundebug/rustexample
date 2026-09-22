@@ -6,7 +6,6 @@ use servicelib::{
     operators::MapFunction,
     runtime::{
         common::RuntimeStream,
-        config::MapStreamConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -47,7 +46,6 @@ impl MapFunction<OrderItemResult, OrderState> for MapOrderItemResultToOrderState
 pub async fn make_map_order_item_result_to_order_state(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &MapStreamConfig,
 ) -> RuntimeResult<MapOrderItemResultToOrderState> {
     Ok(MapOrderItemResultToOrderState)
 }

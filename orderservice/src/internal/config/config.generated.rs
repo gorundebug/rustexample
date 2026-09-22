@@ -386,7 +386,7 @@ impl ServiceConfigContract for Config {
             },
             TypeConfig {
                 name: "OrderItem".to_owned(), data_type: DataType::Struct,
-                type_definition: "OrderItem".to_owned(), type_import: "example_model::types::order_item".to_owned(),
+                type_definition: "OrderItem".to_owned(), type_import: "example_model::model_types::order_item".to_owned(),
                 value_type: "".to_owned(), key_type: "".to_owned(),
                 package: "".to_owned(), module: "model".to_owned(),
                 definition_format: TypeDefinitionFormat::Native, public_type: false,
@@ -394,7 +394,7 @@ impl ServiceConfigContract for Config {
             },
             TypeConfig {
                 name: "OrderItemResult".to_owned(), data_type: DataType::Struct,
-                type_definition: "OrderItemResult".to_owned(), type_import: "example_model::types::order_item_result".to_owned(),
+                type_definition: "OrderItemResult".to_owned(), type_import: "example_model::model_types::order_item_result".to_owned(),
                 value_type: "".to_owned(), key_type: "".to_owned(),
                 package: "".to_owned(), module: "model".to_owned(),
                 definition_format: TypeDefinitionFormat::Native, public_type: false,
@@ -402,7 +402,7 @@ impl ServiceConfigContract for Config {
             },
             TypeConfig {
                 name: "OrderProcessed".to_owned(), data_type: DataType::Struct,
-                type_definition: "OrderProcessed".to_owned(), type_import: "example_model::types::order_processed".to_owned(),
+                type_definition: "OrderProcessed".to_owned(), type_import: "example_model::model_types::order_processed".to_owned(),
                 value_type: "".to_owned(), key_type: "".to_owned(),
                 package: "".to_owned(), module: "model".to_owned(),
                 definition_format: TypeDefinitionFormat::Native, public_type: false,

@@ -5,7 +5,6 @@ use servicelib::{
     operators::FlatMapFunction,
     runtime::{
         common::RuntimeStream,
-        config::FlatMapStreamConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -35,7 +34,6 @@ impl FlatMapFunction<Order, OrderItem> for ProcessOrderItems {
 pub async fn make_process_order_items(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &FlatMapStreamConfig,
 ) -> RuntimeResult<ProcessOrderItems> {
     Ok(ProcessOrderItems)
 }

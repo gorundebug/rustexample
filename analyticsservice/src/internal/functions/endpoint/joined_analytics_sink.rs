@@ -5,7 +5,6 @@ use servicelib::{
     datasink::localsink::{EndpointHandler, HandlerResult},
     runtime::{
         common::{Payload, RuntimeStream},
-        config::CustomEndpointConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
         stream::Stream,
     },
@@ -56,7 +55,6 @@ impl EndpointHandler<(), AnalyticsResult, String> for JoinedAnalyticsSink {
 pub async fn make_joined_analytics_sink(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &CustomEndpointConfig,
 ) -> RuntimeResult<JoinedAnalyticsSink> {
     Ok(JoinedAnalyticsSink)
 }

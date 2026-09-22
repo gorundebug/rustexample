@@ -6,7 +6,6 @@ use servicelib::{
     operators::MapFunction,
     runtime::{
         common::RuntimeStream,
-        config::MapStreamConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -68,7 +67,6 @@ impl MapFunction<AnalyticsEvent, AnalyticsResult> for InvokeAnalyticsSubstream {
 pub async fn make_invoke_analytics_substream(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &MapStreamConfig,
 ) -> RuntimeResult<InvokeAnalyticsSubstream> {
     Err(
         servicelib::runtime::environment::RuntimeError::InvalidConfiguration(

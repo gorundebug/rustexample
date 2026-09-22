@@ -32,6 +32,7 @@ RUN if [ "$CARGO_REGISTRIES_CRATES_IO_INDEX" != "https://github.com/rust-lang/cr
         > /usr/local/cargo/config.toml; \
     fi
 ENV CARGO_HTTP_MULTIPLEXING=false CARGO_HTTP_TIMEOUT=30 CARGO_NET_RETRY=5
+ENV CARGO_TERM_PROGRESS_WHEN=always CARGO_TERM_PROGRESS_WIDTH=100
 COPY prepare-local-build.generated.sh /usr/local/bin/prepare-local-build
 WORKDIR /workspace
 COPY --from=rustservicelib-source / /tmp/rustservicelib-source

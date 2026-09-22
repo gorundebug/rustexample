@@ -6,7 +6,6 @@ use servicelib::{
     operators::DelayFunction,
     runtime::{
         common::RuntimeStream,
-        config::DelayStreamConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -40,7 +39,6 @@ impl DelayFunction<Order> for SoftDeadline {
 pub async fn make_soft_deadline(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &DelayStreamConfig,
 ) -> RuntimeResult<SoftDeadline> {
     Ok(SoftDeadline)
 }

@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use servicelib::{
     Collector, MessageContext, ScheduleEndpointFunction, ScheduleTrigger,
     runtime::{
-        config::CronEndpointConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -25,7 +24,6 @@ impl ScheduleEndpointFunction<String> for AnalyticsScheduleSource {
 pub async fn make_analytics_schedule_source(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &CronEndpointConfig,
 ) -> RuntimeResult<AnalyticsScheduleSource> {
     Ok(AnalyticsScheduleSource)
 }

@@ -4,7 +4,6 @@ use servicelib::{
     operators::KeyByFunction,
     runtime::{
         common::RuntimeStream,
-        config::KeyByStreamConfig,
         datastruct::KeyValue,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
@@ -38,7 +37,6 @@ impl KeyByFunction<AnalyticsEvent, String, AnalyticsEvent> for KeyOrdersForJoin 
 pub async fn make_key_orders_for_join(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &KeyByStreamConfig,
 ) -> RuntimeResult<KeyOrdersForJoin> {
     Ok(KeyOrdersForJoin)
 }

@@ -7,7 +7,6 @@ use servicelib::{
     MessageContext, Payload,
     datasource::grpc::{EndpointHandler, HandlerResult, ResultContext, Sender, StreamContext},
     runtime::{
-        config::GrpcEndpointConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -123,7 +122,6 @@ impl
 pub async fn make_process_order_item_source(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &GrpcEndpointConfig,
 ) -> RuntimeResult<ProcessOrderItemSource> {
     Ok(ProcessOrderItemSource)
 }

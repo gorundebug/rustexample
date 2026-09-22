@@ -53,6 +53,7 @@ ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
     CARGO_HTTP_MULTIPLEXING=false \
     CARGO_HTTP_TIMEOUT=30 \
     CARGO_NET_RETRY=5
+ENV CARGO_TERM_PROGRESS_WHEN=always CARGO_TERM_PROGRESS_WIDTH=100
 
 WORKDIR /workspace
 COPY --from=rustservicelib-source . /tmp/rustservicelib-source

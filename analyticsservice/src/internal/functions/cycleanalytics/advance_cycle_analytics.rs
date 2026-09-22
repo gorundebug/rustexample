@@ -4,7 +4,6 @@ use servicelib::{
     operators::MapFunction,
     runtime::{
         common::RuntimeStream,
-        config::MapStreamConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -32,7 +31,6 @@ impl MapFunction<AnalyticsEvent, AnalyticsEvent> for AdvanceCycleAnalytics {
 pub async fn make_advance_cycle_analytics(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &MapStreamConfig,
 ) -> RuntimeResult<AdvanceCycleAnalytics> {
     Ok(AdvanceCycleAnalytics)
 }

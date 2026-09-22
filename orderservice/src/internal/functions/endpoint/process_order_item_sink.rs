@@ -7,7 +7,6 @@ use servicelib::{
     MessageContext, Payload,
     datasink::grpc::{EndpointHandler, HandlerResult, ResultContext, Sender, StreamContext},
     runtime::{
-        config::GrpcEndpointConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -134,7 +133,6 @@ impl
 pub async fn make_process_order_item_sink(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &GrpcEndpointConfig,
 ) -> RuntimeResult<ProcessOrderItemSink> {
     Ok(ProcessOrderItemSink)
 }

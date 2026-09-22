@@ -11,7 +11,6 @@ use servicelib::{
     operators::process::ProcessFunction,
     runtime::{
         common::RuntimeStream,
-        config::ProcessStreamConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -108,7 +107,6 @@ fn reserve(stock: Option<&AtomicI32>, quantity: i32) -> (i32, bool) {
 pub async fn make_get_inventory_item_data(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &ProcessStreamConfig,
 ) -> RuntimeResult<GetInventoryItemData> {
     Ok(GetInventoryItemData::default())
 }

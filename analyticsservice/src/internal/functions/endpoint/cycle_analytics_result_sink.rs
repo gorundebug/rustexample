@@ -4,7 +4,6 @@ use servicelib::{
     datasink::localsink::{EndpointHandler, HandlerResult},
     runtime::{
         common::{Payload, RuntimeStream},
-        config::CustomEndpointConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
         stream::Stream,
     },
@@ -58,7 +57,6 @@ impl EndpointHandler<(), AnalyticsEvent, String> for CycleAnalyticsResultSink {
 pub async fn make_cycle_analytics_result_sink(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &CustomEndpointConfig,
 ) -> RuntimeResult<CycleAnalyticsResultSink> {
     Ok(CycleAnalyticsResultSink)
 }

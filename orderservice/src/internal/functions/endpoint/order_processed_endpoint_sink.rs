@@ -4,7 +4,6 @@ use servicelib::{
     MessageContext, Payload,
     datasink::kafka::{EndpointHandler, HandlerResult, SinkMessage, StreamContext},
     runtime::{
-        config::KafkaEndpointConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -55,7 +54,6 @@ impl EndpointHandler<(), OrderProcessed, String, String> for OrderProcessedEndpo
 pub async fn make_order_processed_endpoint_sink(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &KafkaEndpointConfig,
 ) -> RuntimeResult<OrderProcessedEndpointSink> {
     Ok(OrderProcessedEndpointSink)
 }

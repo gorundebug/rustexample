@@ -8,7 +8,6 @@ use servicelib::{
     },
     runtime::{
         common::{Consumer, Payload},
-        config::CustomEndpointConfig,
         datasource::StreamContext,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
@@ -87,7 +86,6 @@ impl EndpointHandler<(), AnalyticsEvent, (), String> for SubstreamAnalyticsInput
 pub async fn make_substream_analytics_input_source(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &CustomEndpointConfig,
 ) -> RuntimeResult<SubstreamAnalyticsInputSource> {
     Ok(SubstreamAnalyticsInputSource)
 }

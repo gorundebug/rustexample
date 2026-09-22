@@ -6,7 +6,6 @@ use servicelib::{
     operators::map::MapFunction,
     runtime::{
         common::RuntimeStream,
-        config::MapStreamConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -58,7 +57,6 @@ impl MapFunction<String, OrderItemResult> for GetInventoryItemError {
 pub async fn make_get_inventory_item_error(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &MapStreamConfig,
 ) -> RuntimeResult<GetInventoryItemError> {
     Ok(GetInventoryItemError)
 }

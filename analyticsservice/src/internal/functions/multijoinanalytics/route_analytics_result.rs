@@ -3,7 +3,6 @@ use servicelib::{
     MessageContext,
     operators::BuildSwitchFunction,
     runtime::{
-        config::CaseStreamConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -18,7 +17,6 @@ impl BuildSwitchFunction<AnalyticsResult> for RouteAnalyticsResult {
 pub async fn make_route_analytics_result(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &CaseStreamConfig,
 ) -> RuntimeResult<RouteAnalyticsResult> {
     Ok(RouteAnalyticsResult)
 }

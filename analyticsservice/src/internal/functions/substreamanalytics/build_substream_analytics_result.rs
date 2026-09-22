@@ -4,7 +4,6 @@ use servicelib::{
     operators::MapFunction,
     runtime::{
         common::RuntimeStream,
-        config::MapStreamConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
@@ -38,7 +37,6 @@ impl MapFunction<AnalyticsEvent, AnalyticsResult> for BuildSubstreamAnalyticsRes
 pub async fn make_build_substream_analytics_result(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &MapStreamConfig,
 ) -> RuntimeResult<BuildSubstreamAnalyticsResult> {
     Ok(BuildSubstreamAnalyticsResult)
 }

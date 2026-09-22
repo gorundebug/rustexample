@@ -5,7 +5,6 @@ use servicelib::{
     datasink::localsink::{EndpointHandler, HandlerResult},
     runtime::{
         common::{Payload, RuntimeStream},
-        config::CustomEndpointConfig,
         environment::{RuntimeEnvironment, RuntimeResult},
         stream::Stream,
     },
@@ -51,7 +50,6 @@ impl EndpointHandler<(), AnalyticsResult, String> for HighValueAnalyticsSink {
 pub async fn make_high_value_analytics_sink(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &CustomEndpointConfig,
 ) -> RuntimeResult<HighValueAnalyticsSink> {
     Ok(HighValueAnalyticsSink)
 }

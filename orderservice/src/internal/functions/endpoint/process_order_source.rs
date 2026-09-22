@@ -19,7 +19,6 @@ use servicelib::{
         EndpointHandler, HandlerData, HandlerError, HandlerResult, ResultCallback, ResultContext,
     },
     runtime::{
-        config::HttpEndpointConfig,
         datasource::StreamContext,
         environment::{RuntimeEnvironment, RuntimeResult},
     },
@@ -68,10 +67,6 @@ impl
         String,
     > for ProcessOrderSource
 {
-    fn reload(&self, _config: &HttpEndpointConfig, default_timeout_ms: u64) {
-        self.set_timeout_ms(default_timeout_ms);
-    }
-
     async fn begin_request(
         &self,
         context: MessageContext,
@@ -264,7 +259,6 @@ impl
 pub async fn make_process_order_source(
     _context: MessageContext,
     _environment: RuntimeEnvironment,
-    _config: &HttpEndpointConfig,
 ) -> RuntimeResult<ProcessOrderSource> {
     Ok(ProcessOrderSource {
         timeout_ms: Arc::new(AtomicU64::new(5_000)),
