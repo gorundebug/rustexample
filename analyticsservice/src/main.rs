@@ -1,4 +1,4 @@
-mod internal;
+use analytics_service::internal;
 
 use std::sync::Arc;
 

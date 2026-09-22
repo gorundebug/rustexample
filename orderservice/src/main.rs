@@ -1,4 +1,4 @@
-mod internal;
+use order_service::internal;
 
 use std::sync::Arc;
 

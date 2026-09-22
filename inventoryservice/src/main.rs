@@ -1,4 +1,4 @@
-mod internal;
+use inventory_service::internal;
 
 use std::sync::Arc;
 
