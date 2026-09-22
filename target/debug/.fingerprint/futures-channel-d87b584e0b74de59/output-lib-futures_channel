@@ -1,0 +1,22 @@
+error: rustc interrupted by SIGBUS, printing backtrace
+
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(+0x3389f2c)[0xffffb67e9f2c]
+linux-vdso.so.1(__kernel_rt_sigreturn+0x0)[0xffffb7a477e8]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/libLLVM.so.22.1-rust-1.98.1-stable(_ZN4llvm14identify_magicENS_9StringRefE+0x8)[0xffffb06d6a94]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(+0x2953070)[0xffffb5db3070]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(+0x2952e00)[0xffffb5db2e00]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(+0x2952c40)[0xffffb5db2c40]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(_RNvNtCs52jrnxxgRL9_17ar_archive_writer14archive_writer13write_symbols+0x74)[0xffffb5f16b9c]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(+0x2ab3c84)[0xffffb5f13c84]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(_RNvXs1_NtNtCslyr9txq1rdx_17rustc_codegen_ssa4back7archiveNtB5_16ArArchiveBuilderNtB5_14ArchiveBuilder5build+0x40)[0xffffb5f130f8]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(_RNvNtNtCslyr9txq1rdx_17rustc_codegen_ssa4back4link11link_binary+0x5bc)[0xffffb5f0e378]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(_RNvXs3_Cslr5vmKXg1nu_18rustc_codegen_llvmNtB5_18LlvmCodegenBackendNtNtNtCslyr9txq1rdx_17rustc_codegen_ssa6traits7backend14CodegenBackend4link+0x40)[0xffffb5f0ddb0]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(_RNvMNtCs6Z50QOWnS4m_15rustc_interface7queriesNtB2_6Linker4link+0x3c4)[0xffffb5f3d54c]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(+0x287b124)[0xffffb5cdb124]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(+0x28c81c8)[0xffffb5d281c8]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(+0x28c7f50)[0xffffb5d27f50]
+/usr/local/rustup/toolchains/1.98.1-aarch64-unknown-linux-gnu/lib/librustc_driver-36de65988ef2d886.so(+0x42240c0)[0xffffb76840c0]
+/lib/aarch64-linux-gnu/libc.so.6(+0x82030)[0xffffb32d2030]
+/lib/aarch64-linux-gnu/libc.so.6(+0xebf5c)[0xffffb333bf5c]
+
+note: we would appreciate a report at https://github.com/rust-lang/rust

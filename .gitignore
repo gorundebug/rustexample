@@ -3,7 +3,6 @@ bin/
 generated/
 build/
 dist/
-target/
 node_modules/
 *.tsbuildinfo
 compile_commands.json
