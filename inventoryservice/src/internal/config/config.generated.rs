@@ -31,13 +31,157 @@ pub const INVENTORY_SERVICE_API_CONNECTOR_ID: i32 = 2;
 
 pub const PROCESS_ORDER_ITEM_ENDPOINT_ID: i32 = 11;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Streams {
     pub get_inventory_item_data: ProcessStreamConfig,
     pub map_inventory_item_error: MapStreamConfig,
     pub merge_inventory_result: MergeStreamConfig,
     pub process_inventory_item: InputStreamConfig,
+}
+
+// Preserve Serde's field order for positional formats and diagnostics. The
+// sorted lookup table avoids generating a giant string-matching function.
+const STREAM_CONFIG_FIELDS: &[&str] = &[
+    "getInventoryItemData",
+    "mapInventoryItemError",
+    "mergeInventoryResult",
+    "processInventoryItem",
+];
+
+const STREAM_CONFIG_FIELD_LOOKUP: &[(&str, usize)] = &[
+    ("getInventoryItemData", 0),
+    ("mapInventoryItemError", 1),
+    ("mergeInventoryResult", 2),
+    ("processInventoryItem", 3),
+];
+
+struct StreamConfigField(Option<usize>);
+
+impl<'de> Deserialize<'de> for StreamConfigField {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct FieldVisitor;
+        impl<'de> serde::de::Visitor<'de> for FieldVisitor {
+            type Value = StreamConfigField;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("field identifier")
+            }
+
+            fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                self.visit_bytes(value.as_bytes())
+            }
+
+            fn visit_bytes<E: serde::de::Error>(self, value: &[u8]) -> Result<Self::Value, E> {
+                let index = STREAM_CONFIG_FIELD_LOOKUP
+                    .binary_search_by(|entry| entry.0.as_bytes().cmp(value))
+                    .ok()
+                    .map(|index| STREAM_CONFIG_FIELD_LOOKUP[index].1);
+                Ok(StreamConfigField(index))
+            }
+
+            fn visit_u64<E: serde::de::Error>(self, value: u64) -> Result<Self::Value, E> {
+                match usize::try_from(value) {
+                    Ok(index) if index < STREAM_CONFIG_FIELDS.len() => Ok(StreamConfigField(Some(index))),
+                    _ => Err(E::invalid_value(
+                        serde::de::Unexpected::Unsigned(value),
+                        &"field index 0 <= i < 4",
+                    )),
+                }
+            }
+        }
+        deserializer.deserialize_identifier(FieldVisitor)
+    }
+}
+
+struct StreamsVisitor<'a> {
+    target: &'a mut Streams,
+}
+
+impl<'de> serde::de::Visitor<'de> for StreamsVisitor<'_> {
+    type Value = ();
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("struct Streams")
+    }
+
+    #[inline(never)]
+    fn visit_map<M: serde::de::MapAccess<'de>>(self, mut map: M) -> Result<(), M::Error> {
+        let mut seen = [false; 4];
+        while let Some(StreamConfigField(index)) = map.next_key::<StreamConfigField>()? {
+            if let Some(index) = index {
+                if seen[index] {
+                    return Err(serde::de::Error::duplicate_field(STREAM_CONFIG_FIELDS[index]));
+                }
+                seen[index] = true;
+                self.target.read_stream_map_field(index, &mut map)?;
+            } else {
+                let _: serde::de::IgnoredAny = map.next_value()?;
+            }
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn visit_seq<S: serde::de::SeqAccess<'de>>(self, mut seq: S) -> Result<(), S::Error> {
+        self.target.read_stream_seq_part_0(&mut seq)?;
+        Ok(())
+    }
+}
+
+impl<'de> Deserialize<'de> for Streams {
+    #[inline(never)]
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let mut result = Self::default();
+        deserializer.deserialize_struct(
+            "Streams", STREAM_CONFIG_FIELDS, StreamsVisitor { target: &mut result },
+        )?;
+        Ok(result)
+    }
+}
+
+impl Streams {
+    #[inline(never)]
+    fn read_stream_map_field<'de, M: serde::de::MapAccess<'de>>(
+        &mut self, index: usize, map: &mut M,
+    ) -> Result<(), M::Error> {
+        match index / 32 {
+            0 => self.read_stream_map_part_0(index, map),
+            _ => unreachable!("stream field index was validated"),
+        }
+    }
+    #[inline(never)]
+    fn read_stream_map_part_0<'de, M: serde::de::MapAccess<'de>>(
+        &mut self, index: usize, map: &mut M,
+    ) -> Result<(), M::Error> {
+        match index {
+            0 => self.get_inventory_item_data = map.next_value::<ProcessStreamConfig>()?,
+            1 => self.map_inventory_item_error = map.next_value::<MapStreamConfig>()?,
+            2 => self.merge_inventory_result = map.next_value::<MergeStreamConfig>()?,
+            3 => self.process_inventory_item = map.next_value::<InputStreamConfig>()?,
+            _ => unreachable!("stream field index belongs to another part"),
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn read_stream_seq_part_0<'de, S: serde::de::SeqAccess<'de>>(
+        &mut self, seq: &mut S,
+    ) -> Result<(), S::Error> {
+        if let Some(value) = seq.next_element::<ProcessStreamConfig>()? {
+            self.get_inventory_item_data = value;
+        }
+        if let Some(value) = seq.next_element::<MapStreamConfig>()? {
+            self.map_inventory_item_error = value;
+        }
+        if let Some(value) = seq.next_element::<MergeStreamConfig>()? {
+            self.merge_inventory_result = value;
+        }
+        if let Some(value) = seq.next_element::<InputStreamConfig>()? {
+            self.process_inventory_item = value;
+        }
+        Ok(())
+    }
 }
 
 impl Default for Streams {
@@ -221,12 +365,12 @@ impl ServiceConfigContract for Config {
         vec![
             LinkConfig {
                 from: GET_INVENTORY_ITEM_DATA_STREAM_ID, to: MERGE_INVENTORY_RESULT_STREAM_ID,
-                call_semantics: CallSemantics::FunctionCall,
+                call_semantics: CallSemantics::ParallelCall,
                 r#async: false,
             },
             LinkConfig {
                 from: PROCESS_INVENTORY_ITEM_STREAM_ID, to: GET_INVENTORY_ITEM_DATA_STREAM_ID,
-                call_semantics: CallSemantics::FunctionCall,
+                call_semantics: CallSemantics::PriorityTaskPool { pool_name: "Inventory Priority Workers".to_owned(), priority: 10 },
                 r#async: false,
             },
         ]

@@ -1,7 +1,7 @@
 ARG DEPENDENCY_DOCKER_REGISTRY=docker.io
 FROM rustservicelib-source AS rustservicelib-source
 FROM module-model_rust-source AS module-model_rust-source
-FROM ${DEPENDENCY_DOCKER_REGISTRY}/library/rust:1.97-bookworm AS development
+FROM ${DEPENDENCY_DOCKER_REGISTRY}/library/rust:1.98.1-bookworm AS development
 
 COPY dependency-download-mirrors.generated.env /etc/servicegen/dependency-download-mirrors.generated.env
 COPY dependency-download-mirrors.env /etc/servicegen/dependency-download-mirrors.env
@@ -67,6 +67,7 @@ RUN set -eu; \
     source_dir=${manifest%/Cargo.toml}; \
     mkdir -p /workspace/modules/model_rust; \
     cp -R "$source_dir/." /workspace/modules/model_rust/; \
+    sed -i -E 's|^servicelib-gorundebug[[:space:]]*=.*$|servicelib-gorundebug = { path = "/workspace/rustservicelib" }|' /workspace/modules/model_rust/Cargo.toml; \
     rm -rf /tmp/module-model_rust-source /tmp/module-model_rust-archive
 
 # Dev/debug uses the same dependency contexts; only the service source is mounted.

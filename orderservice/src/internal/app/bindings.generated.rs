@@ -44,7 +44,7 @@ impl ServiceBindings {
         } = streams;
     make_grpc_no_streaming_endpoint_consumer(
         &process_order_item,
-        functions.process_order_item_sink,
+        Arc::clone(&functions.process_order_item_sink),
         clients.process_order_item.clone(),
     )?;
     make_rdkafka_kafka_endpoint_consumer(

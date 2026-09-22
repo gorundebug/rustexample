@@ -62,7 +62,7 @@ pub async fn init_infrastructure(
     let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
     let inventory_service_api_data_source_future = infrastructure_maker_future!(
         makers.inventory_service_api_data_source, maker_group_context, environment,
-        grpc_connector_config(&environment, 2)?, maker_group_context, maker_error_sender
+        grpc_connector_config(&environment, crate::internal::config::INVENTORY_SERVICE_API_CONNECTOR_ID)?, maker_group_context, maker_error_sender
     );
     let mut inventory_service_api_data_source = None;
     let maker_futures: Vec<Pin<Box<dyn Future<Output = ()> + Send + '_>>> = vec![

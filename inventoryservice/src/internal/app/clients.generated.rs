@@ -8,9 +8,6 @@ use super::connectors_generated::ServiceInfrastructure;
 
 use futures_util::{Stream as FuturesStream, StreamExt};
 
-// Bounded queues apply transport backpressure instead of buffering a whole RPC.
-const GRPC_STREAM_BUFFER: usize = 16;
-
 fn grpc_request_stream<T>(receiver: tokio::sync::mpsc::Receiver<T>)
     -> impl FuturesStream<Item = T> + Send
 where T: Send + 'static {

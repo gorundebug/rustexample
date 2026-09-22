@@ -10,18 +10,76 @@ pub struct ServiceFunctions {
     pub get_inventory_item_error: Arc<GetInventoryItemError>,
     pub process_order_item_source: ProcessOrderItemSource,
 }
-struct FunctionGroup0Results {
+
+// Keep fallible field extraction out of the async initialization state machine.
+struct ServiceFunctionsBuilder {
+    get_inventory_item_data: Option<Arc<GetInventoryItemData>>,
+    get_inventory_item_error: Option<Arc<GetInventoryItemError>>,
+    process_order_item_source: Option<ProcessOrderItemSource>,
+}
+struct FunctionCompletionPart0 {
+    get_inventory_item_data: Arc<GetInventoryItemData>,
+    get_inventory_item_error: Arc<GetInventoryItemError>,
+    process_order_item_source: ProcessOrderItemSource,
+}
+
+impl ServiceFunctionsBuilder {
+    #[inline(never)]
+    fn new() -> Box<Self> {
+        Box::new(Self {
+            get_inventory_item_data: None,
+            get_inventory_item_error: None,
+            process_order_item_source: None,
+        })
+    }
+    #[inline(never)]
+    fn store_default_group(&mut self, mut results: Box<DefaultFunctionGroupResults>) {
+        self.store_default_group_part_0(&mut results);
+    }
+    #[inline(never)]
+    fn store_default_group_part_0(&mut self, results: &mut DefaultFunctionGroupResults) {
+        self.get_inventory_item_data = results.get_inventory_item_data.take();
+        self.get_inventory_item_error = results.get_inventory_item_error.take();
+        self.process_order_item_source = results.process_order_item_source.take();
+    }
+    #[inline(never)]
+    fn complete_part_0(&mut self) -> RuntimeResult<FunctionCompletionPart0> {
+        Ok(FunctionCompletionPart0 {
+            get_inventory_item_data: self.get_inventory_item_data.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker get_inventory_item_data failed without an error".to_owned(),
+            ))?,
+            get_inventory_item_error: self.get_inventory_item_error.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker get_inventory_item_error failed without an error".to_owned(),
+            ))?,
+            process_order_item_source: self.process_order_item_source.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker process_order_item_source failed without an error".to_owned(),
+            ))?,
+        })
+    }
+
+    #[inline(never)]
+    fn finish(mut self: Box<Self>) -> RuntimeResult<ServiceFunctions> {
+        let part_0 = self.complete_part_0()?;
+        Ok(ServiceFunctions {
+            get_inventory_item_data: part_0.get_inventory_item_data,
+            get_inventory_item_error: part_0.get_inventory_item_error,
+            process_order_item_source: part_0.process_order_item_source,
+        })
+    }
+}
+struct DefaultFunctionGroupResults {
     get_inventory_item_data: Option<Arc<GetInventoryItemData>>,
     get_inventory_item_error: Option<Arc<GetInventoryItemError>>,
     process_order_item_source: Option<ProcessOrderItemSource>,
 }
 
-fn init_function_group_0(
+#[inline(never)]
+fn init_default_group(
     maker_group_context: MessageContext,
     environment: RuntimeEnvironment,
     makers: &ServiceMakers,
     maker_error_sender: mpsc::Sender<RuntimeError>,
-) -> Pin<Box<dyn Future<Output = FunctionGroup0Results> + Send>> {
+) -> Pin<Box<dyn Future<Output = Box<DefaultFunctionGroupResults>> + Send>> {
     let get_inventory_item_data_maker = makers.get_inventory_item_data.clone();
     let get_inventory_item_error_maker = makers.get_inventory_item_error.clone();
     let process_order_item_source_maker = makers.process_order_item_source.clone();
@@ -92,11 +150,11 @@ fn init_function_group_0(
             Box::pin(async { process_order_item_source = process_order_item_source_future.await; }),
         ];
         futures_util::future::join_all(maker_futures).await;
-        FunctionGroup0Results {
+        Box::new(DefaultFunctionGroupResults {
             get_inventory_item_data,
             get_inventory_item_error,
             process_order_item_source,
-        }
+        })
     })
 }
 
@@ -107,9 +165,10 @@ impl ServiceFunctions {
         makers: &ServiceMakers,
     ) -> RuntimeResult<Self> {
         let _ = (&context, &environment, makers);
+        let mut builder = ServiceFunctionsBuilder::new();
         let maker_group_context = context.child();
         let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
-        let group_0 = init_function_group_0(
+        let default_group = init_default_group(
             maker_group_context.clone(), environment.clone(), makers, maker_error_sender.clone(),
         ).await;
         maker_group_context.cancel();
@@ -117,27 +176,11 @@ impl ServiceFunctions {
         if let Ok(error) = maker_error_receiver.try_recv() {
             return Err(error);
         }
-        Ok(Self {
-            get_inventory_item_data: group_0.get_inventory_item_data.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker get_inventory_item_data failed without an error".to_owned(),
-            ))?,
-            get_inventory_item_error: group_0.get_inventory_item_error.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker get_inventory_item_error failed without an error".to_owned(),
-            ))?,
-            process_order_item_source: group_0.process_order_item_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker process_order_item_source failed without an error".to_owned(),
-            ))?,
-        })
+        builder.store_default_group(default_group);
+        builder.finish()
     }
 }
 
 pub struct ServiceHandlers {
     pub process_order_item_source: ProcessOrderItemSource,
-}
-
-
-impl ServiceHandlers {
-    pub fn reload(&self, config: &Config) {
-        let _ = config;
-    }
 }

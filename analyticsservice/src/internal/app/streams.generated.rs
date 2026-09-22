@@ -16,7 +16,6 @@ where
     }
 }
 
-
 pub struct ServiceStreams {
     pub analytics_schedule: Arc<InputStream<String, (), String>>,
     pub consume_order_processed: Arc<InputStream<OrderProcessed, OrderProcessed, String>>,
@@ -54,6 +53,101 @@ pub struct ServiceStreams {
     pub write_substream_analytics: Arc<SinkStream<AnalyticsResult, String>>,
 }
 
+// Partial state exists only while the graph is being constructed.
+#[derive(Default)]
+struct ServiceStreamsBuilder {
+    analytics_schedule: Option<Arc<InputStream<String, (), String>>>,
+    consume_order_processed: Option<Arc<InputStream<OrderProcessed, OrderProcessed, String>>>,
+    analytics_orders: Option<Arc<InputStream<AnalyticsEvent, (), String>>>,
+    analytics_payments: Option<Arc<InputStream<AnalyticsEvent, (), String>>>,
+    analytics_shipments: Option<Arc<InputStream<AnalyticsEvent, (), String>>>,
+    cycle_analytics_input: Option<Arc<InputStream<AnalyticsEvent, (), String>>>,
+    substream_analytics_input: Option<Arc<InputStream<AnalyticsEvent, (), String>>>,
+    cycle_analytics_link: Option<Arc<LinkStream<AnalyticsEvent>>>,
+    count_order_processed: Option<Stream<OrderProcessed>>,
+    split_analytics_orders: Option<[Stream<AnalyticsEvent>; 2]>,
+    split_analytics_payments: Option<[Stream<AnalyticsEvent>; 2]>,
+    merge_cycle_analytics: Option<Stream<AnalyticsEvent>>,
+    advance_cycle_analytics: Option<Stream<AnalyticsEvent>>,
+    split_cycle_analytics: Option<[Stream<AnalyticsEvent>; 2]>,
+    complete_cycle_analytics: Option<Stream<AnalyticsEvent>>,
+    continue_cycle_analytics: Option<Stream<AnalyticsEvent>>,
+    write_cycle_analytics: Option<Arc<SinkStream<AnalyticsEvent, String>>>,
+    key_orders_for_join: Option<Stream<KeyValue<String, AnalyticsEvent>>>,
+    key_payments_for_join: Option<Stream<KeyValue<String, AnalyticsEvent>>>,
+    join_order_payment_analytics: Option<Stream<AnalyticsResult>>,
+    write_joined_analytics: Option<Arc<SinkStream<AnalyticsResult, String>>>,
+    key_orders_for_multi_join: Option<Stream<KeyValue<String, AnalyticsEvent>>>,
+    key_payments_for_multi_join: Option<Stream<KeyValue<String, AnalyticsEvent>>>,
+    key_shipments_for_multi_join: Option<Stream<KeyValue<String, AnalyticsEvent>>>,
+    multi_join_analytics_events: Option<Arc<MultiJoinStream<String, AnalyticsResult, Arc<MultiJoinAnalyticsEvents>>>>,
+    route_analytics_result: Option<TypedCaseStream<AnalyticsResult, GeneratedSharedCaseFunction<RouteAnalyticsResult>>>,
+    high_value_analytics: Option<Stream<AnalyticsResult>>,
+    standard_analytics: Option<Stream<AnalyticsResult>>,
+    write_high_value_analytics: Option<Arc<SinkStream<AnalyticsResult, String>>>,
+    write_standard_analytics: Option<Arc<SinkStream<AnalyticsResult, String>>>,
+    analyze_analytics_substream: Option<Arc<SubStream<AnalyticsEvent, AnalyticsResult>>>,
+    build_substream_analytics_result: Option<Stream<AnalyticsResult>>,
+    invoke_analytics_substream: Option<Stream<AnalyticsResult>>,
+    write_substream_analytics: Option<Arc<SinkStream<AnalyticsResult, String>>>,
+}
+
+#[inline(never)]
+fn stream_builder_ref<'a, T>(value: &'a Option<T>, name: &str) -> RuntimeResult<&'a T> {
+    value.as_ref().ok_or_else(|| RuntimeError::InvalidConfiguration(
+        format!("stream {name} is required before it has been initialized"),
+    ))
+}
+
+#[inline(never)]
+fn stream_builder_take<T>(value: &mut Option<T>, name: &str) -> RuntimeResult<T> {
+    value.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+        format!("stream {name} was not initialized"),
+    ))
+}
+
+
+struct StreamCompletionPart0 {
+    analytics_schedule: Arc<InputStream<String, (), String>>,
+    consume_order_processed: Arc<InputStream<OrderProcessed, OrderProcessed, String>>,
+    analytics_orders: Arc<InputStream<AnalyticsEvent, (), String>>,
+    analytics_payments: Arc<InputStream<AnalyticsEvent, (), String>>,
+    analytics_shipments: Arc<InputStream<AnalyticsEvent, (), String>>,
+    cycle_analytics_input: Arc<InputStream<AnalyticsEvent, (), String>>,
+    substream_analytics_input: Arc<InputStream<AnalyticsEvent, (), String>>,
+    cycle_analytics_link: Arc<LinkStream<AnalyticsEvent>>,
+    count_order_processed: Stream<OrderProcessed>,
+    split_analytics_orders: [Stream<AnalyticsEvent>; 2],
+    split_analytics_payments: [Stream<AnalyticsEvent>; 2],
+    merge_cycle_analytics: Stream<AnalyticsEvent>,
+    advance_cycle_analytics: Stream<AnalyticsEvent>,
+    split_cycle_analytics: [Stream<AnalyticsEvent>; 2],
+    complete_cycle_analytics: Stream<AnalyticsEvent>,
+    continue_cycle_analytics: Stream<AnalyticsEvent>,
+    write_cycle_analytics: Arc<SinkStream<AnalyticsEvent, String>>,
+    key_orders_for_join: Stream<KeyValue<String, AnalyticsEvent>>,
+    key_payments_for_join: Stream<KeyValue<String, AnalyticsEvent>>,
+    join_order_payment_analytics: Stream<AnalyticsResult>,
+    write_joined_analytics: Arc<SinkStream<AnalyticsResult, String>>,
+    key_orders_for_multi_join: Stream<KeyValue<String, AnalyticsEvent>>,
+    key_payments_for_multi_join: Stream<KeyValue<String, AnalyticsEvent>>,
+    key_shipments_for_multi_join: Stream<KeyValue<String, AnalyticsEvent>>,
+    multi_join_analytics_events: Arc<MultiJoinStream<String, AnalyticsResult, Arc<MultiJoinAnalyticsEvents>>>,
+    route_analytics_result: TypedCaseStream<AnalyticsResult, GeneratedSharedCaseFunction<RouteAnalyticsResult>>,
+    high_value_analytics: Stream<AnalyticsResult>,
+    standard_analytics: Stream<AnalyticsResult>,
+    write_high_value_analytics: Arc<SinkStream<AnalyticsResult, String>>,
+    write_standard_analytics: Arc<SinkStream<AnalyticsResult, String>>,
+    analyze_analytics_substream: Arc<SubStream<AnalyticsEvent, AnalyticsResult>>,
+    build_substream_analytics_result: Stream<AnalyticsResult>,
+}
+
+struct StreamCompletionPart1 {
+    invoke_analytics_substream: Stream<AnalyticsResult>,
+    write_substream_analytics: Arc<SinkStream<AnalyticsResult, String>>,
+}
+
+
 impl ServiceStreams {
     #[inline(never)]
     pub fn init_streams(
@@ -62,93 +156,280 @@ impl ServiceStreams {
         functions: &ServiceFunctions,
     ) -> RuntimeResult<Self> {
         let _ = (config, environment, functions);
-    let cycle_analytics_link = LinkStream::<AnalyticsEvent>::make(&config.streams.cycle_analytics_link, environment.clone());
-    let analytics_schedule = Arc::new(InputStream::<String, (), String>::new(&config.streams.analytics_schedule, environment.clone()));
-    let consume_order_processed = Arc::new(InputStream::<OrderProcessed, OrderProcessed, String>::new(&config.streams.consume_order_processed, environment.clone()));
-    let (count_order_processed, count_order_processed_error) = consume_order_processed.stream().process(&config.streams.count_order_processed, functions.count_order_processed.clone())?;
-    let _ = &count_order_processed_error;
-    let analytics_orders = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.analytics_orders, environment.clone()));
-    let analytics_payments = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.analytics_payments, environment.clone()));
-    let analytics_shipments = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.analytics_shipments, environment.clone()));
-    let split_analytics_orders = analytics_orders.stream().split(&config.streams.split_analytics_orders)?;
-    let [key_orders_for_join_branch, key_orders_for_multi_join_branch] = split_analytics_orders.clone();
-    let split_analytics_payments = analytics_payments.stream().split(&config.streams.split_analytics_payments)?;
-    let [key_payments_for_join_branch, key_payments_for_multi_join_branch] = split_analytics_payments.clone();
-    let cycle_analytics_input = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.cycle_analytics_input, environment.clone()));
-    let merge_cycle_analytics = cycle_analytics_input.stream().merge(&config.streams.merge_cycle_analytics, &[cycle_analytics_link.stream().clone()])?;
-    let advance_cycle_analytics = merge_cycle_analytics.map(&config.streams.advance_cycle_analytics, functions.advance_cycle_analytics.clone())?;
-    let split_cycle_analytics = advance_cycle_analytics.split(&config.streams.split_cycle_analytics)?;
-    let [complete_cycle_analytics_branch, continue_cycle_analytics_branch] = split_cycle_analytics.clone();
-    let complete_cycle_analytics = complete_cycle_analytics_branch.filter(&config.streams.complete_cycle_analytics, functions.complete_cycle_analytics.clone())?;
-    let continue_cycle_analytics = continue_cycle_analytics_branch.filter(&config.streams.continue_cycle_analytics, functions.continue_cycle_analytics.clone())?;
-    let write_cycle_analytics = complete_cycle_analytics.sink::<String>(&config.streams.write_cycle_analytics)?;
-    let key_orders_for_join = key_orders_for_join_branch.key_by(&config.streams.key_orders_for_join, functions.key_orders_for_join.clone())?;
-    let key_payments_for_join = key_payments_for_join_branch.key_by(&config.streams.key_payments_for_join, functions.key_payments_for_join.clone())?;
-    let join_order_payment_analytics = key_orders_for_join.join(&config.streams.join_order_payment_analytics, &key_payments_for_join, functions.join_order_payment_analytics.clone())?;
-    let write_joined_analytics = join_order_payment_analytics.sink::<String>(&config.streams.write_joined_analytics)?;
-    let key_orders_for_multi_join = key_orders_for_multi_join_branch.key_by(&config.streams.key_orders_for_multi_join, functions.key_orders_for_multi_join.clone())?;
-    let key_payments_for_multi_join = key_payments_for_multi_join_branch.key_by(&config.streams.key_payments_for_multi_join, functions.key_payments_for_multi_join.clone())?;
-    let key_shipments_for_multi_join = analytics_shipments.stream().key_by(&config.streams.key_shipments_for_multi_join, functions.key_shipments_for_multi_join.clone())?;
-    let multi_join_analytics_events = key_orders_for_multi_join.multi_join(&config.streams.multi_join_analytics_events, functions.multi_join_analytics_events.clone())?;
-    multi_join_analytics_events.add(&key_payments_for_multi_join)?;
-    multi_join_analytics_events.add(&key_shipments_for_multi_join)?;
-    let route_analytics_result = multi_join_analytics_events.stream().clone().case(&config.streams.route_analytics_result, GeneratedSharedCaseFunction(
-        functions.route_analytics_result.clone(),
-    ))?;
-    let high_value_analytics = route_analytics_result.when(&config.streams.high_value_analytics);
-    let standard_analytics = route_analytics_result.when(&config.streams.standard_analytics);
-    let write_high_value_analytics = high_value_analytics.sink::<String>(&config.streams.write_high_value_analytics)?;
-    let write_standard_analytics = standard_analytics.sink::<String>(&config.streams.write_standard_analytics)?;
-    let analyze_analytics_substream = Arc::new(SubStream::<AnalyticsEvent, AnalyticsResult>::new(&config.streams.analyze_analytics_substream, environment.clone()));
-    let build_substream_analytics_result = analyze_analytics_substream.stream().map(&config.streams.build_substream_analytics_result, functions.build_substream_analytics_result.clone())?;
-    let substream_analytics_input = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.substream_analytics_input, environment.clone()));
-    let invoke_analytics_substream = substream_analytics_input.stream().map(&config.streams.invoke_analytics_substream, functions.invoke_analytics_substream.clone())?;
-    let write_substream_analytics = invoke_analytics_substream.sink::<String>(&config.streams.write_substream_analytics)?;
-
-        let streams = Self {
-            analytics_schedule: analytics_schedule,
-            consume_order_processed: consume_order_processed,
-            analytics_orders: analytics_orders,
-            analytics_payments: analytics_payments,
-            analytics_shipments: analytics_shipments,
-            cycle_analytics_input: cycle_analytics_input,
-            substream_analytics_input: substream_analytics_input,
-            cycle_analytics_link,
-            count_order_processed,
-            split_analytics_orders,
-            split_analytics_payments,
-            merge_cycle_analytics,
-            advance_cycle_analytics,
-            split_cycle_analytics,
-            complete_cycle_analytics,
-            continue_cycle_analytics,
-            write_cycle_analytics,
-            key_orders_for_join,
-            key_payments_for_join,
-            join_order_payment_analytics,
-            write_joined_analytics,
-            key_orders_for_multi_join,
-            key_payments_for_multi_join,
-            key_shipments_for_multi_join,
-            multi_join_analytics_events,
-            route_analytics_result,
-            high_value_analytics,
-            standard_analytics,
-            write_high_value_analytics,
-            write_standard_analytics,
-            analyze_analytics_substream,
-            build_substream_analytics_result,
-            invoke_analytics_substream,
-            write_substream_analytics,
-        };
+        let mut builder = ServiceStreamsBuilder::default();
+        builder.init_part_0(config, environment, functions)?;
+        builder.init_part_1(config, environment, functions)?;
+        let streams = builder.finish()?;
         streams.build()?;
         Ok(streams)
     }
 
     pub fn build(&self) -> RuntimeResult<()> {
+        self.bind_part_0()?;
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn bind_part_0(&self) -> RuntimeResult<()> {
         self.consume_order_processed.set_source(&self.count_order_processed)?;
         self.cycle_analytics_link.set_source(&self.continue_cycle_analytics)?;
         self.analyze_analytics_substream.set_source(&self.build_substream_analytics_result)?;
         Ok(())
+    }
+
+}
+
+impl ServiceStreamsBuilder {
+
+    #[inline(never)]
+    fn init_part_0(
+        &mut self,
+        config: &Config,
+        environment: &RuntimeEnvironment,
+        functions: &ServiceFunctions,
+    ) -> RuntimeResult<()> {
+        let _ = (config, environment, functions);
+        {
+            let node = LinkStream::<AnalyticsEvent>::make(&config.streams.cycle_analytics_link, environment.clone());
+            self.cycle_analytics_link = Some(node);
+        }
+        {
+            let node = Arc::new(InputStream::<String, (), String>::new(&config.streams.analytics_schedule, environment.clone()));
+            self.analytics_schedule = Some(node);
+        }
+        {
+            let node = Arc::new(InputStream::<OrderProcessed, OrderProcessed, String>::new(&config.streams.consume_order_processed, environment.clone()));
+            self.consume_order_processed = Some(node);
+        }
+        {
+            let (node, error_stream) = (*stream_builder_ref(&self.consume_order_processed, "consume_order_processed")?).stream().process(&config.streams.count_order_processed, functions.count_order_processed.clone())?;
+            let _ = error_stream;
+            self.count_order_processed = Some(node);
+        }
+        {
+            let node = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.analytics_orders, environment.clone()));
+            self.analytics_orders = Some(node);
+        }
+        {
+            let node = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.analytics_payments, environment.clone()));
+            self.analytics_payments = Some(node);
+        }
+        {
+            let node = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.analytics_shipments, environment.clone()));
+            self.analytics_shipments = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.analytics_orders, "analytics_orders")?).stream().split(&config.streams.split_analytics_orders)?;
+            self.split_analytics_orders = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.analytics_payments, "analytics_payments")?).stream().split(&config.streams.split_analytics_payments)?;
+            self.split_analytics_payments = Some(node);
+        }
+        {
+            let node = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.cycle_analytics_input, environment.clone()));
+            self.cycle_analytics_input = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.cycle_analytics_input, "cycle_analytics_input")?).stream().merge(&config.streams.merge_cycle_analytics, &[(*stream_builder_ref(&self.cycle_analytics_link, "cycle_analytics_link")?).stream().clone()])?;
+            self.merge_cycle_analytics = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.merge_cycle_analytics, "merge_cycle_analytics")?).map(&config.streams.advance_cycle_analytics, functions.advance_cycle_analytics.clone())?;
+            self.advance_cycle_analytics = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.advance_cycle_analytics, "advance_cycle_analytics")?).split(&config.streams.split_cycle_analytics)?;
+            self.split_cycle_analytics = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.split_cycle_analytics, "split_cycle_analytics")?)[0].filter(&config.streams.complete_cycle_analytics, functions.complete_cycle_analytics.clone())?;
+            self.complete_cycle_analytics = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.split_cycle_analytics, "split_cycle_analytics")?)[1].filter(&config.streams.continue_cycle_analytics, functions.continue_cycle_analytics.clone())?;
+            self.continue_cycle_analytics = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.complete_cycle_analytics, "complete_cycle_analytics")?).sink::<String>(&config.streams.write_cycle_analytics)?;
+            self.write_cycle_analytics = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.split_analytics_orders, "split_analytics_orders")?)[0].key_by(&config.streams.key_orders_for_join, functions.key_orders_for_join.clone())?;
+            self.key_orders_for_join = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.split_analytics_payments, "split_analytics_payments")?)[0].key_by(&config.streams.key_payments_for_join, functions.key_payments_for_join.clone())?;
+            self.key_payments_for_join = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.key_orders_for_join, "key_orders_for_join")?).join(&config.streams.join_order_payment_analytics, &(*stream_builder_ref(&self.key_payments_for_join, "key_payments_for_join")?), functions.join_order_payment_analytics.clone())?;
+            self.join_order_payment_analytics = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.join_order_payment_analytics, "join_order_payment_analytics")?).sink::<String>(&config.streams.write_joined_analytics)?;
+            self.write_joined_analytics = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.split_analytics_orders, "split_analytics_orders")?)[1].key_by(&config.streams.key_orders_for_multi_join, functions.key_orders_for_multi_join.clone())?;
+            self.key_orders_for_multi_join = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.split_analytics_payments, "split_analytics_payments")?)[1].key_by(&config.streams.key_payments_for_multi_join, functions.key_payments_for_multi_join.clone())?;
+            self.key_payments_for_multi_join = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.analytics_shipments, "analytics_shipments")?).stream().key_by(&config.streams.key_shipments_for_multi_join, functions.key_shipments_for_multi_join.clone())?;
+            self.key_shipments_for_multi_join = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.key_orders_for_multi_join, "key_orders_for_multi_join")?).multi_join(&config.streams.multi_join_analytics_events, functions.multi_join_analytics_events.clone())?;
+            node.add(&(*stream_builder_ref(&self.key_payments_for_multi_join, "key_payments_for_multi_join")?))?;
+            node.add(&(*stream_builder_ref(&self.key_shipments_for_multi_join, "key_shipments_for_multi_join")?))?;
+            self.multi_join_analytics_events = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.multi_join_analytics_events, "multi_join_analytics_events")?).stream().clone().case(&config.streams.route_analytics_result, GeneratedSharedCaseFunction(
+                functions.route_analytics_result.clone(),
+            ))?;
+            self.route_analytics_result = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.route_analytics_result, "route_analytics_result")?).when(&config.streams.high_value_analytics);
+            self.high_value_analytics = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.route_analytics_result, "route_analytics_result")?).when(&config.streams.standard_analytics);
+            self.standard_analytics = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.high_value_analytics, "high_value_analytics")?).sink::<String>(&config.streams.write_high_value_analytics)?;
+            self.write_high_value_analytics = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.standard_analytics, "standard_analytics")?).sink::<String>(&config.streams.write_standard_analytics)?;
+            self.write_standard_analytics = Some(node);
+        }
+        {
+            let node = Arc::new(SubStream::<AnalyticsEvent, AnalyticsResult>::new(&config.streams.analyze_analytics_substream, environment.clone()));
+            self.analyze_analytics_substream = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.analyze_analytics_substream, "analyze_analytics_substream")?).stream().map(&config.streams.build_substream_analytics_result, functions.build_substream_analytics_result.clone())?;
+            self.build_substream_analytics_result = Some(node);
+        }
+        {
+            let node = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.substream_analytics_input, environment.clone()));
+            self.substream_analytics_input = Some(node);
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn init_part_1(
+        &mut self,
+        config: &Config,
+        environment: &RuntimeEnvironment,
+        functions: &ServiceFunctions,
+    ) -> RuntimeResult<()> {
+        let _ = (config, environment, functions);
+        {
+            let node = (*stream_builder_ref(&self.substream_analytics_input, "substream_analytics_input")?).stream().map(&config.streams.invoke_analytics_substream, functions.invoke_analytics_substream.clone())?;
+            self.invoke_analytics_substream = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.invoke_analytics_substream, "invoke_analytics_substream")?).sink::<String>(&config.streams.write_substream_analytics)?;
+            self.write_substream_analytics = Some(node);
+        }
+        Ok(())
+    }
+
+
+    #[inline(never)]
+    fn complete_part_0(&mut self) -> RuntimeResult<StreamCompletionPart0> {
+        Ok(StreamCompletionPart0 {
+            analytics_schedule: stream_builder_take(&mut self.analytics_schedule, "analytics_schedule")?,
+            consume_order_processed: stream_builder_take(&mut self.consume_order_processed, "consume_order_processed")?,
+            analytics_orders: stream_builder_take(&mut self.analytics_orders, "analytics_orders")?,
+            analytics_payments: stream_builder_take(&mut self.analytics_payments, "analytics_payments")?,
+            analytics_shipments: stream_builder_take(&mut self.analytics_shipments, "analytics_shipments")?,
+            cycle_analytics_input: stream_builder_take(&mut self.cycle_analytics_input, "cycle_analytics_input")?,
+            substream_analytics_input: stream_builder_take(&mut self.substream_analytics_input, "substream_analytics_input")?,
+            cycle_analytics_link: stream_builder_take(&mut self.cycle_analytics_link, "cycle_analytics_link")?,
+            count_order_processed: stream_builder_take(&mut self.count_order_processed, "count_order_processed")?,
+            split_analytics_orders: stream_builder_take(&mut self.split_analytics_orders, "split_analytics_orders")?,
+            split_analytics_payments: stream_builder_take(&mut self.split_analytics_payments, "split_analytics_payments")?,
+            merge_cycle_analytics: stream_builder_take(&mut self.merge_cycle_analytics, "merge_cycle_analytics")?,
+            advance_cycle_analytics: stream_builder_take(&mut self.advance_cycle_analytics, "advance_cycle_analytics")?,
+            split_cycle_analytics: stream_builder_take(&mut self.split_cycle_analytics, "split_cycle_analytics")?,
+            complete_cycle_analytics: stream_builder_take(&mut self.complete_cycle_analytics, "complete_cycle_analytics")?,
+            continue_cycle_analytics: stream_builder_take(&mut self.continue_cycle_analytics, "continue_cycle_analytics")?,
+            write_cycle_analytics: stream_builder_take(&mut self.write_cycle_analytics, "write_cycle_analytics")?,
+            key_orders_for_join: stream_builder_take(&mut self.key_orders_for_join, "key_orders_for_join")?,
+            key_payments_for_join: stream_builder_take(&mut self.key_payments_for_join, "key_payments_for_join")?,
+            join_order_payment_analytics: stream_builder_take(&mut self.join_order_payment_analytics, "join_order_payment_analytics")?,
+            write_joined_analytics: stream_builder_take(&mut self.write_joined_analytics, "write_joined_analytics")?,
+            key_orders_for_multi_join: stream_builder_take(&mut self.key_orders_for_multi_join, "key_orders_for_multi_join")?,
+            key_payments_for_multi_join: stream_builder_take(&mut self.key_payments_for_multi_join, "key_payments_for_multi_join")?,
+            key_shipments_for_multi_join: stream_builder_take(&mut self.key_shipments_for_multi_join, "key_shipments_for_multi_join")?,
+            multi_join_analytics_events: stream_builder_take(&mut self.multi_join_analytics_events, "multi_join_analytics_events")?,
+            route_analytics_result: stream_builder_take(&mut self.route_analytics_result, "route_analytics_result")?,
+            high_value_analytics: stream_builder_take(&mut self.high_value_analytics, "high_value_analytics")?,
+            standard_analytics: stream_builder_take(&mut self.standard_analytics, "standard_analytics")?,
+            write_high_value_analytics: stream_builder_take(&mut self.write_high_value_analytics, "write_high_value_analytics")?,
+            write_standard_analytics: stream_builder_take(&mut self.write_standard_analytics, "write_standard_analytics")?,
+            analyze_analytics_substream: stream_builder_take(&mut self.analyze_analytics_substream, "analyze_analytics_substream")?,
+            build_substream_analytics_result: stream_builder_take(&mut self.build_substream_analytics_result, "build_substream_analytics_result")?,
+        })
+    }
+
+    #[inline(never)]
+    fn complete_part_1(&mut self) -> RuntimeResult<StreamCompletionPart1> {
+        Ok(StreamCompletionPart1 {
+            invoke_analytics_substream: stream_builder_take(&mut self.invoke_analytics_substream, "invoke_analytics_substream")?,
+            write_substream_analytics: stream_builder_take(&mut self.write_substream_analytics, "write_substream_analytics")?,
+        })
+    }
+
+    #[inline(never)]
+    fn finish(mut self) -> RuntimeResult<ServiceStreams> {
+        let part_0 = self.complete_part_0()?;
+        let part_1 = self.complete_part_1()?;
+        Ok(ServiceStreams {
+            analytics_schedule: part_0.analytics_schedule,
+            consume_order_processed: part_0.consume_order_processed,
+            analytics_orders: part_0.analytics_orders,
+            analytics_payments: part_0.analytics_payments,
+            analytics_shipments: part_0.analytics_shipments,
+            cycle_analytics_input: part_0.cycle_analytics_input,
+            substream_analytics_input: part_0.substream_analytics_input,
+            cycle_analytics_link: part_0.cycle_analytics_link,
+            count_order_processed: part_0.count_order_processed,
+            split_analytics_orders: part_0.split_analytics_orders,
+            split_analytics_payments: part_0.split_analytics_payments,
+            merge_cycle_analytics: part_0.merge_cycle_analytics,
+            advance_cycle_analytics: part_0.advance_cycle_analytics,
+            split_cycle_analytics: part_0.split_cycle_analytics,
+            complete_cycle_analytics: part_0.complete_cycle_analytics,
+            continue_cycle_analytics: part_0.continue_cycle_analytics,
+            write_cycle_analytics: part_0.write_cycle_analytics,
+            key_orders_for_join: part_0.key_orders_for_join,
+            key_payments_for_join: part_0.key_payments_for_join,
+            join_order_payment_analytics: part_0.join_order_payment_analytics,
+            write_joined_analytics: part_0.write_joined_analytics,
+            key_orders_for_multi_join: part_0.key_orders_for_multi_join,
+            key_payments_for_multi_join: part_0.key_payments_for_multi_join,
+            key_shipments_for_multi_join: part_0.key_shipments_for_multi_join,
+            multi_join_analytics_events: part_0.multi_join_analytics_events,
+            route_analytics_result: part_0.route_analytics_result,
+            high_value_analytics: part_0.high_value_analytics,
+            standard_analytics: part_0.standard_analytics,
+            write_high_value_analytics: part_0.write_high_value_analytics,
+            write_standard_analytics: part_0.write_standard_analytics,
+            analyze_analytics_substream: part_0.analyze_analytics_substream,
+            build_substream_analytics_result: part_0.build_substream_analytics_result,
+            invoke_analytics_substream: part_1.invoke_analytics_substream,
+            write_substream_analytics: part_1.write_substream_analytics,
+        })
     }
 }

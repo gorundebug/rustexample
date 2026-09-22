@@ -74,7 +74,7 @@ pub const SUBSTREAM_ANALYTICS_RESULT_ENDPOINT_ID: i32 = 10;
 pub const ANALYTICS_SCHEDULE_ENDPOINT_ID: i32 = 12;
 pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 14;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Streams {
     pub analytics_schedule: InputStreamConfig,
@@ -111,6 +111,348 @@ pub struct Streams {
     pub invoke_analytics_substream: MapStreamConfig,
     pub substream_analytics_input: InputStreamConfig,
     pub write_substream_analytics: SinkStreamConfig,
+}
+
+// Preserve Serde's field order for positional formats and diagnostics. The
+// sorted lookup table avoids generating a giant string-matching function.
+const STREAM_CONFIG_FIELDS: &[&str] = &[
+    "analyticsSchedule",
+    "consumeOrderProcessed",
+    "countOrderProcessed",
+    "analyticsOrders",
+    "analyticsPayments",
+    "analyticsShipments",
+    "splitAnalyticsOrders",
+    "splitAnalyticsPayments",
+    "advanceCycleAnalytics",
+    "completeCycleAnalytics",
+    "continueCycleAnalytics",
+    "cycleAnalyticsInput",
+    "cycleAnalyticsLink",
+    "mergeCycleAnalytics",
+    "splitCycleAnalytics",
+    "writeCycleAnalytics",
+    "joinOrderPaymentAnalytics",
+    "keyOrdersForJoin",
+    "keyPaymentsForJoin",
+    "writeJoinedAnalytics",
+    "highValueAnalytics",
+    "keyOrdersForMultiJoin",
+    "keyPaymentsForMultiJoin",
+    "keyShipmentsForMultiJoin",
+    "multiJoinAnalyticsEvents",
+    "routeAnalyticsResult",
+    "standardAnalytics",
+    "writeHighValueAnalytics",
+    "writeStandardAnalytics",
+    "analyzeAnalyticsSubstream",
+    "buildSubstreamAnalyticsResult",
+    "invokeAnalyticsSubstream",
+    "substreamAnalyticsInput",
+    "writeSubstreamAnalytics",
+];
+
+const STREAM_CONFIG_FIELD_LOOKUP: &[(&str, usize)] = &[
+    ("advanceCycleAnalytics", 8),
+    ("analyticsOrders", 3),
+    ("analyticsPayments", 4),
+    ("analyticsSchedule", 0),
+    ("analyticsShipments", 5),
+    ("analyzeAnalyticsSubstream", 29),
+    ("buildSubstreamAnalyticsResult", 30),
+    ("completeCycleAnalytics", 9),
+    ("consumeOrderProcessed", 1),
+    ("continueCycleAnalytics", 10),
+    ("countOrderProcessed", 2),
+    ("cycleAnalyticsInput", 11),
+    ("cycleAnalyticsLink", 12),
+    ("highValueAnalytics", 20),
+    ("invokeAnalyticsSubstream", 31),
+    ("joinOrderPaymentAnalytics", 16),
+    ("keyOrdersForJoin", 17),
+    ("keyOrdersForMultiJoin", 21),
+    ("keyPaymentsForJoin", 18),
+    ("keyPaymentsForMultiJoin", 22),
+    ("keyShipmentsForMultiJoin", 23),
+    ("mergeCycleAnalytics", 13),
+    ("multiJoinAnalyticsEvents", 24),
+    ("routeAnalyticsResult", 25),
+    ("splitAnalyticsOrders", 6),
+    ("splitAnalyticsPayments", 7),
+    ("splitCycleAnalytics", 14),
+    ("standardAnalytics", 26),
+    ("substreamAnalyticsInput", 32),
+    ("writeCycleAnalytics", 15),
+    ("writeHighValueAnalytics", 27),
+    ("writeJoinedAnalytics", 19),
+    ("writeStandardAnalytics", 28),
+    ("writeSubstreamAnalytics", 33),
+];
+
+struct StreamConfigField(Option<usize>);
+
+impl<'de> Deserialize<'de> for StreamConfigField {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct FieldVisitor;
+        impl<'de> serde::de::Visitor<'de> for FieldVisitor {
+            type Value = StreamConfigField;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("field identifier")
+            }
+
+            fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                self.visit_bytes(value.as_bytes())
+            }
+
+            fn visit_bytes<E: serde::de::Error>(self, value: &[u8]) -> Result<Self::Value, E> {
+                let index = STREAM_CONFIG_FIELD_LOOKUP
+                    .binary_search_by(|entry| entry.0.as_bytes().cmp(value))
+                    .ok()
+                    .map(|index| STREAM_CONFIG_FIELD_LOOKUP[index].1);
+                Ok(StreamConfigField(index))
+            }
+
+            fn visit_u64<E: serde::de::Error>(self, value: u64) -> Result<Self::Value, E> {
+                match usize::try_from(value) {
+                    Ok(index) if index < STREAM_CONFIG_FIELDS.len() => Ok(StreamConfigField(Some(index))),
+                    _ => Err(E::invalid_value(
+                        serde::de::Unexpected::Unsigned(value),
+                        &"field index 0 <= i < 34",
+                    )),
+                }
+            }
+        }
+        deserializer.deserialize_identifier(FieldVisitor)
+    }
+}
+
+struct StreamsVisitor<'a> {
+    target: &'a mut Streams,
+}
+
+impl<'de> serde::de::Visitor<'de> for StreamsVisitor<'_> {
+    type Value = ();
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("struct Streams")
+    }
+
+    #[inline(never)]
+    fn visit_map<M: serde::de::MapAccess<'de>>(self, mut map: M) -> Result<(), M::Error> {
+        let mut seen = [false; 34];
+        while let Some(StreamConfigField(index)) = map.next_key::<StreamConfigField>()? {
+            if let Some(index) = index {
+                if seen[index] {
+                    return Err(serde::de::Error::duplicate_field(STREAM_CONFIG_FIELDS[index]));
+                }
+                seen[index] = true;
+                self.target.read_stream_map_field(index, &mut map)?;
+            } else {
+                let _: serde::de::IgnoredAny = map.next_value()?;
+            }
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn visit_seq<S: serde::de::SeqAccess<'de>>(self, mut seq: S) -> Result<(), S::Error> {
+        self.target.read_stream_seq_part_0(&mut seq)?;
+        self.target.read_stream_seq_part_1(&mut seq)?;
+        Ok(())
+    }
+}
+
+impl<'de> Deserialize<'de> for Streams {
+    #[inline(never)]
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let mut result = Self::default();
+        deserializer.deserialize_struct(
+            "Streams", STREAM_CONFIG_FIELDS, StreamsVisitor { target: &mut result },
+        )?;
+        Ok(result)
+    }
+}
+
+impl Streams {
+    #[inline(never)]
+    fn read_stream_map_field<'de, M: serde::de::MapAccess<'de>>(
+        &mut self, index: usize, map: &mut M,
+    ) -> Result<(), M::Error> {
+        match index / 32 {
+            0 => self.read_stream_map_part_0(index, map),
+            1 => self.read_stream_map_part_1(index, map),
+            _ => unreachable!("stream field index was validated"),
+        }
+    }
+    #[inline(never)]
+    fn read_stream_map_part_0<'de, M: serde::de::MapAccess<'de>>(
+        &mut self, index: usize, map: &mut M,
+    ) -> Result<(), M::Error> {
+        match index {
+            0 => self.analytics_schedule = map.next_value::<InputStreamConfig>()?,
+            1 => self.consume_order_processed = map.next_value::<InputStreamConfig>()?,
+            2 => self.count_order_processed = map.next_value::<ProcessStreamConfig>()?,
+            3 => self.analytics_orders = map.next_value::<InputStreamConfig>()?,
+            4 => self.analytics_payments = map.next_value::<InputStreamConfig>()?,
+            5 => self.analytics_shipments = map.next_value::<InputStreamConfig>()?,
+            6 => self.split_analytics_orders = map.next_value::<SplitStreamConfig>()?,
+            7 => self.split_analytics_payments = map.next_value::<SplitStreamConfig>()?,
+            8 => self.advance_cycle_analytics = map.next_value::<MapStreamConfig>()?,
+            9 => self.complete_cycle_analytics = map.next_value::<FilterStreamConfig>()?,
+            10 => self.continue_cycle_analytics = map.next_value::<FilterStreamConfig>()?,
+            11 => self.cycle_analytics_input = map.next_value::<InputStreamConfig>()?,
+            12 => self.cycle_analytics_link = map.next_value::<CycleLinkStreamConfig>()?,
+            13 => self.merge_cycle_analytics = map.next_value::<MergeStreamConfig>()?,
+            14 => self.split_cycle_analytics = map.next_value::<SplitStreamConfig>()?,
+            15 => self.write_cycle_analytics = map.next_value::<SinkStreamConfig>()?,
+            16 => self.join_order_payment_analytics = map.next_value::<JoinStreamConfig>()?,
+            17 => self.key_orders_for_join = map.next_value::<KeyByStreamConfig>()?,
+            18 => self.key_payments_for_join = map.next_value::<KeyByStreamConfig>()?,
+            19 => self.write_joined_analytics = map.next_value::<SinkStreamConfig>()?,
+            20 => self.high_value_analytics = map.next_value::<WhenStreamConfig>()?,
+            21 => self.key_orders_for_multi_join = map.next_value::<KeyByStreamConfig>()?,
+            22 => self.key_payments_for_multi_join = map.next_value::<KeyByStreamConfig>()?,
+            23 => self.key_shipments_for_multi_join = map.next_value::<KeyByStreamConfig>()?,
+            24 => self.multi_join_analytics_events = map.next_value::<MultiJoinStreamConfig>()?,
+            25 => self.route_analytics_result = map.next_value::<CaseStreamConfig>()?,
+            26 => self.standard_analytics = map.next_value::<WhenStreamConfig>()?,
+            27 => self.write_high_value_analytics = map.next_value::<SinkStreamConfig>()?,
+            28 => self.write_standard_analytics = map.next_value::<SinkStreamConfig>()?,
+            29 => self.analyze_analytics_substream = map.next_value::<SubStreamConfig>()?,
+            30 => self.build_substream_analytics_result = map.next_value::<MapStreamConfig>()?,
+            31 => self.invoke_analytics_substream = map.next_value::<MapStreamConfig>()?,
+            _ => unreachable!("stream field index belongs to another part"),
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn read_stream_seq_part_0<'de, S: serde::de::SeqAccess<'de>>(
+        &mut self, seq: &mut S,
+    ) -> Result<(), S::Error> {
+        if let Some(value) = seq.next_element::<InputStreamConfig>()? {
+            self.analytics_schedule = value;
+        }
+        if let Some(value) = seq.next_element::<InputStreamConfig>()? {
+            self.consume_order_processed = value;
+        }
+        if let Some(value) = seq.next_element::<ProcessStreamConfig>()? {
+            self.count_order_processed = value;
+        }
+        if let Some(value) = seq.next_element::<InputStreamConfig>()? {
+            self.analytics_orders = value;
+        }
+        if let Some(value) = seq.next_element::<InputStreamConfig>()? {
+            self.analytics_payments = value;
+        }
+        if let Some(value) = seq.next_element::<InputStreamConfig>()? {
+            self.analytics_shipments = value;
+        }
+        if let Some(value) = seq.next_element::<SplitStreamConfig>()? {
+            self.split_analytics_orders = value;
+        }
+        if let Some(value) = seq.next_element::<SplitStreamConfig>()? {
+            self.split_analytics_payments = value;
+        }
+        if let Some(value) = seq.next_element::<MapStreamConfig>()? {
+            self.advance_cycle_analytics = value;
+        }
+        if let Some(value) = seq.next_element::<FilterStreamConfig>()? {
+            self.complete_cycle_analytics = value;
+        }
+        if let Some(value) = seq.next_element::<FilterStreamConfig>()? {
+            self.continue_cycle_analytics = value;
+        }
+        if let Some(value) = seq.next_element::<InputStreamConfig>()? {
+            self.cycle_analytics_input = value;
+        }
+        if let Some(value) = seq.next_element::<CycleLinkStreamConfig>()? {
+            self.cycle_analytics_link = value;
+        }
+        if let Some(value) = seq.next_element::<MergeStreamConfig>()? {
+            self.merge_cycle_analytics = value;
+        }
+        if let Some(value) = seq.next_element::<SplitStreamConfig>()? {
+            self.split_cycle_analytics = value;
+        }
+        if let Some(value) = seq.next_element::<SinkStreamConfig>()? {
+            self.write_cycle_analytics = value;
+        }
+        if let Some(value) = seq.next_element::<JoinStreamConfig>()? {
+            self.join_order_payment_analytics = value;
+        }
+        if let Some(value) = seq.next_element::<KeyByStreamConfig>()? {
+            self.key_orders_for_join = value;
+        }
+        if let Some(value) = seq.next_element::<KeyByStreamConfig>()? {
+            self.key_payments_for_join = value;
+        }
+        if let Some(value) = seq.next_element::<SinkStreamConfig>()? {
+            self.write_joined_analytics = value;
+        }
+        if let Some(value) = seq.next_element::<WhenStreamConfig>()? {
+            self.high_value_analytics = value;
+        }
+        if let Some(value) = seq.next_element::<KeyByStreamConfig>()? {
+            self.key_orders_for_multi_join = value;
+        }
+        if let Some(value) = seq.next_element::<KeyByStreamConfig>()? {
+            self.key_payments_for_multi_join = value;
+        }
+        if let Some(value) = seq.next_element::<KeyByStreamConfig>()? {
+            self.key_shipments_for_multi_join = value;
+        }
+        if let Some(value) = seq.next_element::<MultiJoinStreamConfig>()? {
+            self.multi_join_analytics_events = value;
+        }
+        if let Some(value) = seq.next_element::<CaseStreamConfig>()? {
+            self.route_analytics_result = value;
+        }
+        if let Some(value) = seq.next_element::<WhenStreamConfig>()? {
+            self.standard_analytics = value;
+        }
+        if let Some(value) = seq.next_element::<SinkStreamConfig>()? {
+            self.write_high_value_analytics = value;
+        }
+        if let Some(value) = seq.next_element::<SinkStreamConfig>()? {
+            self.write_standard_analytics = value;
+        }
+        if let Some(value) = seq.next_element::<SubStreamConfig>()? {
+            self.analyze_analytics_substream = value;
+        }
+        if let Some(value) = seq.next_element::<MapStreamConfig>()? {
+            self.build_substream_analytics_result = value;
+        }
+        if let Some(value) = seq.next_element::<MapStreamConfig>()? {
+            self.invoke_analytics_substream = value;
+        }
+        Ok(())
+    }
+    #[inline(never)]
+    fn read_stream_map_part_1<'de, M: serde::de::MapAccess<'de>>(
+        &mut self, index: usize, map: &mut M,
+    ) -> Result<(), M::Error> {
+        match index {
+            32 => self.substream_analytics_input = map.next_value::<InputStreamConfig>()?,
+            33 => self.write_substream_analytics = map.next_value::<SinkStreamConfig>()?,
+            _ => unreachable!("stream field index belongs to another part"),
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn read_stream_seq_part_1<'de, S: serde::de::SeqAccess<'de>>(
+        &mut self, seq: &mut S,
+    ) -> Result<(), S::Error> {
+        if let Some(value) = seq.next_element::<InputStreamConfig>()? {
+            self.substream_analytics_input = value;
+        }
+        if let Some(value) = seq.next_element::<SinkStreamConfig>()? {
+            self.write_substream_analytics = value;
+        }
+        Ok(())
+    }
 }
 
 impl Default for Streams {

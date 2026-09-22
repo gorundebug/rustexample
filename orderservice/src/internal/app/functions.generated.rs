@@ -10,28 +10,126 @@ pub struct ServiceFunctions {
     pub map_to_order_processed: Arc<MapToOrderProcessed>,
     pub map_to_order_state: Arc<MapToOrderState>,
     pub order_processed_endpoint_sink: OrderProcessedEndpointSink,
-    pub process_order_item_sink: ProcessOrderItemSink,
+    pub process_order_item_sink: Arc<ProcessOrderItemSink>,
     pub process_order_items: Arc<ProcessOrderItems>,
     pub process_order_source: ProcessOrderSource,
     pub soft_deadline: Arc<SoftDeadline>,
 }
-struct FunctionGroup0Results {
+
+// Keep fallible field extraction out of the async initialization state machine.
+struct ServiceFunctionsBuilder {
     map_order_item_result_to_order_state: Option<Arc<MapOrderItemResultToOrderState>>,
     map_to_order_processed: Option<Arc<MapToOrderProcessed>>,
     map_to_order_state: Option<Arc<MapToOrderState>>,
     order_processed_endpoint_sink: Option<OrderProcessedEndpointSink>,
-    process_order_item_sink: Option<ProcessOrderItemSink>,
+    process_order_item_sink: Option<Arc<ProcessOrderItemSink>>,
+    process_order_items: Option<Arc<ProcessOrderItems>>,
+    process_order_source: Option<ProcessOrderSource>,
+    soft_deadline: Option<Arc<SoftDeadline>>,
+}
+struct FunctionCompletionPart0 {
+    map_order_item_result_to_order_state: Arc<MapOrderItemResultToOrderState>,
+    map_to_order_processed: Arc<MapToOrderProcessed>,
+    map_to_order_state: Arc<MapToOrderState>,
+    order_processed_endpoint_sink: OrderProcessedEndpointSink,
+    process_order_item_sink: Arc<ProcessOrderItemSink>,
+    process_order_items: Arc<ProcessOrderItems>,
+    process_order_source: ProcessOrderSource,
+    soft_deadline: Arc<SoftDeadline>,
+}
+
+impl ServiceFunctionsBuilder {
+    #[inline(never)]
+    fn new() -> Box<Self> {
+        Box::new(Self {
+            map_order_item_result_to_order_state: None,
+            map_to_order_processed: None,
+            map_to_order_state: None,
+            order_processed_endpoint_sink: None,
+            process_order_item_sink: None,
+            process_order_items: None,
+            process_order_source: None,
+            soft_deadline: None,
+        })
+    }
+    #[inline(never)]
+    fn store_default_group(&mut self, mut results: Box<DefaultFunctionGroupResults>) {
+        self.store_default_group_part_0(&mut results);
+    }
+    #[inline(never)]
+    fn store_default_group_part_0(&mut self, results: &mut DefaultFunctionGroupResults) {
+        self.map_order_item_result_to_order_state = results.map_order_item_result_to_order_state.take();
+        self.map_to_order_processed = results.map_to_order_processed.take();
+        self.map_to_order_state = results.map_to_order_state.take();
+        self.order_processed_endpoint_sink = results.order_processed_endpoint_sink.take();
+        self.process_order_item_sink = results.process_order_item_sink.take();
+        self.process_order_items = results.process_order_items.take();
+        self.process_order_source = results.process_order_source.take();
+        self.soft_deadline = results.soft_deadline.take();
+    }
+    #[inline(never)]
+    fn complete_part_0(&mut self) -> RuntimeResult<FunctionCompletionPart0> {
+        Ok(FunctionCompletionPart0 {
+            map_order_item_result_to_order_state: self.map_order_item_result_to_order_state.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker map_order_item_result_to_order_state failed without an error".to_owned(),
+            ))?,
+            map_to_order_processed: self.map_to_order_processed.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker map_to_order_processed failed without an error".to_owned(),
+            ))?,
+            map_to_order_state: self.map_to_order_state.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker map_to_order_state failed without an error".to_owned(),
+            ))?,
+            order_processed_endpoint_sink: self.order_processed_endpoint_sink.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker order_processed_endpoint_sink failed without an error".to_owned(),
+            ))?,
+            process_order_item_sink: self.process_order_item_sink.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker process_order_item_sink failed without an error".to_owned(),
+            ))?,
+            process_order_items: self.process_order_items.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker process_order_items failed without an error".to_owned(),
+            ))?,
+            process_order_source: self.process_order_source.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker process_order_source failed without an error".to_owned(),
+            ))?,
+            soft_deadline: self.soft_deadline.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker soft_deadline failed without an error".to_owned(),
+            ))?,
+        })
+    }
+
+    #[inline(never)]
+    fn finish(mut self: Box<Self>) -> RuntimeResult<ServiceFunctions> {
+        let part_0 = self.complete_part_0()?;
+        Ok(ServiceFunctions {
+            map_order_item_result_to_order_state: part_0.map_order_item_result_to_order_state,
+            map_to_order_processed: part_0.map_to_order_processed,
+            map_to_order_state: part_0.map_to_order_state,
+            order_processed_endpoint_sink: part_0.order_processed_endpoint_sink,
+            process_order_item_sink: part_0.process_order_item_sink,
+            process_order_items: part_0.process_order_items,
+            process_order_source: part_0.process_order_source,
+            soft_deadline: part_0.soft_deadline,
+        })
+    }
+}
+struct DefaultFunctionGroupResults {
+    map_order_item_result_to_order_state: Option<Arc<MapOrderItemResultToOrderState>>,
+    map_to_order_processed: Option<Arc<MapToOrderProcessed>>,
+    map_to_order_state: Option<Arc<MapToOrderState>>,
+    order_processed_endpoint_sink: Option<OrderProcessedEndpointSink>,
+    process_order_item_sink: Option<Arc<ProcessOrderItemSink>>,
     process_order_items: Option<Arc<ProcessOrderItems>>,
     process_order_source: Option<ProcessOrderSource>,
     soft_deadline: Option<Arc<SoftDeadline>>,
 }
 
-fn init_function_group_0(
+#[inline(never)]
+fn init_default_group(
     maker_group_context: MessageContext,
     environment: RuntimeEnvironment,
     makers: &ServiceMakers,
     maker_error_sender: mpsc::Sender<RuntimeError>,
-) -> Pin<Box<dyn Future<Output = FunctionGroup0Results> + Send>> {
+) -> Pin<Box<dyn Future<Output = Box<DefaultFunctionGroupResults>> + Send>> {
     let map_order_item_result_to_order_state_maker = makers.map_order_item_result_to_order_state.clone();
     let map_to_order_processed_maker = makers.map_to_order_processed.clone();
     let map_to_order_state_maker = makers.map_to_order_state.clone();
@@ -131,7 +229,7 @@ fn init_function_group_0(
                 process_order_item_sink_environment,
             ).await;
             match result {
-                Ok(value) => Some(value),
+                Ok(value) => Some(Arc::new(value)),
                 Err(error) => {
                     process_order_item_sink_group_context.cancel();
                     process_order_item_sink_error_sender.send(error)
@@ -212,7 +310,7 @@ fn init_function_group_0(
             Box::pin(async { soft_deadline = soft_deadline_future.await; }),
         ];
         futures_util::future::join_all(maker_futures).await;
-        FunctionGroup0Results {
+        Box::new(DefaultFunctionGroupResults {
             map_order_item_result_to_order_state,
             map_to_order_processed,
             map_to_order_state,
@@ -221,7 +319,7 @@ fn init_function_group_0(
             process_order_items,
             process_order_source,
             soft_deadline,
-        }
+        })
     })
 }
 
@@ -232,9 +330,10 @@ impl ServiceFunctions {
         makers: &ServiceMakers,
     ) -> RuntimeResult<Self> {
         let _ = (&context, &environment, makers);
+        let mut builder = ServiceFunctionsBuilder::new();
         let maker_group_context = context.child();
         let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
-        let group_0 = init_function_group_0(
+        let default_group = init_default_group(
             maker_group_context.clone(), environment.clone(), makers, maker_error_sender.clone(),
         ).await;
         maker_group_context.cancel();
@@ -242,43 +341,11 @@ impl ServiceFunctions {
         if let Ok(error) = maker_error_receiver.try_recv() {
             return Err(error);
         }
-        Ok(Self {
-            map_order_item_result_to_order_state: group_0.map_order_item_result_to_order_state.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker map_order_item_result_to_order_state failed without an error".to_owned(),
-            ))?,
-            map_to_order_processed: group_0.map_to_order_processed.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker map_to_order_processed failed without an error".to_owned(),
-            ))?,
-            map_to_order_state: group_0.map_to_order_state.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker map_to_order_state failed without an error".to_owned(),
-            ))?,
-            order_processed_endpoint_sink: group_0.order_processed_endpoint_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker order_processed_endpoint_sink failed without an error".to_owned(),
-            ))?,
-            process_order_item_sink: group_0.process_order_item_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker process_order_item_sink failed without an error".to_owned(),
-            ))?,
-            process_order_items: group_0.process_order_items.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker process_order_items failed without an error".to_owned(),
-            ))?,
-            process_order_source: group_0.process_order_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker process_order_source failed without an error".to_owned(),
-            ))?,
-            soft_deadline: group_0.soft_deadline.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker soft_deadline failed without an error".to_owned(),
-            ))?,
-        })
+        builder.store_default_group(default_group);
+        builder.finish()
     }
 }
 
 pub struct ServiceHandlers {
     pub process_order_source: ProcessOrderSource,
-}
-
-
-impl ServiceHandlers {
-    pub fn reload(&self, config: &Config) {
-        let _ = config;
-        self.process_order_source.reload(&config.endpoints.process_order, config.request_timeout_ms);
-    }
 }

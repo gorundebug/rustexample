@@ -77,11 +77,11 @@ pub async fn init_infrastructure(
     let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
     let order_events_data_source_future = infrastructure_maker_future!(
         makers.order_events_data_source, maker_group_context, environment,
-        kafka_connector_config(&environment, 4)?, maker_group_context, maker_error_sender
+        kafka_connector_config(&environment, crate::internal::config::ORDER_EVENTS_CONNECTOR_ID)?, maker_group_context, maker_error_sender
     );
     let local_cron_data_source_future = infrastructure_maker_future!(
         makers.local_cron_data_source, maker_group_context, environment,
-        cron_connector_config(&environment, 3)?, maker_group_context, maker_error_sender
+        cron_connector_config(&environment, crate::internal::config::LOCAL_CRON_CONNECTOR_ID)?, maker_group_context, maker_error_sender
     );
     let mut order_events_data_source = None;
     let mut local_cron_data_source = None;

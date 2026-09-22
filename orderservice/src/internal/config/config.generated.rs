@@ -42,7 +42,7 @@ pub const PROCESS_ORDER_ITEM_ENDPOINT_ID: i32 = 11;
 pub const ORDER_PROCESSED_ENDPOINT_ID: i32 = 14;
 pub const PROCESS_ORDER_ENDPOINT_ID: i32 = 15;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Streams {
     pub map_order_item_result_to_order_state: MapStreamConfig,
@@ -56,6 +56,192 @@ pub struct Streams {
     pub soft_deadline: DelayStreamConfig,
     pub split_order_result: SplitStreamConfig,
     pub split_pipeline: SplitStreamConfig,
+}
+
+// Preserve Serde's field order for positional formats and diagnostics. The
+// sorted lookup table avoids generating a giant string-matching function.
+const STREAM_CONFIG_FIELDS: &[&str] = &[
+    "mapOrderItemResultToOrderState",
+    "mapToOrderProcessed",
+    "mapToOrderState",
+    "mergeResults",
+    "processOrder",
+    "processOrderItem",
+    "processOrderItems",
+    "publishOrderProcessed",
+    "softDeadline",
+    "splitOrderResult",
+    "splitPipeline",
+];
+
+const STREAM_CONFIG_FIELD_LOOKUP: &[(&str, usize)] = &[
+    ("mapOrderItemResultToOrderState", 0),
+    ("mapToOrderProcessed", 1),
+    ("mapToOrderState", 2),
+    ("mergeResults", 3),
+    ("processOrder", 4),
+    ("processOrderItem", 5),
+    ("processOrderItems", 6),
+    ("publishOrderProcessed", 7),
+    ("softDeadline", 8),
+    ("splitOrderResult", 9),
+    ("splitPipeline", 10),
+];
+
+struct StreamConfigField(Option<usize>);
+
+impl<'de> Deserialize<'de> for StreamConfigField {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct FieldVisitor;
+        impl<'de> serde::de::Visitor<'de> for FieldVisitor {
+            type Value = StreamConfigField;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("field identifier")
+            }
+
+            fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                self.visit_bytes(value.as_bytes())
+            }
+
+            fn visit_bytes<E: serde::de::Error>(self, value: &[u8]) -> Result<Self::Value, E> {
+                let index = STREAM_CONFIG_FIELD_LOOKUP
+                    .binary_search_by(|entry| entry.0.as_bytes().cmp(value))
+                    .ok()
+                    .map(|index| STREAM_CONFIG_FIELD_LOOKUP[index].1);
+                Ok(StreamConfigField(index))
+            }
+
+            fn visit_u64<E: serde::de::Error>(self, value: u64) -> Result<Self::Value, E> {
+                match usize::try_from(value) {
+                    Ok(index) if index < STREAM_CONFIG_FIELDS.len() => Ok(StreamConfigField(Some(index))),
+                    _ => Err(E::invalid_value(
+                        serde::de::Unexpected::Unsigned(value),
+                        &"field index 0 <= i < 11",
+                    )),
+                }
+            }
+        }
+        deserializer.deserialize_identifier(FieldVisitor)
+    }
+}
+
+struct StreamsVisitor<'a> {
+    target: &'a mut Streams,
+}
+
+impl<'de> serde::de::Visitor<'de> for StreamsVisitor<'_> {
+    type Value = ();
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("struct Streams")
+    }
+
+    #[inline(never)]
+    fn visit_map<M: serde::de::MapAccess<'de>>(self, mut map: M) -> Result<(), M::Error> {
+        let mut seen = [false; 11];
+        while let Some(StreamConfigField(index)) = map.next_key::<StreamConfigField>()? {
+            if let Some(index) = index {
+                if seen[index] {
+                    return Err(serde::de::Error::duplicate_field(STREAM_CONFIG_FIELDS[index]));
+                }
+                seen[index] = true;
+                self.target.read_stream_map_field(index, &mut map)?;
+            } else {
+                let _: serde::de::IgnoredAny = map.next_value()?;
+            }
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn visit_seq<S: serde::de::SeqAccess<'de>>(self, mut seq: S) -> Result<(), S::Error> {
+        self.target.read_stream_seq_part_0(&mut seq)?;
+        Ok(())
+    }
+}
+
+impl<'de> Deserialize<'de> for Streams {
+    #[inline(never)]
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let mut result = Self::default();
+        deserializer.deserialize_struct(
+            "Streams", STREAM_CONFIG_FIELDS, StreamsVisitor { target: &mut result },
+        )?;
+        Ok(result)
+    }
+}
+
+impl Streams {
+    #[inline(never)]
+    fn read_stream_map_field<'de, M: serde::de::MapAccess<'de>>(
+        &mut self, index: usize, map: &mut M,
+    ) -> Result<(), M::Error> {
+        match index / 32 {
+            0 => self.read_stream_map_part_0(index, map),
+            _ => unreachable!("stream field index was validated"),
+        }
+    }
+    #[inline(never)]
+    fn read_stream_map_part_0<'de, M: serde::de::MapAccess<'de>>(
+        &mut self, index: usize, map: &mut M,
+    ) -> Result<(), M::Error> {
+        match index {
+            0 => self.map_order_item_result_to_order_state = map.next_value::<MapStreamConfig>()?,
+            1 => self.map_to_order_processed = map.next_value::<MapStreamConfig>()?,
+            2 => self.map_to_order_state = map.next_value::<MapStreamConfig>()?,
+            3 => self.merge_results = map.next_value::<MergeStreamConfig>()?,
+            4 => self.process_order = map.next_value::<InputStreamConfig>()?,
+            5 => self.process_order_item = map.next_value::<SinkStreamConfig>()?,
+            6 => self.process_order_items = map.next_value::<FlatMapStreamConfig>()?,
+            7 => self.publish_order_processed = map.next_value::<SinkStreamConfig>()?,
+            8 => self.soft_deadline = map.next_value::<DelayStreamConfig>()?,
+            9 => self.split_order_result = map.next_value::<SplitStreamConfig>()?,
+            10 => self.split_pipeline = map.next_value::<SplitStreamConfig>()?,
+            _ => unreachable!("stream field index belongs to another part"),
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn read_stream_seq_part_0<'de, S: serde::de::SeqAccess<'de>>(
+        &mut self, seq: &mut S,
+    ) -> Result<(), S::Error> {
+        if let Some(value) = seq.next_element::<MapStreamConfig>()? {
+            self.map_order_item_result_to_order_state = value;
+        }
+        if let Some(value) = seq.next_element::<MapStreamConfig>()? {
+            self.map_to_order_processed = value;
+        }
+        if let Some(value) = seq.next_element::<MapStreamConfig>()? {
+            self.map_to_order_state = value;
+        }
+        if let Some(value) = seq.next_element::<MergeStreamConfig>()? {
+            self.merge_results = value;
+        }
+        if let Some(value) = seq.next_element::<InputStreamConfig>()? {
+            self.process_order = value;
+        }
+        if let Some(value) = seq.next_element::<SinkStreamConfig>()? {
+            self.process_order_item = value;
+        }
+        if let Some(value) = seq.next_element::<FlatMapStreamConfig>()? {
+            self.process_order_items = value;
+        }
+        if let Some(value) = seq.next_element::<SinkStreamConfig>()? {
+            self.publish_order_processed = value;
+        }
+        if let Some(value) = seq.next_element::<DelayStreamConfig>()? {
+            self.soft_deadline = value;
+        }
+        if let Some(value) = seq.next_element::<SplitStreamConfig>()? {
+            self.split_order_result = value;
+        }
+        if let Some(value) = seq.next_element::<SplitStreamConfig>()? {
+            self.split_pipeline = value;
+        }
+        Ok(())
+    }
 }
 
 impl Default for Streams {
@@ -352,18 +538,18 @@ impl ServiceConfigContract for Config {
             },
             LinkConfig {
                 from: PROCESS_ORDER_STREAM_ID, to: SPLIT_PIPELINE_STREAM_ID,
-                call_semantics: CallSemantics::FunctionCall,
+                call_semantics: CallSemantics::TaskPool { pool_name: "Default Pool".to_owned() },
                 r#async: false,
             },
             LinkConfig {
                 from: SPLIT_PIPELINE_STREAM_ID, to: PROCESS_ORDER_ITEMS_STREAM_ID,
-                call_semantics: CallSemantics::FunctionCall,
+                call_semantics: CallSemantics::ParallelCall,
                 r#async: false,
             },
             LinkConfig {
                 from: SPLIT_PIPELINE_STREAM_ID, to: SOFT_DEADLINE_STREAM_ID,
-                call_semantics: CallSemantics::FunctionCall,
-                r#async: true,
+                call_semantics: CallSemantics::ParallelCall,
+                r#async: false,
             },
         ]
     }

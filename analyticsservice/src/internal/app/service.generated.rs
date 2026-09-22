@@ -40,6 +40,7 @@ impl GeneratedService {
         custom_functions_init: fn(MessageContext, &mut ServiceFunctions) -> RuntimeResult<()>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let mut app = ServiceApp::new(environment, config.service())?;
+        app.environment().set_serde_provider(super::serde_generated::get_serde)?;
         let context = MessageContext::new();
         let mut makers = ServiceMakers::init_makers();
         custom_makers_init(context.clone(), &mut makers)?;
@@ -68,7 +69,6 @@ impl GeneratedService {
             let app = inner.app.get().ok_or_else(|| "service application is not initialized".to_owned())?;
             app.validate_reload(&config.service()).map_err(|error| error.to_string())?;
             inner.runtime.data_connectors.reload(&config)?;
-            inner.runtime.handlers.reload(&config);
             app.environment().publish_runtime_config(runtime_config);
             Ok(())
         });

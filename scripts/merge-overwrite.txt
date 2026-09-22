@@ -21,6 +21,9 @@ Dockerfile
 Cargo.toml
 inventory_service_api/Cargo.toml
 order_service_api/Cargo.toml
+inventory_service_api/src/lib.rs
+model_rust/src/lib.rs
+order_service_api/src/lib.rs
 analyticsservice/grafana/Dockerfile
 analyticsservice/grafana/dashboards/_lib.libsonnet
 analyticsservice/helm/Chart.yaml
@@ -34,6 +37,7 @@ analyticsservice/static_config.yaml
 analyticsservice/config/config.yaml
 analyticsservice/config/config_vars.yaml
 analyticsservice/config/config_vars.integration.yaml
+analyticsservice/src/internal/app/mod.rs
 analyticsservice/src/internal/config/mod.rs
 analyticsservice/src/internal/mod.rs
 analyticsservice/src/lib.rs
@@ -63,6 +67,7 @@ inventoryservice/static_config.yaml
 inventoryservice/config/config.yaml
 inventoryservice/config/config_vars.yaml
 inventoryservice/config/config_vars.integration.yaml
+inventoryservice/src/internal/app/mod.rs
 inventoryservice/src/internal/config/mod.rs
 inventoryservice/src/internal/mod.rs
 inventoryservice/src/lib.rs
@@ -79,6 +84,7 @@ orderservice/static_config.yaml
 orderservice/config/config.yaml
 orderservice/config/config_vars.yaml
 orderservice/config/config_vars.integration.yaml
+orderservice/src/internal/app/mod.rs
 orderservice/src/internal/config/mod.rs
 orderservice/src/internal/mod.rs
 orderservice/src/lib.rs

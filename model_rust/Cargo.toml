@@ -2,11 +2,13 @@
 name = "example-model"
 version = "0.2.130"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.98.1"
 
 [lib]
 name = "example_model"
 
 
 [dependencies]
+servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.130" }
+
 serde = { version = "1", features = ["derive"] }

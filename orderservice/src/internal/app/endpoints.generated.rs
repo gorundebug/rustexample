@@ -12,9 +12,6 @@ pub struct ServiceEndpoints {
 impl ServiceEndpoints {
     pub fn init_endpoints(config: &Config, runtime: &ServiceRuntime) -> RuntimeResult<Self> {
         let _ = (config, runtime);
-        runtime.handlers.process_order_source.reload(
-            &config.endpoints.process_order, config.request_timeout_ms,
-        );
         runtime.data_connectors.order_service_api_data_source.add_endpoint(
             runtime.streams.process_order.as_ref().clone(),
             config.endpoints.process_order.clone(),

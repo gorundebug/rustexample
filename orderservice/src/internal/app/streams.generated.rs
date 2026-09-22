@@ -16,7 +16,6 @@ where
     }
 }
 
-
 pub struct ServiceStreams {
     pub process_order: Arc<InputStream<Order, OrderState, String>>,
     pub split_pipeline: [Stream<Order>; 2],
@@ -32,6 +31,54 @@ pub struct ServiceStreams {
     pub publish_order_processed: Arc<SinkStreamWithResult<OrderProcessed, String, String>>,
 }
 
+// Partial state exists only while the graph is being constructed.
+#[derive(Default)]
+struct ServiceStreamsBuilder {
+    process_order: Option<Arc<InputStream<Order, OrderState, String>>>,
+    split_pipeline: Option<[Stream<Order>; 2]>,
+    process_order_items: Option<Stream<OrderItem>>,
+    process_order_item: Option<Arc<SinkStreamWithResult<OrderItem, OrderItemResult, OrderState>>>,
+    process_order_item_error: Option<Stream<OrderState>>,
+    map_order_item_result_to_order_state: Option<Stream<OrderState>>,
+    soft_deadline: Option<Stream<Order>>,
+    map_to_order_state: Option<Stream<OrderState>>,
+    merge_results: Option<Stream<OrderState>>,
+    split_order_result: Option<[Stream<OrderState>; 2]>,
+    map_to_order_processed: Option<Stream<OrderProcessed>>,
+    publish_order_processed: Option<Arc<SinkStreamWithResult<OrderProcessed, String, String>>>,
+}
+
+#[inline(never)]
+fn stream_builder_ref<'a, T>(value: &'a Option<T>, name: &str) -> RuntimeResult<&'a T> {
+    value.as_ref().ok_or_else(|| RuntimeError::InvalidConfiguration(
+        format!("stream {name} is required before it has been initialized"),
+    ))
+}
+
+#[inline(never)]
+fn stream_builder_take<T>(value: &mut Option<T>, name: &str) -> RuntimeResult<T> {
+    value.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+        format!("stream {name} was not initialized"),
+    ))
+}
+
+
+struct StreamCompletionPart0 {
+    process_order: Arc<InputStream<Order, OrderState, String>>,
+    split_pipeline: [Stream<Order>; 2],
+    process_order_items: Stream<OrderItem>,
+    process_order_item: Arc<SinkStreamWithResult<OrderItem, OrderItemResult, OrderState>>,
+    process_order_item_error: Stream<OrderState>,
+    map_order_item_result_to_order_state: Stream<OrderState>,
+    soft_deadline: Stream<Order>,
+    map_to_order_state: Stream<OrderState>,
+    merge_results: Stream<OrderState>,
+    split_order_result: [Stream<OrderState>; 2],
+    map_to_order_processed: Stream<OrderProcessed>,
+    publish_order_processed: Arc<SinkStreamWithResult<OrderProcessed, String, String>>,
+}
+
+
 impl ServiceStreams {
     #[inline(never)]
     pub fn init_streams(
@@ -40,41 +87,119 @@ impl ServiceStreams {
         functions: &ServiceFunctions,
     ) -> RuntimeResult<Self> {
         let _ = (config, environment, functions);
-    let process_order = Arc::new(InputStream::<Order, OrderState, String>::new(&config.streams.process_order, environment.clone()));
-    let split_pipeline = process_order.stream().split(&config.streams.split_pipeline)?;
-    let [process_order_items_branch, soft_deadline_branch] = split_pipeline.clone();
-    let process_order_items = process_order_items_branch.flat_map(&config.streams.process_order_items, functions.process_order_items.clone())?;
-    let process_order_item = process_order_items.sink_with_result::<OrderItemResult, OrderState>(&config.streams.process_order_item)?;
-    let process_order_item_error = process_order_item.error_stream().clone();
-    let map_order_item_result_to_order_state = process_order_item.stream().clone().map(&config.streams.map_order_item_result_to_order_state, functions.map_order_item_result_to_order_state.clone())?;
-    let soft_deadline = soft_deadline_branch.delay(&config.streams.soft_deadline, functions.soft_deadline.clone())?;
-    let map_to_order_state = soft_deadline.map(&config.streams.map_to_order_state, functions.map_to_order_state.clone())?;
-    let merge_results = map_to_order_state.merge(&config.streams.merge_results, &[map_order_item_result_to_order_state.clone(), process_order_item_error.clone()])?;
-    let split_order_result = merge_results.split(&config.streams.split_order_result)?;
-    let [map_to_order_processed_branch, process_order_branch] = split_order_result.clone();
-    let map_to_order_processed = map_to_order_processed_branch.map(&config.streams.map_to_order_processed, functions.map_to_order_processed.clone())?;
-    let publish_order_processed = map_to_order_processed.sink_with_result::<String, String>(&config.streams.publish_order_processed)?;
-
-        let streams = Self {
-            process_order: process_order,
-            split_pipeline,
-            process_order_items,
-            process_order_item,
-            process_order_item_error,
-            map_order_item_result_to_order_state,
-            soft_deadline,
-            map_to_order_state,
-            merge_results,
-            split_order_result,
-            map_to_order_processed,
-            publish_order_processed,
-        };
+        let mut builder = ServiceStreamsBuilder::default();
+        builder.init_part_0(config, environment, functions)?;
+        let streams = builder.finish()?;
         streams.build()?;
         Ok(streams)
     }
 
     pub fn build(&self) -> RuntimeResult<()> {
+        self.bind_part_0()?;
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn bind_part_0(&self) -> RuntimeResult<()> {
         self.process_order.set_source(&self.split_order_result[1])?;
         Ok(())
+    }
+
+}
+
+impl ServiceStreamsBuilder {
+
+    #[inline(never)]
+    fn init_part_0(
+        &mut self,
+        config: &Config,
+        environment: &RuntimeEnvironment,
+        functions: &ServiceFunctions,
+    ) -> RuntimeResult<()> {
+        let _ = (config, environment, functions);
+        {
+            let node = Arc::new(InputStream::<Order, OrderState, String>::new(&config.streams.process_order, environment.clone()));
+            self.process_order = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.process_order, "process_order")?).stream().split(&config.streams.split_pipeline)?;
+            self.split_pipeline = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.split_pipeline, "split_pipeline")?)[0].flat_map(&config.streams.process_order_items, functions.process_order_items.clone())?;
+            self.process_order_items = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.process_order_items, "process_order_items")?).sink_with_result::<OrderItemResult, OrderState>(&config.streams.process_order_item)?;
+            self.process_order_item_error = Some(node.error_stream().clone());
+            self.process_order_item = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.process_order_item, "process_order_item")?).stream().clone().map(&config.streams.map_order_item_result_to_order_state, functions.map_order_item_result_to_order_state.clone())?;
+            self.map_order_item_result_to_order_state = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.split_pipeline, "split_pipeline")?)[1].delay(&config.streams.soft_deadline, functions.soft_deadline.clone())?;
+            self.soft_deadline = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.soft_deadline, "soft_deadline")?).map(&config.streams.map_to_order_state, functions.map_to_order_state.clone())?;
+            self.map_to_order_state = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.map_to_order_state, "map_to_order_state")?).merge(&config.streams.merge_results, &[(*stream_builder_ref(&self.map_order_item_result_to_order_state, "map_order_item_result_to_order_state")?).clone(), (*stream_builder_ref(&self.process_order_item_error, "process_order_item_error")?).clone()])?;
+            self.merge_results = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.merge_results, "merge_results")?).split(&config.streams.split_order_result)?;
+            self.split_order_result = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.split_order_result, "split_order_result")?)[0].map(&config.streams.map_to_order_processed, functions.map_to_order_processed.clone())?;
+            self.map_to_order_processed = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.map_to_order_processed, "map_to_order_processed")?).sink_with_result::<String, String>(&config.streams.publish_order_processed)?;
+            self.publish_order_processed = Some(node);
+        }
+        Ok(())
+    }
+
+
+    #[inline(never)]
+    fn complete_part_0(&mut self) -> RuntimeResult<StreamCompletionPart0> {
+        Ok(StreamCompletionPart0 {
+            process_order: stream_builder_take(&mut self.process_order, "process_order")?,
+            split_pipeline: stream_builder_take(&mut self.split_pipeline, "split_pipeline")?,
+            process_order_items: stream_builder_take(&mut self.process_order_items, "process_order_items")?,
+            process_order_item: stream_builder_take(&mut self.process_order_item, "process_order_item")?,
+            process_order_item_error: stream_builder_take(&mut self.process_order_item_error, "process_order_item_error")?,
+            map_order_item_result_to_order_state: stream_builder_take(&mut self.map_order_item_result_to_order_state, "map_order_item_result_to_order_state")?,
+            soft_deadline: stream_builder_take(&mut self.soft_deadline, "soft_deadline")?,
+            map_to_order_state: stream_builder_take(&mut self.map_to_order_state, "map_to_order_state")?,
+            merge_results: stream_builder_take(&mut self.merge_results, "merge_results")?,
+            split_order_result: stream_builder_take(&mut self.split_order_result, "split_order_result")?,
+            map_to_order_processed: stream_builder_take(&mut self.map_to_order_processed, "map_to_order_processed")?,
+            publish_order_processed: stream_builder_take(&mut self.publish_order_processed, "publish_order_processed")?,
+        })
+    }
+
+    #[inline(never)]
+    fn finish(mut self) -> RuntimeResult<ServiceStreams> {
+        let part_0 = self.complete_part_0()?;
+        Ok(ServiceStreams {
+            process_order: part_0.process_order,
+            split_pipeline: part_0.split_pipeline,
+            process_order_items: part_0.process_order_items,
+            process_order_item: part_0.process_order_item,
+            process_order_item_error: part_0.process_order_item_error,
+            map_order_item_result_to_order_state: part_0.map_order_item_result_to_order_state,
+            soft_deadline: part_0.soft_deadline,
+            map_to_order_state: part_0.map_to_order_state,
+            merge_results: part_0.merge_results,
+            split_order_result: part_0.split_order_result,
+            map_to_order_processed: part_0.map_to_order_processed,
+            publish_order_processed: part_0.publish_order_processed,
+        })
     }
 }

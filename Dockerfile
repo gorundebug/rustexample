@@ -1,6 +1,6 @@
 ARG DEPENDENCY_DOCKER_REGISTRY=docker.io
 FROM rustservicelib-source AS rustservicelib-source
-FROM ${DEPENDENCY_DOCKER_REGISTRY}/library/rust:1.97-bookworm AS development-base
+FROM ${DEPENDENCY_DOCKER_REGISTRY}/library/rust:1.98.1-bookworm AS development-base
 
 ARG DEPENDENCY_GITHUB_RAW_URL=https://github.com
 ENV DEPENDENCY_GITHUB_RAW_URL=${DEPENDENCY_GITHUB_RAW_URL}

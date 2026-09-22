@@ -33,7 +33,248 @@ pub struct ServiceFunctions {
     pub substream_analytics_input_source: SubstreamAnalyticsInputSource,
     pub substream_analytics_result_sink: SubstreamAnalyticsResultSink,
 }
-struct FunctionGroup0Results {
+
+// Keep fallible field extraction out of the async initialization state machine.
+struct ServiceFunctionsBuilder {
+    advance_cycle_analytics: Option<Arc<AdvanceCycleAnalytics>>,
+    analytics_orders_source: Option<AnalyticsOrdersSource>,
+    analytics_payments_source: Option<AnalyticsPaymentsSource>,
+    analytics_schedule_source: Option<AnalyticsScheduleSource>,
+    analytics_shipments_source: Option<AnalyticsShipmentsSource>,
+    build_substream_analytics_result: Option<Arc<BuildSubstreamAnalyticsResult>>,
+    complete_cycle_analytics: Option<Arc<CompleteCycleAnalytics>>,
+    continue_cycle_analytics: Option<Arc<ContinueCycleAnalytics>>,
+    count_order_processed: Option<Arc<CountOrderProcessed>>,
+    cycle_analytics_input_source: Option<CycleAnalyticsInputSource>,
+    cycle_analytics_result_sink: Option<CycleAnalyticsResultSink>,
+    high_value_analytics_sink: Option<HighValueAnalyticsSink>,
+    invoke_analytics_substream: Option<Arc<InvokeAnalyticsSubstream>>,
+    join_order_payment_analytics: Option<Arc<JoinOrderPaymentAnalytics>>,
+    joined_analytics_sink: Option<JoinedAnalyticsSink>,
+    key_orders_for_join: Option<Arc<KeyOrdersForJoin>>,
+    key_orders_for_multi_join: Option<Arc<KeyOrdersForMultiJoin>>,
+    key_payments_for_join: Option<Arc<KeyPaymentsForJoin>>,
+    key_payments_for_multi_join: Option<Arc<KeyPaymentsForMultiJoin>>,
+    key_shipments_for_multi_join: Option<Arc<KeyShipmentsForMultiJoin>>,
+    multi_join_analytics_events: Option<Arc<MultiJoinAnalyticsEvents>>,
+    order_processed_endpoint_source: Option<OrderProcessedEndpointSource>,
+    route_analytics_result: Option<Arc<RouteAnalyticsResult>>,
+    standard_analytics_sink: Option<StandardAnalyticsSink>,
+    substream_analytics_input_source: Option<SubstreamAnalyticsInputSource>,
+    substream_analytics_result_sink: Option<SubstreamAnalyticsResultSink>,
+}
+struct FunctionCompletionPart0 {
+    advance_cycle_analytics: Arc<AdvanceCycleAnalytics>,
+    analytics_orders_source: AnalyticsOrdersSource,
+    analytics_payments_source: AnalyticsPaymentsSource,
+    analytics_schedule_source: AnalyticsScheduleSource,
+    analytics_shipments_source: AnalyticsShipmentsSource,
+    build_substream_analytics_result: Arc<BuildSubstreamAnalyticsResult>,
+    complete_cycle_analytics: Arc<CompleteCycleAnalytics>,
+    continue_cycle_analytics: Arc<ContinueCycleAnalytics>,
+    count_order_processed: Arc<CountOrderProcessed>,
+    cycle_analytics_input_source: CycleAnalyticsInputSource,
+    cycle_analytics_result_sink: CycleAnalyticsResultSink,
+    high_value_analytics_sink: HighValueAnalyticsSink,
+    invoke_analytics_substream: Arc<InvokeAnalyticsSubstream>,
+    join_order_payment_analytics: Arc<JoinOrderPaymentAnalytics>,
+    joined_analytics_sink: JoinedAnalyticsSink,
+    key_orders_for_join: Arc<KeyOrdersForJoin>,
+    key_orders_for_multi_join: Arc<KeyOrdersForMultiJoin>,
+    key_payments_for_join: Arc<KeyPaymentsForJoin>,
+    key_payments_for_multi_join: Arc<KeyPaymentsForMultiJoin>,
+    key_shipments_for_multi_join: Arc<KeyShipmentsForMultiJoin>,
+    multi_join_analytics_events: Arc<MultiJoinAnalyticsEvents>,
+    order_processed_endpoint_source: OrderProcessedEndpointSource,
+    route_analytics_result: Arc<RouteAnalyticsResult>,
+    standard_analytics_sink: StandardAnalyticsSink,
+    substream_analytics_input_source: SubstreamAnalyticsInputSource,
+    substream_analytics_result_sink: SubstreamAnalyticsResultSink,
+}
+
+impl ServiceFunctionsBuilder {
+    #[inline(never)]
+    fn new() -> Box<Self> {
+        Box::new(Self {
+            advance_cycle_analytics: None,
+            analytics_orders_source: None,
+            analytics_payments_source: None,
+            analytics_schedule_source: None,
+            analytics_shipments_source: None,
+            build_substream_analytics_result: None,
+            complete_cycle_analytics: None,
+            continue_cycle_analytics: None,
+            count_order_processed: None,
+            cycle_analytics_input_source: None,
+            cycle_analytics_result_sink: None,
+            high_value_analytics_sink: None,
+            invoke_analytics_substream: None,
+            join_order_payment_analytics: None,
+            joined_analytics_sink: None,
+            key_orders_for_join: None,
+            key_orders_for_multi_join: None,
+            key_payments_for_join: None,
+            key_payments_for_multi_join: None,
+            key_shipments_for_multi_join: None,
+            multi_join_analytics_events: None,
+            order_processed_endpoint_source: None,
+            route_analytics_result: None,
+            standard_analytics_sink: None,
+            substream_analytics_input_source: None,
+            substream_analytics_result_sink: None,
+        })
+    }
+    #[inline(never)]
+    fn store_default_group(&mut self, mut results: Box<DefaultFunctionGroupResults>) {
+        self.store_default_group_part_0(&mut results);
+    }
+    #[inline(never)]
+    fn store_default_group_part_0(&mut self, results: &mut DefaultFunctionGroupResults) {
+        self.advance_cycle_analytics = results.advance_cycle_analytics.take();
+        self.analytics_orders_source = results.analytics_orders_source.take();
+        self.analytics_payments_source = results.analytics_payments_source.take();
+        self.analytics_schedule_source = results.analytics_schedule_source.take();
+        self.analytics_shipments_source = results.analytics_shipments_source.take();
+        self.build_substream_analytics_result = results.build_substream_analytics_result.take();
+        self.complete_cycle_analytics = results.complete_cycle_analytics.take();
+        self.continue_cycle_analytics = results.continue_cycle_analytics.take();
+        self.count_order_processed = results.count_order_processed.take();
+        self.cycle_analytics_input_source = results.cycle_analytics_input_source.take();
+        self.cycle_analytics_result_sink = results.cycle_analytics_result_sink.take();
+        self.high_value_analytics_sink = results.high_value_analytics_sink.take();
+        self.invoke_analytics_substream = results.invoke_analytics_substream.take();
+        self.join_order_payment_analytics = results.join_order_payment_analytics.take();
+        self.joined_analytics_sink = results.joined_analytics_sink.take();
+        self.key_orders_for_join = results.key_orders_for_join.take();
+        self.key_orders_for_multi_join = results.key_orders_for_multi_join.take();
+        self.key_payments_for_join = results.key_payments_for_join.take();
+        self.key_payments_for_multi_join = results.key_payments_for_multi_join.take();
+        self.key_shipments_for_multi_join = results.key_shipments_for_multi_join.take();
+        self.multi_join_analytics_events = results.multi_join_analytics_events.take();
+        self.order_processed_endpoint_source = results.order_processed_endpoint_source.take();
+        self.route_analytics_result = results.route_analytics_result.take();
+        self.standard_analytics_sink = results.standard_analytics_sink.take();
+        self.substream_analytics_input_source = results.substream_analytics_input_source.take();
+        self.substream_analytics_result_sink = results.substream_analytics_result_sink.take();
+    }
+    #[inline(never)]
+    fn complete_part_0(&mut self) -> RuntimeResult<FunctionCompletionPart0> {
+        Ok(FunctionCompletionPart0 {
+            advance_cycle_analytics: self.advance_cycle_analytics.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker advance_cycle_analytics failed without an error".to_owned(),
+            ))?,
+            analytics_orders_source: self.analytics_orders_source.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker analytics_orders_source failed without an error".to_owned(),
+            ))?,
+            analytics_payments_source: self.analytics_payments_source.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker analytics_payments_source failed without an error".to_owned(),
+            ))?,
+            analytics_schedule_source: self.analytics_schedule_source.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker analytics_schedule_source failed without an error".to_owned(),
+            ))?,
+            analytics_shipments_source: self.analytics_shipments_source.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker analytics_shipments_source failed without an error".to_owned(),
+            ))?,
+            build_substream_analytics_result: self.build_substream_analytics_result.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker build_substream_analytics_result failed without an error".to_owned(),
+            ))?,
+            complete_cycle_analytics: self.complete_cycle_analytics.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker complete_cycle_analytics failed without an error".to_owned(),
+            ))?,
+            continue_cycle_analytics: self.continue_cycle_analytics.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker continue_cycle_analytics failed without an error".to_owned(),
+            ))?,
+            count_order_processed: self.count_order_processed.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker count_order_processed failed without an error".to_owned(),
+            ))?,
+            cycle_analytics_input_source: self.cycle_analytics_input_source.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker cycle_analytics_input_source failed without an error".to_owned(),
+            ))?,
+            cycle_analytics_result_sink: self.cycle_analytics_result_sink.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker cycle_analytics_result_sink failed without an error".to_owned(),
+            ))?,
+            high_value_analytics_sink: self.high_value_analytics_sink.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker high_value_analytics_sink failed without an error".to_owned(),
+            ))?,
+            invoke_analytics_substream: self.invoke_analytics_substream.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker invoke_analytics_substream failed without an error".to_owned(),
+            ))?,
+            join_order_payment_analytics: self.join_order_payment_analytics.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker join_order_payment_analytics failed without an error".to_owned(),
+            ))?,
+            joined_analytics_sink: self.joined_analytics_sink.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker joined_analytics_sink failed without an error".to_owned(),
+            ))?,
+            key_orders_for_join: self.key_orders_for_join.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker key_orders_for_join failed without an error".to_owned(),
+            ))?,
+            key_orders_for_multi_join: self.key_orders_for_multi_join.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker key_orders_for_multi_join failed without an error".to_owned(),
+            ))?,
+            key_payments_for_join: self.key_payments_for_join.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker key_payments_for_join failed without an error".to_owned(),
+            ))?,
+            key_payments_for_multi_join: self.key_payments_for_multi_join.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker key_payments_for_multi_join failed without an error".to_owned(),
+            ))?,
+            key_shipments_for_multi_join: self.key_shipments_for_multi_join.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker key_shipments_for_multi_join failed without an error".to_owned(),
+            ))?,
+            multi_join_analytics_events: self.multi_join_analytics_events.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker multi_join_analytics_events failed without an error".to_owned(),
+            ))?,
+            order_processed_endpoint_source: self.order_processed_endpoint_source.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker order_processed_endpoint_source failed without an error".to_owned(),
+            ))?,
+            route_analytics_result: self.route_analytics_result.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker route_analytics_result failed without an error".to_owned(),
+            ))?,
+            standard_analytics_sink: self.standard_analytics_sink.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker standard_analytics_sink failed without an error".to_owned(),
+            ))?,
+            substream_analytics_input_source: self.substream_analytics_input_source.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker substream_analytics_input_source failed without an error".to_owned(),
+            ))?,
+            substream_analytics_result_sink: self.substream_analytics_result_sink.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+                "function maker substream_analytics_result_sink failed without an error".to_owned(),
+            ))?,
+        })
+    }
+
+    #[inline(never)]
+    fn finish(mut self: Box<Self>) -> RuntimeResult<ServiceFunctions> {
+        let part_0 = self.complete_part_0()?;
+        Ok(ServiceFunctions {
+            advance_cycle_analytics: part_0.advance_cycle_analytics,
+            analytics_orders_source: part_0.analytics_orders_source,
+            analytics_payments_source: part_0.analytics_payments_source,
+            analytics_schedule_source: part_0.analytics_schedule_source,
+            analytics_shipments_source: part_0.analytics_shipments_source,
+            build_substream_analytics_result: part_0.build_substream_analytics_result,
+            complete_cycle_analytics: part_0.complete_cycle_analytics,
+            continue_cycle_analytics: part_0.continue_cycle_analytics,
+            count_order_processed: part_0.count_order_processed,
+            cycle_analytics_input_source: part_0.cycle_analytics_input_source,
+            cycle_analytics_result_sink: part_0.cycle_analytics_result_sink,
+            high_value_analytics_sink: part_0.high_value_analytics_sink,
+            invoke_analytics_substream: part_0.invoke_analytics_substream,
+            join_order_payment_analytics: part_0.join_order_payment_analytics,
+            joined_analytics_sink: part_0.joined_analytics_sink,
+            key_orders_for_join: part_0.key_orders_for_join,
+            key_orders_for_multi_join: part_0.key_orders_for_multi_join,
+            key_payments_for_join: part_0.key_payments_for_join,
+            key_payments_for_multi_join: part_0.key_payments_for_multi_join,
+            key_shipments_for_multi_join: part_0.key_shipments_for_multi_join,
+            multi_join_analytics_events: part_0.multi_join_analytics_events,
+            order_processed_endpoint_source: part_0.order_processed_endpoint_source,
+            route_analytics_result: part_0.route_analytics_result,
+            standard_analytics_sink: part_0.standard_analytics_sink,
+            substream_analytics_input_source: part_0.substream_analytics_input_source,
+            substream_analytics_result_sink: part_0.substream_analytics_result_sink,
+        })
+    }
+}
+struct DefaultFunctionGroupResults {
     advance_cycle_analytics: Option<Arc<AdvanceCycleAnalytics>>,
     analytics_orders_source: Option<AnalyticsOrdersSource>,
     analytics_payments_source: Option<AnalyticsPaymentsSource>,
@@ -62,12 +303,13 @@ struct FunctionGroup0Results {
     substream_analytics_result_sink: Option<SubstreamAnalyticsResultSink>,
 }
 
-fn init_function_group_0(
+#[inline(never)]
+fn init_default_group(
     maker_group_context: MessageContext,
     environment: RuntimeEnvironment,
     makers: &ServiceMakers,
     maker_error_sender: mpsc::Sender<RuntimeError>,
-) -> Pin<Box<dyn Future<Output = FunctionGroup0Results> + Send>> {
+) -> Pin<Box<dyn Future<Output = Box<DefaultFunctionGroupResults>> + Send>> {
     let advance_cycle_analytics_maker = makers.advance_cycle_analytics.clone();
     let analytics_orders_source_maker = makers.analytics_orders_source.clone();
     let analytics_payments_source_maker = makers.analytics_payments_source.clone();
@@ -644,7 +886,7 @@ fn init_function_group_0(
             Box::pin(async { substream_analytics_result_sink = substream_analytics_result_sink_future.await; }),
         ];
         futures_util::future::join_all(maker_futures).await;
-        FunctionGroup0Results {
+        Box::new(DefaultFunctionGroupResults {
             advance_cycle_analytics,
             analytics_orders_source,
             analytics_payments_source,
@@ -671,7 +913,7 @@ fn init_function_group_0(
             standard_analytics_sink,
             substream_analytics_input_source,
             substream_analytics_result_sink,
-        }
+        })
     })
 }
 
@@ -682,9 +924,10 @@ impl ServiceFunctions {
         makers: &ServiceMakers,
     ) -> RuntimeResult<Self> {
         let _ = (&context, &environment, makers);
+        let mut builder = ServiceFunctionsBuilder::new();
         let maker_group_context = context.child();
         let (maker_error_sender, maker_error_receiver) = mpsc::channel::<RuntimeError>();
-        let group_0 = init_function_group_0(
+        let default_group = init_default_group(
             maker_group_context.clone(), environment.clone(), makers, maker_error_sender.clone(),
         ).await;
         maker_group_context.cancel();
@@ -692,95 +935,10 @@ impl ServiceFunctions {
         if let Ok(error) = maker_error_receiver.try_recv() {
             return Err(error);
         }
-        Ok(Self {
-            advance_cycle_analytics: group_0.advance_cycle_analytics.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker advance_cycle_analytics failed without an error".to_owned(),
-            ))?,
-            analytics_orders_source: group_0.analytics_orders_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker analytics_orders_source failed without an error".to_owned(),
-            ))?,
-            analytics_payments_source: group_0.analytics_payments_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker analytics_payments_source failed without an error".to_owned(),
-            ))?,
-            analytics_schedule_source: group_0.analytics_schedule_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker analytics_schedule_source failed without an error".to_owned(),
-            ))?,
-            analytics_shipments_source: group_0.analytics_shipments_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker analytics_shipments_source failed without an error".to_owned(),
-            ))?,
-            build_substream_analytics_result: group_0.build_substream_analytics_result.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker build_substream_analytics_result failed without an error".to_owned(),
-            ))?,
-            complete_cycle_analytics: group_0.complete_cycle_analytics.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker complete_cycle_analytics failed without an error".to_owned(),
-            ))?,
-            continue_cycle_analytics: group_0.continue_cycle_analytics.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker continue_cycle_analytics failed without an error".to_owned(),
-            ))?,
-            count_order_processed: group_0.count_order_processed.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker count_order_processed failed without an error".to_owned(),
-            ))?,
-            cycle_analytics_input_source: group_0.cycle_analytics_input_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker cycle_analytics_input_source failed without an error".to_owned(),
-            ))?,
-            cycle_analytics_result_sink: group_0.cycle_analytics_result_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker cycle_analytics_result_sink failed without an error".to_owned(),
-            ))?,
-            high_value_analytics_sink: group_0.high_value_analytics_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker high_value_analytics_sink failed without an error".to_owned(),
-            ))?,
-            invoke_analytics_substream: group_0.invoke_analytics_substream.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker invoke_analytics_substream failed without an error".to_owned(),
-            ))?,
-            join_order_payment_analytics: group_0.join_order_payment_analytics.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker join_order_payment_analytics failed without an error".to_owned(),
-            ))?,
-            joined_analytics_sink: group_0.joined_analytics_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker joined_analytics_sink failed without an error".to_owned(),
-            ))?,
-            key_orders_for_join: group_0.key_orders_for_join.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker key_orders_for_join failed without an error".to_owned(),
-            ))?,
-            key_orders_for_multi_join: group_0.key_orders_for_multi_join.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker key_orders_for_multi_join failed without an error".to_owned(),
-            ))?,
-            key_payments_for_join: group_0.key_payments_for_join.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker key_payments_for_join failed without an error".to_owned(),
-            ))?,
-            key_payments_for_multi_join: group_0.key_payments_for_multi_join.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker key_payments_for_multi_join failed without an error".to_owned(),
-            ))?,
-            key_shipments_for_multi_join: group_0.key_shipments_for_multi_join.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker key_shipments_for_multi_join failed without an error".to_owned(),
-            ))?,
-            multi_join_analytics_events: group_0.multi_join_analytics_events.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker multi_join_analytics_events failed without an error".to_owned(),
-            ))?,
-            order_processed_endpoint_source: group_0.order_processed_endpoint_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker order_processed_endpoint_source failed without an error".to_owned(),
-            ))?,
-            route_analytics_result: group_0.route_analytics_result.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker route_analytics_result failed without an error".to_owned(),
-            ))?,
-            standard_analytics_sink: group_0.standard_analytics_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker standard_analytics_sink failed without an error".to_owned(),
-            ))?,
-            substream_analytics_input_source: group_0.substream_analytics_input_source.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker substream_analytics_input_source failed without an error".to_owned(),
-            ))?,
-            substream_analytics_result_sink: group_0.substream_analytics_result_sink.ok_or_else(|| RuntimeError::InvalidConfiguration(
-                "function maker substream_analytics_result_sink failed without an error".to_owned(),
-            ))?,
-        })
+        builder.store_default_group(default_group);
+        builder.finish()
     }
 }
 
 pub struct ServiceHandlers {
-}
-
-
-impl ServiceHandlers {
-    pub fn reload(&self, config: &Config) {
-        let _ = config;
-    }
 }

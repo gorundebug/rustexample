@@ -2,7 +2,7 @@
 name = "order-service-api"
 version = "0.2.130"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.98.1"
 
 [lib]
 name = "order_service_api"
@@ -14,6 +14,7 @@ conversion = []
 
 
 [dependencies]
+
 serde = { version = "1", features = ["derive"] }
 ammonia = "4"
 async-trait = "0.1"

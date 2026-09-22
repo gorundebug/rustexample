@@ -16,7 +16,6 @@ where
     }
 }
 
-
 pub struct ServiceStreams {
     pub process_inventory_item: Arc<InputStream<OrderItem, OrderItemResult, OrderItemResult>>,
     pub get_inventory_item_data: Stream<OrderItemResult>,
@@ -24,6 +23,40 @@ pub struct ServiceStreams {
     pub map_inventory_item_error: Stream<OrderItemResult>,
     pub merge_inventory_result: Stream<OrderItemResult>,
 }
+
+// Partial state exists only while the graph is being constructed.
+#[derive(Default)]
+struct ServiceStreamsBuilder {
+    process_inventory_item: Option<Arc<InputStream<OrderItem, OrderItemResult, OrderItemResult>>>,
+    get_inventory_item_data: Option<Stream<OrderItemResult>>,
+    get_inventory_item_error: Option<Stream<String>>,
+    map_inventory_item_error: Option<Stream<OrderItemResult>>,
+    merge_inventory_result: Option<Stream<OrderItemResult>>,
+}
+
+#[inline(never)]
+fn stream_builder_ref<'a, T>(value: &'a Option<T>, name: &str) -> RuntimeResult<&'a T> {
+    value.as_ref().ok_or_else(|| RuntimeError::InvalidConfiguration(
+        format!("stream {name} is required before it has been initialized"),
+    ))
+}
+
+#[inline(never)]
+fn stream_builder_take<T>(value: &mut Option<T>, name: &str) -> RuntimeResult<T> {
+    value.take().ok_or_else(|| RuntimeError::InvalidConfiguration(
+        format!("stream {name} was not initialized"),
+    ))
+}
+
+
+struct StreamCompletionPart0 {
+    process_inventory_item: Arc<InputStream<OrderItem, OrderItemResult, OrderItemResult>>,
+    get_inventory_item_data: Stream<OrderItemResult>,
+    get_inventory_item_error: Stream<String>,
+    map_inventory_item_error: Stream<OrderItemResult>,
+    merge_inventory_result: Stream<OrderItemResult>,
+}
+
 
 impl ServiceStreams {
     #[inline(never)]
@@ -33,25 +66,77 @@ impl ServiceStreams {
         functions: &ServiceFunctions,
     ) -> RuntimeResult<Self> {
         let _ = (config, environment, functions);
-    let process_inventory_item = Arc::new(InputStream::<OrderItem, OrderItemResult, OrderItemResult>::new(&config.streams.process_inventory_item, environment.clone()));
-    let (get_inventory_item_data, get_inventory_item_error) = process_inventory_item.stream().process(&config.streams.get_inventory_item_data, functions.get_inventory_item_data.clone())?;
-    let _ = &get_inventory_item_error;
-    let map_inventory_item_error = get_inventory_item_error.map(&config.streams.map_inventory_item_error, functions.get_inventory_item_error.clone())?;
-    let merge_inventory_result = get_inventory_item_data.merge(&config.streams.merge_inventory_result, &[map_inventory_item_error.clone()])?;
-
-        let streams = Self {
-            process_inventory_item: process_inventory_item,
-            get_inventory_item_data,
-            get_inventory_item_error,
-            map_inventory_item_error,
-            merge_inventory_result,
-        };
+        let mut builder = ServiceStreamsBuilder::default();
+        builder.init_part_0(config, environment, functions)?;
+        let streams = builder.finish()?;
         streams.build()?;
         Ok(streams)
     }
 
     pub fn build(&self) -> RuntimeResult<()> {
+        self.bind_part_0()?;
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn bind_part_0(&self) -> RuntimeResult<()> {
         self.process_inventory_item.set_source(&self.merge_inventory_result)?;
         Ok(())
+    }
+
+}
+
+impl ServiceStreamsBuilder {
+
+    #[inline(never)]
+    fn init_part_0(
+        &mut self,
+        config: &Config,
+        environment: &RuntimeEnvironment,
+        functions: &ServiceFunctions,
+    ) -> RuntimeResult<()> {
+        let _ = (config, environment, functions);
+        {
+            let node = Arc::new(InputStream::<OrderItem, OrderItemResult, OrderItemResult>::new(&config.streams.process_inventory_item, environment.clone()));
+            self.process_inventory_item = Some(node);
+        }
+        {
+            let (node, error_stream) = (*stream_builder_ref(&self.process_inventory_item, "process_inventory_item")?).stream().process(&config.streams.get_inventory_item_data, functions.get_inventory_item_data.clone())?;
+            self.get_inventory_item_error = Some(error_stream);
+            self.get_inventory_item_data = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.get_inventory_item_error, "get_inventory_item_error")?).map(&config.streams.map_inventory_item_error, functions.get_inventory_item_error.clone())?;
+            self.map_inventory_item_error = Some(node);
+        }
+        {
+            let node = (*stream_builder_ref(&self.get_inventory_item_data, "get_inventory_item_data")?).merge(&config.streams.merge_inventory_result, &[(*stream_builder_ref(&self.map_inventory_item_error, "map_inventory_item_error")?).clone()])?;
+            self.merge_inventory_result = Some(node);
+        }
+        Ok(())
+    }
+
+
+    #[inline(never)]
+    fn complete_part_0(&mut self) -> RuntimeResult<StreamCompletionPart0> {
+        Ok(StreamCompletionPart0 {
+            process_inventory_item: stream_builder_take(&mut self.process_inventory_item, "process_inventory_item")?,
+            get_inventory_item_data: stream_builder_take(&mut self.get_inventory_item_data, "get_inventory_item_data")?,
+            get_inventory_item_error: stream_builder_take(&mut self.get_inventory_item_error, "get_inventory_item_error")?,
+            map_inventory_item_error: stream_builder_take(&mut self.map_inventory_item_error, "map_inventory_item_error")?,
+            merge_inventory_result: stream_builder_take(&mut self.merge_inventory_result, "merge_inventory_result")?,
+        })
+    }
+
+    #[inline(never)]
+    fn finish(mut self) -> RuntimeResult<ServiceStreams> {
+        let part_0 = self.complete_part_0()?;
+        Ok(ServiceStreams {
+            process_inventory_item: part_0.process_inventory_item,
+            get_inventory_item_data: part_0.get_inventory_item_data,
+            get_inventory_item_error: part_0.get_inventory_item_error,
+            map_inventory_item_error: part_0.map_inventory_item_error,
+            merge_inventory_result: part_0.merge_inventory_result,
+        })
     }
 }
