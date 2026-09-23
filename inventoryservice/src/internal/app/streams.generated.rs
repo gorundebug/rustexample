@@ -19,7 +19,7 @@ where
 pub struct ServiceStreams {
     pub process_inventory_item: Arc<InputStream<OrderItem, OrderItemResult, OrderItemResult>>,
     pub get_inventory_item_data: Stream<OrderItemResult>,
-    pub get_inventory_item_error: Stream<String>,
+    pub get_inventory_item_error: Stream<InventoryFailure>,
     pub map_inventory_item_error: Stream<OrderItemResult>,
     pub merge_inventory_result: Stream<OrderItemResult>,
 }
@@ -29,7 +29,7 @@ pub struct ServiceStreams {
 struct ServiceStreamsBuilder {
     process_inventory_item: Option<Arc<InputStream<OrderItem, OrderItemResult, OrderItemResult>>>,
     get_inventory_item_data: Option<Stream<OrderItemResult>>,
-    get_inventory_item_error: Option<Stream<String>>,
+    get_inventory_item_error: Option<Stream<InventoryFailure>>,
     map_inventory_item_error: Option<Stream<OrderItemResult>>,
     merge_inventory_result: Option<Stream<OrderItemResult>>,
 }
@@ -52,7 +52,7 @@ fn stream_builder_take<T>(value: &mut Option<T>, name: &str) -> RuntimeResult<T>
 struct StreamCompletionPart0 {
     process_inventory_item: Arc<InputStream<OrderItem, OrderItemResult, OrderItemResult>>,
     get_inventory_item_data: Stream<OrderItemResult>,
-    get_inventory_item_error: Stream<String>,
+    get_inventory_item_error: Stream<InventoryFailure>,
     map_inventory_item_error: Stream<OrderItemResult>,
     merge_inventory_result: Stream<OrderItemResult>,
 }

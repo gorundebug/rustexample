@@ -538,17 +538,17 @@ impl ServiceConfigContract for Config {
             },
             LinkConfig {
                 from: PROCESS_ORDER_STREAM_ID, to: SPLIT_PIPELINE_STREAM_ID,
-                call_semantics: CallSemantics::TaskPool { pool_name: "Default Pool".to_owned() },
+                call_semantics: CallSemantics::FunctionCall,
                 r#async: false,
             },
             LinkConfig {
                 from: SPLIT_PIPELINE_STREAM_ID, to: PROCESS_ORDER_ITEMS_STREAM_ID,
-                call_semantics: CallSemantics::ParallelCall,
+                call_semantics: CallSemantics::FunctionCall,
                 r#async: false,
             },
             LinkConfig {
                 from: SPLIT_PIPELINE_STREAM_ID, to: SOFT_DEADLINE_STREAM_ID,
-                call_semantics: CallSemantics::ParallelCall,
+                call_semantics: CallSemantics::FunctionCall,
                 r#async: false,
             },
         ]

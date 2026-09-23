@@ -365,12 +365,12 @@ impl ServiceConfigContract for Config {
         vec![
             LinkConfig {
                 from: GET_INVENTORY_ITEM_DATA_STREAM_ID, to: MERGE_INVENTORY_RESULT_STREAM_ID,
-                call_semantics: CallSemantics::ParallelCall,
+                call_semantics: CallSemantics::FunctionCall,
                 r#async: false,
             },
             LinkConfig {
                 from: PROCESS_INVENTORY_ITEM_STREAM_ID, to: GET_INVENTORY_ITEM_DATA_STREAM_ID,
-                call_semantics: CallSemantics::PriorityTaskPool { pool_name: "Inventory Priority Workers".to_owned(), priority: 10 },
+                call_semantics: CallSemantics::FunctionCall,
                 r#async: false,
             },
         ]
@@ -385,11 +385,11 @@ impl ServiceConfigContract for Config {
     fn types(&self) -> Vec<TypeConfig> {
         vec![
             TypeConfig {
-                name: "InventoryFailure".to_owned(), data_type: DataType::Error,
-                type_definition: "String".to_owned(), type_import: "crate::internal::types::inventory_failure".to_owned(),
+                name: "InventoryFailure".to_owned(), data_type: DataType::Struct,
+                type_definition: "InventoryFailure".to_owned(), type_import: "crate::internal::types::inventory_failure".to_owned(),
                 value_type: "".to_owned(), key_type: "".to_owned(),
                 package: "".to_owned(), module: "".to_owned(),
-                definition_format: TypeDefinitionFormat::Undefined, public_type: false,
+                definition_format: TypeDefinitionFormat::Native, public_type: false,
                 transfer_by_value: false, use_alias: false, properties: Default::default(),
             },
             TypeConfig {

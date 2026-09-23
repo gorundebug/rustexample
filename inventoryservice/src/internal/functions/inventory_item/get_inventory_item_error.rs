@@ -1,6 +1,6 @@
+use crate::internal::types::InventoryFailure;
 use async_trait::async_trait;
 use example_model::types::OrderItemResult;
-use serde::Deserialize;
 use servicelib::{
     Collector, MessageContext,
     operators::map::MapFunction,
@@ -9,48 +9,29 @@ use servicelib::{
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
-
-#[derive(Deserialize)]
-struct InventoryFailurePayload {
-    order_id: String,
-    item_id: String,
-    sku: String,
-    requested_qty: i32,
-    available_qty: i32,
-    unit_price: f64,
-}
-
 pub struct GetInventoryItemError;
 
 #[async_trait]
-impl MapFunction<String, OrderItemResult> for GetInventoryItemError {
+impl MapFunction<InventoryFailure, OrderItemResult> for GetInventoryItemError {
     async fn map(
         &self,
         context: MessageContext,
         _stream: &dyn RuntimeStream,
-        value: &String,
+        value: &InventoryFailure,
         out: &Collector<OrderItemResult>,
     ) {
-        let decoded = serde_json::from_str::<InventoryFailurePayload>(value);
-        let result = match decoded {
-            Ok(failure) => OrderItemResult {
-                order_id: failure.order_id,
-                item_id: failure.item_id,
-                sku: failure.sku,
-                requested_qty: failure.requested_qty,
-                available_qty: failure.available_qty,
-                reserved: false,
-                status: "OUT_OF_STOCK".to_owned(),
-                unit_price: failure.unit_price,
-                error: "inventory is out of stock".to_owned(),
-            },
-            Err(error) => OrderItemResult {
-                status: "PROCESSING_ERROR".to_owned(),
-                error: format!("{error}: {value}"),
-                ..Default::default()
-            },
-        };
-        out.collect(context, result).await;
+        let item = &value.item;
+        out.collect(context, OrderItemResult {
+            order_id: item.order_id.clone(),
+            item_id: item.item_id.clone(),
+            sku: item.sku.clone(),
+            requested_qty: item.quantity,
+            available_qty: value.available_qty,
+            reserved: false,
+            status: "OUT_OF_STOCK".to_owned(),
+            unit_price: item.unit_price,
+            error: "inventory is out of stock".to_owned(),
+        }).await;
     }
 }
 

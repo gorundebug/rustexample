@@ -67,7 +67,9 @@ impl InventoryServiceApi for GeneratedService {
         &self,
         request: Request<inventory_service_api::inventoryserviceapi::processorderitem::ProcessOrderItemRequest>,
     ) -> Result<Response<inventory_service_api::inventoryserviceapi::processorderitem::ProcessOrderItemResponse>, Status> {
-        let context = MessageContext::from_tonic_request(&request);
+        let context = MessageContext::from_tonic_request_with_tracing(
+            &request, self.inner.tracing_enabled,
+        );
 
         let request = request.into_inner();
 

@@ -21,6 +21,10 @@ pub fn get_serde(value_type: TypeId, environment: &RuntimeEnvironment) -> Runtim
 
 #[inline(never)]
 fn get_serde_part_0(value_type: TypeId, environment: &RuntimeEnvironment) -> RuntimeResult<Option<Serializer>> {
+    if value_type == TypeId::of::<InventoryFailure>() {
+        let serde = crate::internal::serdes::InventoryFailureSerde::new();
+        return Ok(Some(Serializer::new::<InventoryFailure>(Arc::new(serde))));
+    }
     if value_type == TypeId::of::<OrderItem>() {
         let serde = example_model::serdes::OrderItemSerde::new();
         return Ok(Some(Serializer::new::<OrderItem>(Arc::new(serde))));

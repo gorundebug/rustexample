@@ -22,6 +22,7 @@ use super::{imports::*, substreams_generated::ServiceSubStreams};
 pub(super) struct GeneratedServiceInner {
     pub(super) runtime: ServiceRuntime,
     pub(super) endpoints: ServiceEndpoints,
+    pub(super) tracing_enabled: bool,
     substreams: ServiceSubStreams,
     app: OnceLock<Arc<ServiceApp>>,
 }
@@ -59,6 +60,7 @@ impl GeneratedService {
         let service = Self {
             inner: Arc::new(GeneratedServiceInner {
                 runtime, endpoints,
+                tracing_enabled: app.environment().tracing_enabled(),
                 substreams: makers.substreams,
                 app: OnceLock::new(),
             }),

@@ -21,6 +21,7 @@ pub use super::{functions_generated::ServiceFunctions, makers_generated::Service
 pub(super) struct GeneratedServiceInner {
     pub(super) runtime: ServiceRuntime,
     pub(super) endpoints: ServiceEndpoints,
+    pub(super) tracing_enabled: bool,
     app: OnceLock<Arc<ServiceApp>>,
 }
 
@@ -56,6 +57,7 @@ impl GeneratedService {
         let service = Self {
             inner: Arc::new(GeneratedServiceInner {
                 runtime, endpoints,
+                tracing_enabled: app.environment().tracing_enabled(),
                 app: OnceLock::new(),
             }),
         };

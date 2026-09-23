@@ -75,6 +75,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             },
         )
     };
+    let environment = if noop_tracing {
+        environment.without_tracing()
+    } else {
+        environment
+    };
     environment.publish_runtime_config(loader.runtime_config());
     Service::new(&config, environment, loader).await?.run().await
 }
