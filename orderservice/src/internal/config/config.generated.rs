@@ -549,7 +549,7 @@ impl ServiceConfigContract for Config {
             LinkConfig {
                 from: SPLIT_PIPELINE_STREAM_ID, to: SOFT_DEADLINE_STREAM_ID,
                 call_semantics: CallSemantics::FunctionCall,
-                r#async: false,
+                r#async: true,
             },
         ]
     }
