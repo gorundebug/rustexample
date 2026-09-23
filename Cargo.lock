@@ -25,7 +25,7 @@ dependencies = [
 
 [[package]]
 name = "analytics_service"
-version = "0.2.132"
+version = "0.2.133"
 dependencies = [
  "async-trait",
  "croner",
@@ -649,7 +649,7 @@ dependencies = [
 
 [[package]]
 name = "example-model"
-version = "0.2.132"
+version = "0.2.133"
 dependencies = [
  "serde",
  "servicelib-gorundebug",
@@ -1206,7 +1206,7 @@ dependencies = [
 
 [[package]]
 name = "inventory-service-api"
-version = "0.2.132"
+version = "0.2.133"
 dependencies = [
  "prost 0.13.5",
  "protoc-bin-vendored",
@@ -1217,7 +1217,7 @@ dependencies = [
 
 [[package]]
 name = "inventory_service"
-version = "0.2.132"
+version = "0.2.133"
 dependencies = [
  "async-trait",
  "axum 0.8.9",
@@ -1731,7 +1731,7 @@ dependencies = [
 
 [[package]]
 name = "order-service-api"
-version = "0.2.132"
+version = "0.2.133"
 dependencies = [
  "ammonia",
  "async-trait",
@@ -1756,7 +1756,7 @@ dependencies = [
 
 [[package]]
 name = "order_service"
-version = "0.2.132"
+version = "0.2.133"
 dependencies = [
  "async-trait",
  "axum 0.8.9",
@@ -2691,7 +2691,7 @@ dependencies = [
 
 [[package]]
 name = "servicelib-gorundebug"
-version = "0.2.132"
+version = "0.2.133"
 dependencies = [
  "arc-swap",
  "async-trait",
