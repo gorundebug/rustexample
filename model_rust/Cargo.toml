@@ -1,6 +1,6 @@
 [package]
 name = "example-model"
-version = "0.2.137"
+version = "0.2.138"
 edition = "2024"
 rust-version = "1.98.1"
 
@@ -9,6 +9,6 @@ name = "example_model"
 
 
 [dependencies]
-servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.137" }
+servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.138" }
 
 serde = { version = "1", features = ["derive"] }
