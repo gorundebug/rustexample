@@ -27,7 +27,7 @@ fn connector_config(
         ))
     )
 }
-fn http_connector_config(environment: &RuntimeEnvironment, connector_id: i32) -> RuntimeResult<HttpDataConnectorConfig> {
+pub(super) fn http_connector_config(environment: &RuntimeEnvironment, connector_id: i32) -> RuntimeResult<HttpDataConnectorConfig> {
     match connector_config(environment, connector_id)?.as_ref() {
         RuntimeDataConnectorConfig::Http(config) => Ok(config.clone()),
         _ => Err(RuntimeError::InvalidConfiguration(format!(

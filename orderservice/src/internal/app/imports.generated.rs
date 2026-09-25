@@ -24,6 +24,7 @@ pub(super) use servicelib::{
 };
 pub(super) use example_model::model_types::*;
 
+
 pub(super) use servicelib::datasink::grpc::{
     NoStreamingClientFunction, ServerStreamingClientFunction,
     ClientStreamingClientFunction, BidiStreamingClientFunction,

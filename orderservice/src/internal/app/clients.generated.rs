@@ -112,8 +112,13 @@ impl ServiceClients {
 
             let mut request = tonic::Request::new(request);
             context.apply_to_tonic_request(&mut request);
+            let mut client = inventory_service_api::inventoryserviceapi::inventory_service_api_client::InventoryServiceApiClient::new(channel);
+            let response = tokio::select! {
+                _ = context.cancelled() => return Err(Box::new(tonic::Status::cancelled("RPC cancelled")) as servicelib::datasink::grpc::HandlerError),
+                response = client.process_order_item(request) => response?,
+            };
 
-            Ok(inventory_service_api::inventoryserviceapi::inventory_service_api_client::InventoryServiceApiClient::new(channel).process_order_item(request).await?.into_inner())
+            Ok(response.into_inner())
 
         })
     });
