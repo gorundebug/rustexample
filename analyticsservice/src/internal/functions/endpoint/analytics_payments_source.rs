@@ -20,7 +20,7 @@ impl DataProducer<AnalyticsEvent> for AnalyticsPaymentsSource {
     async fn start(
         &self,
         context: MessageContext,
-        consumer: Arc<dyn Consumer<AnalyticsEvent>>,
+        consumer: Arc<impl Consumer<AnalyticsEvent> + 'static>,
     ) -> HandlerResult {
         for value in [
             AnalyticsEvent {

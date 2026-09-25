@@ -5,7 +5,7 @@ use std::sync::{
 
 use example_model::types::OrderProcessed;
 use servicelib::{
-    Collector, MessageContext,
+    MessageContext,
     operators::ProcessFunction,
     runtime::{
         common::RuntimeStream,
@@ -30,8 +30,8 @@ impl ProcessFunction<OrderProcessed, OrderProcessed, String> for CountOrderProce
         context: MessageContext,
         _stream: &dyn RuntimeStream,
         value: &OrderProcessed,
-        out: &Collector<OrderProcessed>,
-        _error: &Collector<String>,
+        out: &impl servicelib::runtime::collector::Collect<OrderProcessed>,
+        _error: &impl servicelib::runtime::collector::Collect<String>,
     ) {
         let counter = if value.status == "CONFIRMED" {
             &self.counters.successful

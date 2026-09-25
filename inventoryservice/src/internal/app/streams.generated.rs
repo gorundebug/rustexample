@@ -68,19 +68,13 @@ impl ServiceStreams {
         let _ = (config, environment, functions);
         let mut builder = ServiceStreamsBuilder::default();
         builder.init_part_0(config, environment, functions)?;
+        builder.connect_part_0(config, functions)?;
         let streams = builder.finish()?;
         streams.build()?;
         Ok(streams)
     }
 
     pub fn build(&self) -> RuntimeResult<()> {
-        self.bind_part_0()?;
-        Ok(())
-    }
-
-    #[inline(never)]
-    fn bind_part_0(&self) -> RuntimeResult<()> {
-        self.process_inventory_item.set_source(&self.merge_inventory_result)?;
         Ok(())
     }
 
@@ -101,18 +95,33 @@ impl ServiceStreamsBuilder {
             self.process_inventory_item = Some(node);
         }
         {
-            let (node, error_stream) = (*stream_builder_ref(&self.process_inventory_item, "process_inventory_item")?).stream().process(&config.streams.get_inventory_item_data, functions.get_inventory_item_data.clone())?;
+            let node = Stream::new(&config.streams.get_inventory_item_data.stream, environment.clone());
+            let error_stream = servicelib::operators::error::ErrorStream::new(&config.streams.get_inventory_item_data.stream, environment.clone()).stream().clone();
             self.get_inventory_item_error = Some(error_stream);
             self.get_inventory_item_data = Some(node);
         }
         {
-            let node = (*stream_builder_ref(&self.get_inventory_item_error, "get_inventory_item_error")?).map(&config.streams.map_inventory_item_error, functions.get_inventory_item_error.clone())?;
+            let node = Stream::new(&config.streams.map_inventory_item_error.stream, environment.clone());
             self.map_inventory_item_error = Some(node);
         }
         {
-            let node = (*stream_builder_ref(&self.get_inventory_item_data, "get_inventory_item_data")?).merge(&config.streams.merge_inventory_result, &[(*stream_builder_ref(&self.map_inventory_item_error, "map_inventory_item_error")?).clone()])?;
+            let node = Stream::derived(&config.streams.merge_inventory_result.stream, (*stream_builder_ref(&self.get_inventory_item_data, "get_inventory_item_data")?).environment().clone(), (*stream_builder_ref(&self.get_inventory_item_data, "get_inventory_item_data")?).get_serde());
             self.merge_inventory_result = Some(node);
         }
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn connect_part_0(&self, config: &Config, functions: &ServiceFunctions) -> RuntimeResult<()> {
+        let _ = (config, functions);
+        let _collector_bound_process_inventory_item = (*stream_builder_ref(&self.process_inventory_item, "process_inventory_item")?).set_source_typed(&(*stream_builder_ref(&self.merge_inventory_result, "merge_inventory_result")?))?;
+        let operator_merge_inventory_result = Arc::new(servicelib::operators::merge::MergeStream::from_collector(_collector_bound_process_inventory_item.clone()));
+        let _collector_merge_inventory_result_0 = (*stream_builder_ref(&self.get_inventory_item_data, "get_inventory_item_data")?).try_set_typed_consumer(Arc::clone(&operator_merge_inventory_result), config.streams.merge_inventory_result.stream.id)?;
+        let _collector_merge_inventory_result_1 = (*stream_builder_ref(&self.map_inventory_item_error, "map_inventory_item_error")?).try_set_typed_consumer(Arc::clone(&operator_merge_inventory_result), config.streams.merge_inventory_result.stream.id)?;
+        let operator_map_inventory_item_error = Arc::new(servicelib::operators::map::MapStream::from_collector(_collector_merge_inventory_result_1.clone(), functions.get_inventory_item_error.clone()));
+        let _collector_map_inventory_item_error = (*stream_builder_ref(&self.get_inventory_item_error, "get_inventory_item_error")?).try_set_typed_consumer(Arc::clone(&operator_map_inventory_item_error), config.streams.map_inventory_item_error.stream.id)?;
+        let operator_get_inventory_item_data = Arc::new(servicelib::operators::process::ProcessStream::from_collectors(_collector_merge_inventory_result_0.clone(), _collector_map_inventory_item_error.clone(), functions.get_inventory_item_data.clone()));
+        let _collector_get_inventory_item_data = (*stream_builder_ref(&self.process_inventory_item, "process_inventory_item")?).stream().try_set_typed_consumer(Arc::clone(&operator_get_inventory_item_data), config.streams.get_inventory_item_data.stream.id)?;
         Ok(())
     }
 

@@ -1,7 +1,7 @@
 use chrono::Utc;
 use example_model::types::OrderItemResult;
 use servicelib::{
-    Collector, MessageContext,
+    MessageContext,
     operators::MapFunction,
     runtime::{
         common::RuntimeStream,
@@ -20,7 +20,7 @@ impl MapFunction<OrderItemResult, OrderState> for MapOrderItemResultToOrderState
         context: MessageContext,
         _stream: &dyn RuntimeStream,
         value: &OrderItemResult,
-        out: &Collector<OrderState>,
+        out: &impl servicelib::runtime::collector::Collect<OrderState>,
     ) {
         let status = if value.reserved {
             "CONFIRMED"

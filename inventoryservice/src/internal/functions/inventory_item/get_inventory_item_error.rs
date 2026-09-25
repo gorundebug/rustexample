@@ -1,7 +1,7 @@
 use crate::internal::types::InventoryFailure;
 use example_model::types::OrderItemResult;
 use servicelib::{
-    Collector, MessageContext,
+    MessageContext,
     operators::map::MapFunction,
     runtime::{
         common::RuntimeStream,
@@ -16,7 +16,7 @@ impl MapFunction<InventoryFailure, OrderItemResult> for GetInventoryItemError {
         context: MessageContext,
         _stream: &dyn RuntimeStream,
         value: &InventoryFailure,
-        out: &Collector<OrderItemResult>,
+        out: &impl servicelib::runtime::collector::Collect<OrderItemResult>,
     ) {
         let item = &value.item;
         out.collect(context, OrderItemResult {

@@ -89,19 +89,13 @@ impl ServiceStreams {
         let _ = (config, environment, functions);
         let mut builder = ServiceStreamsBuilder::default();
         builder.init_part_0(config, environment, functions)?;
+        builder.connect_part_0(config, functions)?;
         let streams = builder.finish()?;
         streams.build()?;
         Ok(streams)
     }
 
     pub fn build(&self) -> RuntimeResult<()> {
-        self.bind_part_0()?;
-        Ok(())
-    }
-
-    #[inline(never)]
-    fn bind_part_0(&self) -> RuntimeResult<()> {
-        self.process_order.set_source(&self.split_order_result[1])?;
         Ok(())
     }
 
@@ -122,46 +116,75 @@ impl ServiceStreamsBuilder {
             self.process_order = Some(node);
         }
         {
-            let node = (*stream_builder_ref(&self.process_order, "process_order")?).stream().split(&config.streams.split_pipeline)?;
+            let node = servicelib::operators::split::SplitStream::<_, 2>::create_links(&config.streams.split_pipeline, &(*stream_builder_ref(&self.process_order, "process_order")?).stream());
             self.split_pipeline = Some(node);
         }
         {
-            let node = (*stream_builder_ref(&self.split_pipeline, "split_pipeline")?)[0].flat_map(&config.streams.process_order_items, functions.process_order_items.clone())?;
+            let node = Stream::new(&config.streams.process_order_items.stream, environment.clone());
             self.process_order_items = Some(node);
         }
         {
-            let node = (*stream_builder_ref(&self.process_order_items, "process_order_items")?).sink_with_result::<OrderItemResult, OrderState>(&config.streams.process_order_item)?;
+            let node = SinkStreamWithResult::new(&config.streams.process_order_item, environment.clone())?;
             self.process_order_item_error = Some(node.error_stream().clone());
             self.process_order_item = Some(node);
         }
         {
-            let node = (*stream_builder_ref(&self.process_order_item, "process_order_item")?).stream().clone().map(&config.streams.map_order_item_result_to_order_state, functions.map_order_item_result_to_order_state.clone())?;
+            let node = Stream::new(&config.streams.map_order_item_result_to_order_state.stream, environment.clone());
             self.map_order_item_result_to_order_state = Some(node);
         }
         {
-            let node = (*stream_builder_ref(&self.split_pipeline, "split_pipeline")?)[1].delay(&config.streams.soft_deadline, functions.soft_deadline.clone())?;
+            let node = Stream::derived(&config.streams.soft_deadline.stream, (*stream_builder_ref(&self.split_pipeline, "split_pipeline")?)[1].environment().clone(), (*stream_builder_ref(&self.split_pipeline, "split_pipeline")?)[1].get_serde());
             self.soft_deadline = Some(node);
         }
         {
-            let node = (*stream_builder_ref(&self.soft_deadline, "soft_deadline")?).map(&config.streams.map_to_order_state, functions.map_to_order_state.clone())?;
+            let node = Stream::new(&config.streams.map_to_order_state.stream, environment.clone());
             self.map_to_order_state = Some(node);
         }
         {
-            let node = (*stream_builder_ref(&self.map_to_order_state, "map_to_order_state")?).merge(&config.streams.merge_results, &[(*stream_builder_ref(&self.map_order_item_result_to_order_state, "map_order_item_result_to_order_state")?).clone(), (*stream_builder_ref(&self.process_order_item_error, "process_order_item_error")?).clone()])?;
+            let node = Stream::derived(&config.streams.merge_results.stream, (*stream_builder_ref(&self.map_to_order_state, "map_to_order_state")?).environment().clone(), (*stream_builder_ref(&self.map_to_order_state, "map_to_order_state")?).get_serde());
             self.merge_results = Some(node);
         }
         {
-            let node = (*stream_builder_ref(&self.merge_results, "merge_results")?).split(&config.streams.split_order_result)?;
+            let node = servicelib::operators::split::SplitStream::<_, 2>::create_links(&config.streams.split_order_result, &(*stream_builder_ref(&self.merge_results, "merge_results")?));
             self.split_order_result = Some(node);
         }
         {
-            let node = (*stream_builder_ref(&self.split_order_result, "split_order_result")?)[0].map(&config.streams.map_to_order_processed, functions.map_to_order_processed.clone())?;
+            let node = Stream::new(&config.streams.map_to_order_processed.stream, environment.clone());
             self.map_to_order_processed = Some(node);
         }
         {
-            let node = (*stream_builder_ref(&self.map_to_order_processed, "map_to_order_processed")?).sink_with_result::<String, String>(&config.streams.publish_order_processed)?;
+            let node = SinkStreamWithResult::new(&config.streams.publish_order_processed, environment.clone())?;
             self.publish_order_processed = Some(node);
         }
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn connect_part_0(&self, config: &Config, functions: &ServiceFunctions) -> RuntimeResult<()> {
+        let _ = (config, functions);
+        let _collector_bound_process_order = (*stream_builder_ref(&self.process_order, "process_order")?).set_source_typed(&(*stream_builder_ref(&self.split_order_result, "split_order_result")?)[1])?;
+        let operator_publish_order_processed = Arc::clone(&(*stream_builder_ref(&self.publish_order_processed, "publish_order_processed")?));
+        let _collector_publish_order_processed = (*stream_builder_ref(&self.map_to_order_processed, "map_to_order_processed")?).try_set_typed_consumer(Arc::clone(&operator_publish_order_processed), config.streams.publish_order_processed.stream.id)?;
+        let operator_map_to_order_processed = Arc::new(servicelib::operators::map::MapStream::from_collector(_collector_publish_order_processed.clone(), functions.map_to_order_processed.clone()));
+        let _collector_map_to_order_processed = (*stream_builder_ref(&self.split_order_result, "split_order_result")?)[0].try_set_typed_consumer(Arc::clone(&operator_map_to_order_processed), config.streams.map_to_order_processed.stream.id)?;
+        let operator_split_order_result = servicelib::operators::split::SplitStream::<_, 2>::from_typed(&config.streams.split_order_result, &(*stream_builder_ref(&self.merge_results, "merge_results")?), (_collector_map_to_order_processed.clone(), (_collector_bound_process_order.clone(), ())))?;
+        let _collector_split_order_result = (*stream_builder_ref(&self.merge_results, "merge_results")?).try_set_typed_consumer(Arc::clone(&operator_split_order_result), config.streams.split_order_result.stream.id)?;
+        let operator_merge_results = Arc::new(servicelib::operators::merge::MergeStream::from_collector(_collector_split_order_result.clone()));
+        let _collector_merge_results_0 = (*stream_builder_ref(&self.map_to_order_state, "map_to_order_state")?).try_set_typed_consumer(Arc::clone(&operator_merge_results), config.streams.merge_results.stream.id)?;
+        let _collector_merge_results_1 = (*stream_builder_ref(&self.map_order_item_result_to_order_state, "map_order_item_result_to_order_state")?).try_set_typed_consumer(Arc::clone(&operator_merge_results), config.streams.merge_results.stream.id)?;
+        let _collector_merge_results_2 = (*stream_builder_ref(&self.process_order_item_error, "process_order_item_error")?).try_set_typed_consumer(Arc::clone(&operator_merge_results), config.streams.merge_results.stream.id)?;
+        let operator_map_to_order_state = Arc::new(servicelib::operators::map::MapStream::from_collector(_collector_merge_results_0.clone(), functions.map_to_order_state.clone()));
+        let _collector_map_to_order_state = (*stream_builder_ref(&self.soft_deadline, "soft_deadline")?).try_set_typed_consumer(Arc::clone(&operator_map_to_order_state), config.streams.map_to_order_state.stream.id)?;
+        let operator_soft_deadline = Arc::new(servicelib::operators::delay::DelayStream::from_collector(_collector_map_to_order_state.clone(), functions.soft_deadline.clone()));
+        let _collector_soft_deadline = (*stream_builder_ref(&self.split_pipeline, "split_pipeline")?)[1].try_set_typed_consumer(Arc::clone(&operator_soft_deadline), config.streams.soft_deadline.stream.id)?;
+        let operator_map_order_item_result_to_order_state = Arc::new(servicelib::operators::map::MapStream::from_collector(_collector_merge_results_1.clone(), functions.map_order_item_result_to_order_state.clone()));
+        let _collector_map_order_item_result_to_order_state = (*stream_builder_ref(&self.process_order_item, "process_order_item")?).stream().clone().try_set_typed_consumer(Arc::clone(&operator_map_order_item_result_to_order_state), config.streams.map_order_item_result_to_order_state.stream.id)?;
+        let operator_process_order_item = Arc::clone(&(*stream_builder_ref(&self.process_order_item, "process_order_item")?));
+        let _collector_process_order_item = (*stream_builder_ref(&self.process_order_items, "process_order_items")?).try_set_typed_consumer(Arc::clone(&operator_process_order_item), config.streams.process_order_item.stream.id)?;
+        let operator_process_order_items = Arc::new(servicelib::operators::flatmap::FlatMapStream::from_collector(_collector_process_order_item.clone(), functions.process_order_items.clone()));
+        let _collector_process_order_items = (*stream_builder_ref(&self.split_pipeline, "split_pipeline")?)[0].try_set_typed_consumer(Arc::clone(&operator_process_order_items), config.streams.process_order_items.stream.id)?;
+        let operator_split_pipeline = servicelib::operators::split::SplitStream::<_, 2>::from_typed(&config.streams.split_pipeline, &(*stream_builder_ref(&self.process_order, "process_order")?).stream(), (_collector_process_order_items.clone(), (_collector_soft_deadline.clone(), ())))?;
+        let _collector_split_pipeline = (*stream_builder_ref(&self.process_order, "process_order")?).stream().try_set_typed_consumer(Arc::clone(&operator_split_pipeline), config.streams.split_pipeline.stream.id)?;
         Ok(())
     }
 

@@ -1,5 +1,5 @@
 use servicelib::{
-    Collector, MessageContext,
+    MessageContext,
     operators::MapFunction,
     runtime::{
         common::RuntimeStream,
@@ -18,7 +18,7 @@ impl MapFunction<AnalyticsEvent, AnalyticsEvent> for AdvanceCycleAnalytics {
         context: MessageContext,
         _stream: &dyn RuntimeStream,
         value: &AnalyticsEvent,
-        out: &Collector<AnalyticsEvent>,
+        out: &impl servicelib::runtime::collector::Collect<AnalyticsEvent>,
     ) {
         let mut next = value.clone();
         next.value += 1;

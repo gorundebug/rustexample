@@ -1,6 +1,6 @@
 use crate::internal::types::{AnalyticsEvent, AnalyticsResult};
 use servicelib::{
-    Collector, MessageContext,
+    MessageContext,
     operators::{MultiJoinFunction, downcast_join_values},
     runtime::{
         common::RuntimeStream,
@@ -18,7 +18,7 @@ impl MultiJoinFunction<String, AnalyticsResult> for MultiJoinAnalyticsEvents {
         _stream: &dyn RuntimeStream,
         key: String,
         values: JoinValues,
-        out: &Collector<AnalyticsResult>,
+        out: &impl servicelib::runtime::collector::Collect<AnalyticsResult>,
     ) -> bool {
         if values.len() != 3 {
             return false;

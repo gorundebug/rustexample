@@ -1,6 +1,6 @@
 use chrono::Utc;
 use servicelib::{
-    Collector, MessageContext,
+    MessageContext,
     operators::MapFunction,
     runtime::{
         common::RuntimeStream,
@@ -19,7 +19,7 @@ impl MapFunction<Order, OrderState> for MapToOrderState {
         context: MessageContext,
         _stream: &dyn RuntimeStream,
         value: &Order,
-        out: &Collector<OrderState>,
+        out: &impl servicelib::runtime::collector::Collect<OrderState>,
     ) {
         out.collect(
             context,

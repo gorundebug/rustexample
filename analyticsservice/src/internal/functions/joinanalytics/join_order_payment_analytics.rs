@@ -1,5 +1,5 @@
 use servicelib::{
-    Collector, MessageContext,
+    MessageContext,
     operators::JoinFunction,
     runtime::{
         common::RuntimeStream,
@@ -22,7 +22,7 @@ impl JoinFunction<String, AnalyticsEvent, AnalyticsEvent, AnalyticsResult>
         key: String,
         left: Vec<AnalyticsEvent>,
         right: Vec<AnalyticsEvent>,
-        out: &Collector<AnalyticsResult>,
+        out: &impl servicelib::runtime::collector::Collect<AnalyticsResult>,
     ) -> bool {
         let (Some(order), Some(payment)) = (left.first(), right.first()) else {
             return false;

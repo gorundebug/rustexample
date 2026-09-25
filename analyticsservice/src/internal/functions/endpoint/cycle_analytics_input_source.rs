@@ -23,7 +23,7 @@ impl DataProducer<AnalyticsEvent> for CycleAnalyticsInputSource {
     async fn start(
         &self,
         context: MessageContext,
-        consumer: Arc<dyn Consumer<AnalyticsEvent>>,
+        consumer: Arc<impl Consumer<AnalyticsEvent> + 'static>,
     ) -> HandlerResult {
         consumer
             .consume(

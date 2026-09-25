@@ -1,6 +1,6 @@
 use crate::internal::types::AnalyticsEvent;
 use servicelib::{
-    Collector, MessageContext,
+    MessageContext,
     operators::KeyByFunction,
     runtime::{
         common::RuntimeStream,
@@ -17,7 +17,7 @@ impl KeyByFunction<AnalyticsEvent, String, AnalyticsEvent> for KeyShipmentsForMu
         context: MessageContext,
         _stream: &dyn RuntimeStream,
         value: &AnalyticsEvent,
-        out: &Collector<KeyValue<String, AnalyticsEvent>>,
+        out: &impl servicelib::runtime::collector::Collect<KeyValue<String, AnalyticsEvent>>,
     ) {
         out.collect(
             context,

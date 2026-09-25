@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use servicelib::{
-    CallableSubStream, Collector, MessageContext, Payload, SubStreamCollectorFunc,
+    CallableSubStream, MessageContext, Payload, SubStreamCollectorFunc,
     operators::MapFunction,
     runtime::{
         common::RuntimeStream,
@@ -28,7 +28,7 @@ impl MapFunction<AnalyticsEvent, AnalyticsResult> for InvokeAnalyticsSubstream {
         context: MessageContext,
         _stream: &dyn RuntimeStream,
         value: &AnalyticsEvent,
-        out: &Collector<AnalyticsResult>,
+        out: &impl servicelib::runtime::collector::Collect<AnalyticsResult>,
     ) {
         let results = Arc::new(Mutex::new(Vec::<(MessageContext, AnalyticsResult)>::new()));
         let collected = Arc::clone(&results);

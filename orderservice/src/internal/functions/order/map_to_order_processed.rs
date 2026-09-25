@@ -1,6 +1,6 @@
 use example_model::types::OrderProcessed;
 use servicelib::{
-    Collector, MessageContext,
+    MessageContext,
     operators::MapFunction,
     runtime::{
         common::RuntimeStream,
@@ -19,7 +19,7 @@ impl MapFunction<OrderState, OrderProcessed> for MapToOrderProcessed {
         context: MessageContext,
         _stream: &dyn RuntimeStream,
         value: &OrderState,
-        out: &Collector<OrderProcessed>,
+        out: &impl servicelib::runtime::collector::Collect<OrderProcessed>,
     ) {
         let confirmed_items = value
             .confirmed_items

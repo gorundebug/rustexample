@@ -6,7 +6,7 @@ use std::{
 use crate::internal::types::InventoryFailure;
 use example_model::types::{OrderItem, OrderItemResult};
 use servicelib::{
-    Collector, MessageContext,
+    MessageContext,
     operators::process::ProcessFunction,
     runtime::{
         common::RuntimeStream,
@@ -35,8 +35,8 @@ impl ProcessFunction<OrderItem, OrderItemResult, InventoryFailure> for GetInvent
         context: MessageContext,
         _stream: &dyn RuntimeStream,
         value: &OrderItem,
-        out: &Collector<OrderItemResult>,
-        error: &Collector<InventoryFailure>,
+        out: &impl servicelib::runtime::collector::Collect<OrderItemResult>,
+        error: &impl servicelib::runtime::collector::Collect<InventoryFailure>,
     ) {
         let (available, reserved) = reserve(self.stock.get(&value.sku), value.quantity);
         if reserved {

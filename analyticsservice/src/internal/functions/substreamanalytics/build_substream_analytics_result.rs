@@ -1,5 +1,5 @@
 use servicelib::{
-    Collector, MessageContext,
+    MessageContext,
     operators::MapFunction,
     runtime::{
         common::RuntimeStream,
@@ -18,7 +18,7 @@ impl MapFunction<AnalyticsEvent, AnalyticsResult> for BuildSubstreamAnalyticsRes
         context: MessageContext,
         _stream: &dyn RuntimeStream,
         value: &AnalyticsEvent,
-        out: &Collector<AnalyticsResult>,
+        out: &impl servicelib::runtime::collector::Collect<AnalyticsResult>,
     ) {
         out.collect(
             context,

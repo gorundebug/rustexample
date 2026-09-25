@@ -1,6 +1,6 @@
 use example_model::types::OrderItem;
 use servicelib::{
-    Collector, MessageContext,
+    MessageContext,
     operators::FlatMapFunction,
     runtime::{
         common::RuntimeStream,
@@ -19,7 +19,7 @@ impl FlatMapFunction<Order, OrderItem> for ProcessOrderItems {
         context: MessageContext,
         _stream: &dyn RuntimeStream,
         value: &Order,
-        out: &Collector<OrderItem>,
+        out: &impl servicelib::runtime::collector::Collect<OrderItem>,
     ) {
         for item in &value.items {
             let mut item = item.clone();

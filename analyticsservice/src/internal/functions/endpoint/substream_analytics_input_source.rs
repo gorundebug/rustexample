@@ -23,7 +23,7 @@ impl DataProducer<AnalyticsEvent> for SubstreamAnalyticsInputSource {
     async fn start(
         &self,
         context: MessageContext,
-        consumer: Arc<dyn Consumer<AnalyticsEvent>>,
+        consumer: Arc<impl Consumer<AnalyticsEvent> + 'static>,
     ) -> HandlerResult {
         consumer
             .consume(
