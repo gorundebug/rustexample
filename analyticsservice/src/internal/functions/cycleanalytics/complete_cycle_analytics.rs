@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use servicelib::{
     MessageContext,
     operators::FilterFunction,
@@ -13,7 +12,6 @@ use crate::internal::types::AnalyticsEvent;
 #[derive(Clone, Default)]
 pub struct CompleteCycleAnalytics;
 
-#[async_trait]
 impl FilterFunction<AnalyticsEvent> for CompleteCycleAnalytics {
     async fn filter(
         &self,

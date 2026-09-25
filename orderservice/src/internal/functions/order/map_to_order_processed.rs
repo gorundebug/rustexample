@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use example_model::types::OrderProcessed;
 use servicelib::{
     Collector, MessageContext,
@@ -14,7 +13,6 @@ use crate::internal::types::OrderState;
 #[derive(Default)]
 pub struct MapToOrderProcessed;
 
-#[async_trait]
 impl MapFunction<OrderState, OrderProcessed> for MapToOrderProcessed {
     async fn map(
         &self,

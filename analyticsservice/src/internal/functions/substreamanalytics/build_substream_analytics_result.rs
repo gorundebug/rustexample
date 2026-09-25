@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use servicelib::{
     Collector, MessageContext,
     operators::MapFunction,
@@ -13,7 +12,6 @@ use crate::internal::types::{AnalyticsEvent, AnalyticsResult};
 #[derive(Clone, Default)]
 pub struct BuildSubstreamAnalyticsResult;
 
-#[async_trait]
 impl MapFunction<AnalyticsEvent, AnalyticsResult> for BuildSubstreamAnalyticsResult {
     async fn map(
         &self,

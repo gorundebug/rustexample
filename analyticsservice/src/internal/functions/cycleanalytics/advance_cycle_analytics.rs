@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use servicelib::{
     Collector, MessageContext,
     operators::MapFunction,
@@ -13,7 +12,6 @@ use crate::internal::types::AnalyticsEvent;
 #[derive(Clone, Default)]
 pub struct AdvanceCycleAnalytics;
 
-#[async_trait]
 impl MapFunction<AnalyticsEvent, AnalyticsEvent> for AdvanceCycleAnalytics {
     async fn map(
         &self,

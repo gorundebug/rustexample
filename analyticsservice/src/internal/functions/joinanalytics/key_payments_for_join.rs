@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use servicelib::{
     Collector, MessageContext,
     operators::KeyByFunction,
@@ -14,7 +13,6 @@ use crate::internal::types::AnalyticsEvent;
 #[derive(Clone, Default)]
 pub struct KeyPaymentsForJoin;
 
-#[async_trait]
 impl KeyByFunction<AnalyticsEvent, String, AnalyticsEvent> for KeyPaymentsForJoin {
     async fn key_by(
         &self,

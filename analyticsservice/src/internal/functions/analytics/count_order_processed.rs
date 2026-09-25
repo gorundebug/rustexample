@@ -3,7 +3,6 @@ use std::sync::{
     atomic::{AtomicU64, Ordering},
 };
 
-use async_trait::async_trait;
 use example_model::types::OrderProcessed;
 use servicelib::{
     Collector, MessageContext,
@@ -25,7 +24,6 @@ struct Counters {
     unsuccessful: AtomicU64,
 }
 
-#[async_trait]
 impl ProcessFunction<OrderProcessed, OrderProcessed, String> for CountOrderProcessed {
     async fn process(
         &self,

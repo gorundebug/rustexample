@@ -1,5 +1,4 @@
 use crate::internal::types::InventoryFailure;
-use async_trait::async_trait;
 use example_model::types::OrderItemResult;
 use servicelib::{
     Collector, MessageContext,
@@ -11,7 +10,6 @@ use servicelib::{
 };
 pub struct GetInventoryItemError;
 
-#[async_trait]
 impl MapFunction<InventoryFailure, OrderItemResult> for GetInventoryItemError {
     async fn map(
         &self,

@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use example_model::types::OrderItem;
 use servicelib::{
     Collector, MessageContext,
@@ -14,7 +13,6 @@ use crate::internal::types::Order;
 #[derive(Default)]
 pub struct ProcessOrderItems;
 
-#[async_trait]
 impl FlatMapFunction<Order, OrderItem> for ProcessOrderItems {
     async fn flat_map(
         &self,

@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use async_trait::async_trait;
 use servicelib::{
     MessageContext,
     operators::DelayFunction,
@@ -15,7 +14,6 @@ use crate::internal::types::Order;
 #[derive(Default)]
 pub struct SoftDeadline;
 
-#[async_trait]
 impl DelayFunction<Order> for SoftDeadline {
     async fn duration(
         &self,

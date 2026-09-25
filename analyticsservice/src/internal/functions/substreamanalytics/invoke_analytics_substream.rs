@@ -1,6 +1,5 @@
 use std::sync::{Arc, Mutex};
 
-use async_trait::async_trait;
 use servicelib::{
     CallableSubStream, Collector, MessageContext, Payload, SubStreamCollectorFunc,
     operators::MapFunction,
@@ -23,7 +22,6 @@ impl InvokeAnalyticsSubstream {
     }
 }
 
-#[async_trait]
 impl MapFunction<AnalyticsEvent, AnalyticsResult> for InvokeAnalyticsSubstream {
     async fn map(
         &self,

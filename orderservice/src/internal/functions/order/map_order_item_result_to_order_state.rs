@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use chrono::Utc;
 use example_model::types::OrderItemResult;
 use servicelib::{
@@ -15,7 +14,6 @@ use crate::internal::types::OrderState;
 #[derive(Default)]
 pub struct MapOrderItemResultToOrderState;
 
-#[async_trait]
 impl MapFunction<OrderItemResult, OrderState> for MapOrderItemResultToOrderState {
     async fn map(
         &self,

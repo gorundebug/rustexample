@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use chrono::Utc;
 use servicelib::{
     Collector, MessageContext,
@@ -14,7 +13,6 @@ use crate::internal::types::{Order, OrderState};
 #[derive(Default)]
 pub struct MapToOrderState;
 
-#[async_trait]
 impl MapFunction<Order, OrderState> for MapToOrderState {
     async fn map(
         &self,

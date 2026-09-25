@@ -1,5 +1,4 @@
 use crate::internal::types::{AnalyticsEvent, AnalyticsResult};
-use async_trait::async_trait;
 use servicelib::{
     Collector, MessageContext,
     operators::{MultiJoinFunction, downcast_join_values},
@@ -12,7 +11,6 @@ use servicelib::{
 
 #[derive(Clone, Default)]
 pub struct MultiJoinAnalyticsEvents;
-#[async_trait]
 impl MultiJoinFunction<String, AnalyticsResult> for MultiJoinAnalyticsEvents {
     async fn multi_join(
         &self,

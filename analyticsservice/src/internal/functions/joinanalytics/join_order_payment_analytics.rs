@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use servicelib::{
     Collector, MessageContext,
     operators::JoinFunction,
@@ -13,7 +12,6 @@ use crate::internal::types::{AnalyticsEvent, AnalyticsResult};
 #[derive(Clone, Default)]
 pub struct JoinOrderPaymentAnalytics;
 
-#[async_trait]
 impl JoinFunction<String, AnalyticsEvent, AnalyticsEvent, AnalyticsResult>
     for JoinOrderPaymentAnalytics
 {

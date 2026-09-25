@@ -3,7 +3,6 @@ use std::{
     sync::atomic::{AtomicI32, Ordering},
 };
 
-use async_trait::async_trait;
 use crate::internal::types::InventoryFailure;
 use example_model::types::{OrderItem, OrderItemResult};
 use servicelib::{
@@ -30,7 +29,6 @@ impl Default for GetInventoryItemData {
         }
     }
 }
-#[async_trait]
 impl ProcessFunction<OrderItem, OrderItemResult, InventoryFailure> for GetInventoryItemData {
     async fn process(
         &self,
