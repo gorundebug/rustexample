@@ -19,7 +19,20 @@ use servicelib::runtime::{
 };
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() {
+    let code = match run().await {
+        Ok(()) => 0,
+        Err(error) => {
+            eprintln!("{error}");
+            1
+        }
+    };
+    // ServiceApp owns graceful shutdown. Runtime destruction must not wait
+    // indefinitely for detached blocking work after its deadline has expired.
+    std::process::exit(code);
+}
+
+async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let (config_path, values_path) =
         config_paths("./config/config.yaml", "./config/overrides.yaml");
     let noop_logs = environment_flag_enabled("SERVICELIB_NOOP_LOGS");
@@ -81,7 +94,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         environment
     };
     environment.publish_runtime_config(loader.runtime_config());
+    install_shutdown_deadline(loader.clone())?;
     Service::new(&config, environment, loader).await?.run().await
+}
+
+fn install_shutdown_deadline(loader: ConfigLoader<Config>) -> std::io::Result<()> {
+    let (ready, initialized) = std::sync::mpsc::sync_channel(1);
+    std::thread::Builder::new()
+        .name("shutdown-deadline".to_owned())
+        .spawn(move || {
+            // Signals and the deadline must progress even if every application
+            // worker is blocked. No extra crate or application executor is used.
+            let wait_for_signal = || -> std::io::Result<()> {
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()?;
+                runtime.block_on(async {
+                    #[cfg(unix)]
+                    {
+                        use tokio::signal::unix::{SignalKind, signal};
+                        let mut interrupt = signal(SignalKind::interrupt())?;
+                        let mut terminate = signal(SignalKind::terminate())?;
+                        let _ = ready.send(Ok(()));
+                        tokio::select! {
+                            _ = interrupt.recv() => {},
+                            _ = terminate.recv() => {},
+                        }
+                    }
+                    #[cfg(windows)]
+                    {
+                        let mut interrupt = tokio::signal::windows::ctrl_c()?;
+                        let _ = ready.send(Ok(()));
+                        interrupt.recv().await;
+                    }
+                    Ok(())
+                })
+            };
+            if let Err(error) = wait_for_signal() {
+                let _ = ready.send(Err(error));
+                return;
+            }
+            let started = std::time::Instant::now();
+            let timeout = std::time::Duration::from_millis(
+                loader.current().service().shutdown_timeout.max(0) as u64,
+            );
+            std::thread::sleep(timeout.saturating_sub(started.elapsed()));
+            // Normal signal shutdown has the same exit status as graceful exit.
+            // This policy belongs to the executable, never to library Stop.
+            std::process::exit(0);
+        })?;
+    initialized.recv().map_err(std::io::Error::other)?
 }
 
 fn config_paths(default_config: &str, default_values: &str) -> (String, String) {
