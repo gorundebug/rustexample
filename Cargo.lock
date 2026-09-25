@@ -25,7 +25,7 @@ dependencies = [
 
 [[package]]
 name = "analytics_service"
-version = "0.2.140"
+version = "0.2.141"
 dependencies = [
  "async-trait",
  "croner",
@@ -648,7 +648,7 @@ dependencies = [
 
 [[package]]
 name = "example-model"
-version = "0.2.140"
+version = "0.2.141"
 dependencies = [
  "serde",
  "servicelib-gorundebug",
@@ -1206,7 +1206,7 @@ dependencies = [
 
 [[package]]
 name = "inventory-service-api"
-version = "0.2.140"
+version = "0.2.141"
 dependencies = [
  "prost 0.13.5",
  "protoc-bin-vendored",
@@ -1217,7 +1217,7 @@ dependencies = [
 
 [[package]]
 name = "inventory_service"
-version = "0.2.140"
+version = "0.2.141"
 dependencies = [
  "async-trait",
  "axum 0.8.9",
@@ -1710,7 +1710,7 @@ dependencies = [
 
 [[package]]
 name = "order-service-api"
-version = "0.2.140"
+version = "0.2.141"
 dependencies = [
  "ammonia",
  "async-trait",
@@ -1735,7 +1735,7 @@ dependencies = [
 
 [[package]]
 name = "order_service"
-version = "0.2.140"
+version = "0.2.141"
 dependencies = [
  "async-trait",
  "axum 0.8.9",
@@ -2670,7 +2670,7 @@ dependencies = [
 
 [[package]]
 name = "servicelib-gorundebug"
-version = "0.2.140"
+version = "0.2.141"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -3814,18 +3814,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.58"
+version = "0.8.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c17e8fafad82b542ff3717217ecdc736231b59e387768c9630123b4ce4d2db44"
+checksum = "6df92bf3d9227be3d53173901ddbffac2babc27ae50f397776ffd6dc33f800cb"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.58"
+version = "0.8.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "595f56e044df4f46a0c9a626f65c3d99eb8488f7e8a8baa12dd76326d9710bf2"
+checksum = "ac4f328cf2f05d084e496c3e9c3f33ed0a183656a16e1fcec4d464d8373aec82"
 dependencies = [
  "proc-macro2",
  "quote",
