@@ -1,6 +1,6 @@
 services:
   analyticsservice:
-    image: analyticsservice-rust:local
+    image: analyticsservice-rust:${DOCKER_IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: Dockerfile

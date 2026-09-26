@@ -3,7 +3,7 @@ services:
     # The project workspace and the autonomous service build must publish and
     # run the same image. This also makes `docker-start` consume exactly what
     # `make -C <service> docker-build` produced.
-    image: analyticsservice-rust:local
+    image: analyticsservice-rust:${DOCKER_IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: Dockerfile
@@ -41,7 +41,7 @@ services:
       - app_net
 
   automationservice:
-    image: automationservice:local
+    image: automationservice:${DOCKER_IMAGE_TAG:-local}
     restart: unless-stopped
     environment:
       - DEBUG=${AUTOMATION_SERVICE_DEBUG:-0}
@@ -63,7 +63,7 @@ services:
     # The project workspace and the autonomous service build must publish and
     # run the same image. This also makes `docker-start` consume exactly what
     # `make -C <service> docker-build` produced.
-    image: inventoryservice-rust:local
+    image: inventoryservice-rust:${DOCKER_IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: Dockerfile
@@ -101,7 +101,7 @@ services:
     # The project workspace and the autonomous service build must publish and
     # run the same image. This also makes `docker-start` consume exactly what
     # `make -C <service> docker-build` produced.
-    image: orderservice-rust:local
+    image: orderservice-rust:${DOCKER_IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: Dockerfile
