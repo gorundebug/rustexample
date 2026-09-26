@@ -4,6 +4,7 @@
 
 use super::imports::*;
 use super::functions_generated::ServiceFunctions;
+use servicelib::operators::{case, delay, error, filter, flatmap, flatmapiterable, input, join, keyby, link, map, merge, multijoin, process, sink, split, substream};
 
 pub struct GeneratedSharedCaseFunction<F>(pub Arc<F>);
 
@@ -182,171 +183,104 @@ impl ServiceStreamsBuilder {
         functions: &ServiceFunctions,
     ) -> RuntimeResult<()> {
         let _ = (config, environment, functions);
-        {
-            let node = LinkStream::<AnalyticsEvent>::make(&config.streams.cycle_analytics_link, environment.clone());
-            self.cycle_analytics_link = Some(node);
-        }
-        {
-            let node = Arc::new(InputStream::<String, (), String>::new(&config.streams.analytics_schedule, environment.clone()));
-            self.analytics_schedule = Some(node);
-        }
-        {
-            let node = Arc::new(InputStream::<OrderProcessed, OrderProcessed, String>::new(&config.streams.consume_order_processed, environment.clone()));
-            self.consume_order_processed = Some(node);
-        }
-        {
-            let node = Stream::new(&config.streams.count_order_processed.stream, environment.clone());
-            self.count_order_processed = Some(node);
-        }
-        {
-            let node = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.analytics_orders, environment.clone()));
-            self.analytics_orders = Some(node);
-        }
-        {
-            let node = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.analytics_payments, environment.clone()));
-            self.analytics_payments = Some(node);
-        }
-        {
-            let node = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.analytics_shipments, environment.clone()));
-            self.analytics_shipments = Some(node);
-        }
-        {
-            let node = servicelib::operators::split::SplitStream::<_, 2>::create_links(&config.streams.split_analytics_orders, &(*stream_builder_ref(&self.analytics_orders, "analytics_orders")?).stream());
-            self.split_analytics_orders = Some(node);
-        }
-        {
-            let node = servicelib::operators::split::SplitStream::<_, 2>::create_links(&config.streams.split_analytics_payments, &(*stream_builder_ref(&self.analytics_payments, "analytics_payments")?).stream());
-            self.split_analytics_payments = Some(node);
-        }
-        {
-            let node = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.cycle_analytics_input, environment.clone()));
-            self.cycle_analytics_input = Some(node);
-        }
-        {
-            let node = Stream::derived(&config.streams.merge_cycle_analytics.stream, (*stream_builder_ref(&self.cycle_analytics_input, "cycle_analytics_input")?).stream().environment().clone(), (*stream_builder_ref(&self.cycle_analytics_input, "cycle_analytics_input")?).stream().get_serde());
-            self.merge_cycle_analytics = Some(node);
-        }
-        {
-            let node = Stream::new(&config.streams.advance_cycle_analytics.stream, environment.clone());
-            self.advance_cycle_analytics = Some(node);
-        }
-        {
-            let node = servicelib::operators::split::SplitStream::<_, 2>::create_links(&config.streams.split_cycle_analytics, &(*stream_builder_ref(&self.advance_cycle_analytics, "advance_cycle_analytics")?));
-            self.split_cycle_analytics = Some(node);
-        }
-        {
-            let node = Stream::derived(&config.streams.complete_cycle_analytics.stream, (*stream_builder_ref(&self.split_cycle_analytics, "split_cycle_analytics")?)[0].environment().clone(), (*stream_builder_ref(&self.split_cycle_analytics, "split_cycle_analytics")?)[0].get_serde());
-            self.complete_cycle_analytics = Some(node);
-        }
-        {
-            let node = Stream::derived(&config.streams.continue_cycle_analytics.stream, (*stream_builder_ref(&self.split_cycle_analytics, "split_cycle_analytics")?)[1].environment().clone(), (*stream_builder_ref(&self.split_cycle_analytics, "split_cycle_analytics")?)[1].get_serde());
-            self.continue_cycle_analytics = Some(node);
-        }
-        {
-            let node = SinkStream::new(&config.streams.write_cycle_analytics, environment.clone())?;
-            self.write_cycle_analytics = Some(node);
-        }
-        {
-            let node = Stream::derived(
-                &config.streams.key_orders_for_join.stream,
-                (*stream_builder_ref(&self.split_analytics_orders, "split_analytics_orders")?)[0].environment().clone(),
-                servicelib::runtime::serde::make_stream_key_value_serde(
-                    (*stream_builder_ref(&self.split_analytics_orders, "split_analytics_orders")?)[0].environment().make_serde(),
-                    (*stream_builder_ref(&self.split_analytics_orders, "split_analytics_orders")?)[0].environment().make_serde(),
-                ),
-            );
-            self.key_orders_for_join = Some(node);
-        }
-        {
-            let node = Stream::derived(
-                &config.streams.key_payments_for_join.stream,
-                (*stream_builder_ref(&self.split_analytics_payments, "split_analytics_payments")?)[0].environment().clone(),
-                servicelib::runtime::serde::make_stream_key_value_serde(
-                    (*stream_builder_ref(&self.split_analytics_payments, "split_analytics_payments")?)[0].environment().make_serde(),
-                    (*stream_builder_ref(&self.split_analytics_payments, "split_analytics_payments")?)[0].environment().make_serde(),
-                ),
-            );
-            self.key_payments_for_join = Some(node);
-        }
-        {
-            let node = Stream::new(&config.streams.join_order_payment_analytics.stream, environment.clone());
-            self.join_order_payment_analytics = Some(node);
-        }
-        {
-            let node = SinkStream::new(&config.streams.write_joined_analytics, environment.clone())?;
-            self.write_joined_analytics = Some(node);
-        }
-        {
-            let node = Stream::derived(
-                &config.streams.key_orders_for_multi_join.stream,
-                (*stream_builder_ref(&self.split_analytics_orders, "split_analytics_orders")?)[1].environment().clone(),
-                servicelib::runtime::serde::make_stream_key_value_serde(
-                    (*stream_builder_ref(&self.split_analytics_orders, "split_analytics_orders")?)[1].environment().make_serde(),
-                    (*stream_builder_ref(&self.split_analytics_orders, "split_analytics_orders")?)[1].environment().make_serde(),
-                ),
-            );
-            self.key_orders_for_multi_join = Some(node);
-        }
-        {
-            let node = Stream::derived(
-                &config.streams.key_payments_for_multi_join.stream,
-                (*stream_builder_ref(&self.split_analytics_payments, "split_analytics_payments")?)[1].environment().clone(),
-                servicelib::runtime::serde::make_stream_key_value_serde(
-                    (*stream_builder_ref(&self.split_analytics_payments, "split_analytics_payments")?)[1].environment().make_serde(),
-                    (*stream_builder_ref(&self.split_analytics_payments, "split_analytics_payments")?)[1].environment().make_serde(),
-                ),
-            );
-            self.key_payments_for_multi_join = Some(node);
-        }
-        {
-            let node = Stream::derived(
-                &config.streams.key_shipments_for_multi_join.stream,
-                (*stream_builder_ref(&self.analytics_shipments, "analytics_shipments")?).stream().environment().clone(),
-                servicelib::runtime::serde::make_stream_key_value_serde(
-                    (*stream_builder_ref(&self.analytics_shipments, "analytics_shipments")?).stream().environment().make_serde(),
-                    (*stream_builder_ref(&self.analytics_shipments, "analytics_shipments")?).stream().environment().make_serde(),
-                ),
-            );
-            self.key_shipments_for_multi_join = Some(node);
-        }
-        {
-            let node = MultiJoinStream::new(&config.streams.multi_join_analytics_events, environment.clone(), functions.multi_join_analytics_events.clone())?;
-            self.multi_join_analytics_events = Some(node);
-        }
-        {
-            let node = TypedCaseStream::create_links(&config.streams.route_analytics_result, &(*stream_builder_ref(&self.multi_join_analytics_events, "multi_join_analytics_events")?).stream().clone(), GeneratedSharedCaseFunction(
+        self.cycle_analytics_link = Some(
+            link::create(&config.streams.cycle_analytics_link, environment.clone())
+        );
+        self.analytics_schedule = Some(
+            input::create(&config.streams.analytics_schedule, environment.clone())
+        );
+        self.consume_order_processed = Some(
+            input::create(&config.streams.consume_order_processed, environment.clone())
+        );
+        self.count_order_processed = Some(
+            process::create(&config.streams.count_order_processed, environment.clone())
+        );
+        self.analytics_orders = Some(
+            input::create(&config.streams.analytics_orders, environment.clone())
+        );
+        self.analytics_payments = Some(
+            input::create(&config.streams.analytics_payments, environment.clone())
+        );
+        self.analytics_shipments = Some(
+            input::create(&config.streams.analytics_shipments, environment.clone())
+        );
+        self.split_analytics_orders = Some(
+            split::create(&config.streams.split_analytics_orders, &(*stream_builder_ref(&self.analytics_orders, "analytics_orders")?).stream())
+        );
+        self.split_analytics_payments = Some(
+            split::create(&config.streams.split_analytics_payments, &(*stream_builder_ref(&self.analytics_payments, "analytics_payments")?).stream())
+        );
+        self.cycle_analytics_input = Some(
+            input::create(&config.streams.cycle_analytics_input, environment.clone())
+        );
+        self.merge_cycle_analytics = Some(
+            merge::create(&config.streams.merge_cycle_analytics, &(*stream_builder_ref(&self.cycle_analytics_input, "cycle_analytics_input")?).stream())
+        );
+        self.advance_cycle_analytics = Some(
+            map::create(&config.streams.advance_cycle_analytics, environment.clone())
+        );
+        self.split_cycle_analytics = Some(
+            split::create(&config.streams.split_cycle_analytics, &(*stream_builder_ref(&self.advance_cycle_analytics, "advance_cycle_analytics")?))
+        );
+        self.complete_cycle_analytics = Some(
+            filter::create(&config.streams.complete_cycle_analytics, &(*stream_builder_ref(&self.split_cycle_analytics, "split_cycle_analytics")?)[0])
+        );
+        self.continue_cycle_analytics = Some(
+            filter::create(&config.streams.continue_cycle_analytics, &(*stream_builder_ref(&self.split_cycle_analytics, "split_cycle_analytics")?)[1])
+        );
+        self.write_cycle_analytics = Some(
+            sink::create(&config.streams.write_cycle_analytics, environment.clone())?
+        );
+        self.key_orders_for_join = Some(
+            keyby::create(&config.streams.key_orders_for_join, environment.clone())
+        );
+        self.key_payments_for_join = Some(
+            keyby::create(&config.streams.key_payments_for_join, environment.clone())
+        );
+        self.join_order_payment_analytics = Some(
+            join::create(&config.streams.join_order_payment_analytics, environment.clone())
+        );
+        self.write_joined_analytics = Some(
+            sink::create(&config.streams.write_joined_analytics, environment.clone())?
+        );
+        self.key_orders_for_multi_join = Some(
+            keyby::create(&config.streams.key_orders_for_multi_join, environment.clone())
+        );
+        self.key_payments_for_multi_join = Some(
+            keyby::create(&config.streams.key_payments_for_multi_join, environment.clone())
+        );
+        self.key_shipments_for_multi_join = Some(
+            keyby::create(&config.streams.key_shipments_for_multi_join, environment.clone())
+        );
+        self.multi_join_analytics_events = Some(
+            multijoin::create(&config.streams.multi_join_analytics_events, environment.clone(), functions.multi_join_analytics_events.clone())?
+        );
+        self.route_analytics_result = Some(
+            case::create(&config.streams.route_analytics_result, &(*stream_builder_ref(&self.multi_join_analytics_events, "multi_join_analytics_events")?).stream().clone(), GeneratedSharedCaseFunction(
                 functions.route_analytics_result.clone(),
-            ));
-            self.route_analytics_result = Some(node);
-        }
-        {
-            let node = (*stream_builder_ref(&self.route_analytics_result, "route_analytics_result")?).when(&config.streams.high_value_analytics);
-            self.high_value_analytics = Some(node);
-        }
-        {
-            let node = (*stream_builder_ref(&self.route_analytics_result, "route_analytics_result")?).when(&config.streams.standard_analytics);
-            self.standard_analytics = Some(node);
-        }
-        {
-            let node = SinkStream::new(&config.streams.write_high_value_analytics, environment.clone())?;
-            self.write_high_value_analytics = Some(node);
-        }
-        {
-            let node = SinkStream::new(&config.streams.write_standard_analytics, environment.clone())?;
-            self.write_standard_analytics = Some(node);
-        }
-        {
-            let node = Arc::new(SubStream::<AnalyticsEvent, AnalyticsResult>::new(&config.streams.analyze_analytics_substream, environment.clone()));
-            self.analyze_analytics_substream = Some(node);
-        }
-        {
-            let node = Stream::new(&config.streams.build_substream_analytics_result.stream, environment.clone());
-            self.build_substream_analytics_result = Some(node);
-        }
-        {
-            let node = Arc::new(InputStream::<AnalyticsEvent, (), String>::new(&config.streams.substream_analytics_input, environment.clone()));
-            self.substream_analytics_input = Some(node);
-        }
+            ))
+        );
+        self.high_value_analytics = Some(
+            case::when(&config.streams.high_value_analytics, &(*stream_builder_ref(&self.route_analytics_result, "route_analytics_result")?))
+        );
+        self.standard_analytics = Some(
+            case::when(&config.streams.standard_analytics, &(*stream_builder_ref(&self.route_analytics_result, "route_analytics_result")?))
+        );
+        self.write_high_value_analytics = Some(
+            sink::create(&config.streams.write_high_value_analytics, environment.clone())?
+        );
+        self.write_standard_analytics = Some(
+            sink::create(&config.streams.write_standard_analytics, environment.clone())?
+        );
+        self.analyze_analytics_substream = Some(
+            substream::create(&config.streams.analyze_analytics_substream, environment.clone())
+        );
+        self.build_substream_analytics_result = Some(
+            map::create(&config.streams.build_substream_analytics_result, environment.clone())
+        );
+        self.substream_analytics_input = Some(
+            input::create(&config.streams.substream_analytics_input, environment.clone())
+        );
         Ok(())
     }
 
@@ -413,14 +347,12 @@ impl ServiceStreamsBuilder {
         functions: &ServiceFunctions,
     ) -> RuntimeResult<()> {
         let _ = (config, environment, functions);
-        {
-            let node = Stream::new(&config.streams.invoke_analytics_substream.stream, environment.clone());
-            self.invoke_analytics_substream = Some(node);
-        }
-        {
-            let node = SinkStream::new(&config.streams.write_substream_analytics, environment.clone())?;
-            self.write_substream_analytics = Some(node);
-        }
+        self.invoke_analytics_substream = Some(
+            map::create(&config.streams.invoke_analytics_substream, environment.clone())
+        );
+        self.write_substream_analytics = Some(
+            sink::create(&config.streams.write_substream_analytics, environment.clone())?
+        );
         Ok(())
     }
 

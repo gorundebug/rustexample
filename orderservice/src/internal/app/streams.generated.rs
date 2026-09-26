@@ -4,6 +4,7 @@
 
 use super::imports::*;
 use super::functions_generated::ServiceFunctions;
+use servicelib::operators::{case, delay, error, filter, flatmap, flatmapiterable, input, join, keyby, link, map, merge, multijoin, process, sink, split, substream};
 
 pub struct GeneratedSharedCaseFunction<F>(pub Arc<F>);
 
@@ -111,51 +112,42 @@ impl ServiceStreamsBuilder {
         functions: &ServiceFunctions,
     ) -> RuntimeResult<()> {
         let _ = (config, environment, functions);
-        {
-            let node = Arc::new(InputStream::<Order, OrderState, String>::new(&config.streams.process_order, environment.clone()));
-            self.process_order = Some(node);
-        }
-        {
-            let node = servicelib::operators::split::SplitStream::<_, 2>::create_links(&config.streams.split_pipeline, &(*stream_builder_ref(&self.process_order, "process_order")?).stream());
-            self.split_pipeline = Some(node);
-        }
-        {
-            let node = Stream::new(&config.streams.process_order_items.stream, environment.clone());
-            self.process_order_items = Some(node);
-        }
-        {
-            let node = SinkStreamWithResult::new(&config.streams.process_order_item, environment.clone())?;
-            self.process_order_item_error = Some(node.error_stream().clone());
-            self.process_order_item = Some(node);
-        }
-        {
-            let node = Stream::new(&config.streams.map_order_item_result_to_order_state.stream, environment.clone());
-            self.map_order_item_result_to_order_state = Some(node);
-        }
-        {
-            let node = Stream::derived(&config.streams.soft_deadline.stream, (*stream_builder_ref(&self.split_pipeline, "split_pipeline")?)[1].environment().clone(), (*stream_builder_ref(&self.split_pipeline, "split_pipeline")?)[1].get_serde());
-            self.soft_deadline = Some(node);
-        }
-        {
-            let node = Stream::new(&config.streams.map_to_order_state.stream, environment.clone());
-            self.map_to_order_state = Some(node);
-        }
-        {
-            let node = Stream::derived(&config.streams.merge_results.stream, (*stream_builder_ref(&self.map_to_order_state, "map_to_order_state")?).environment().clone(), (*stream_builder_ref(&self.map_to_order_state, "map_to_order_state")?).get_serde());
-            self.merge_results = Some(node);
-        }
-        {
-            let node = servicelib::operators::split::SplitStream::<_, 2>::create_links(&config.streams.split_order_result, &(*stream_builder_ref(&self.merge_results, "merge_results")?));
-            self.split_order_result = Some(node);
-        }
-        {
-            let node = Stream::new(&config.streams.map_to_order_processed.stream, environment.clone());
-            self.map_to_order_processed = Some(node);
-        }
-        {
-            let node = SinkStreamWithResult::new(&config.streams.publish_order_processed, environment.clone())?;
-            self.publish_order_processed = Some(node);
-        }
+        self.process_order = Some(
+            input::create(&config.streams.process_order, environment.clone())
+        );
+        self.split_pipeline = Some(
+            split::create(&config.streams.split_pipeline, &(*stream_builder_ref(&self.process_order, "process_order")?).stream())
+        );
+        self.process_order_items = Some(
+            flatmap::create(&config.streams.process_order_items, environment.clone())
+        );
+        self.process_order_item = Some(
+            sink::create_with_result(&config.streams.process_order_item, environment.clone())?
+        );
+        self.process_order_item_error = Some(
+            stream_builder_ref(&self.process_order_item, "process_order_item")?.error_stream().clone(),
+        );
+        self.map_order_item_result_to_order_state = Some(
+            map::create(&config.streams.map_order_item_result_to_order_state, environment.clone())
+        );
+        self.soft_deadline = Some(
+            delay::create(&config.streams.soft_deadline, &(*stream_builder_ref(&self.split_pipeline, "split_pipeline")?)[1])
+        );
+        self.map_to_order_state = Some(
+            map::create(&config.streams.map_to_order_state, environment.clone())
+        );
+        self.merge_results = Some(
+            merge::create(&config.streams.merge_results, &(*stream_builder_ref(&self.map_to_order_state, "map_to_order_state")?))
+        );
+        self.split_order_result = Some(
+            split::create(&config.streams.split_order_result, &(*stream_builder_ref(&self.merge_results, "merge_results")?))
+        );
+        self.map_to_order_processed = Some(
+            map::create(&config.streams.map_to_order_processed, environment.clone())
+        );
+        self.publish_order_processed = Some(
+            sink::create_with_result(&config.streams.publish_order_processed, environment.clone())?
+        );
         Ok(())
     }
 

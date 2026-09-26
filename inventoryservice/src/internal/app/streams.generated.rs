@@ -4,6 +4,7 @@
 
 use super::imports::*;
 use super::functions_generated::ServiceFunctions;
+use servicelib::operators::{case, delay, error, filter, flatmap, flatmapiterable, input, join, keyby, link, map, merge, multijoin, process, sink, split, substream};
 
 pub struct GeneratedSharedCaseFunction<F>(pub Arc<F>);
 
@@ -90,24 +91,21 @@ impl ServiceStreamsBuilder {
         functions: &ServiceFunctions,
     ) -> RuntimeResult<()> {
         let _ = (config, environment, functions);
-        {
-            let node = Arc::new(InputStream::<OrderItem, OrderItemResult, OrderItemResult>::new(&config.streams.process_inventory_item, environment.clone()));
-            self.process_inventory_item = Some(node);
-        }
-        {
-            let node = Stream::new(&config.streams.get_inventory_item_data.stream, environment.clone());
-            let error_stream = servicelib::operators::error::ErrorStream::new(&config.streams.get_inventory_item_data.stream, environment.clone()).stream().clone();
-            self.get_inventory_item_error = Some(error_stream);
-            self.get_inventory_item_data = Some(node);
-        }
-        {
-            let node = Stream::new(&config.streams.map_inventory_item_error.stream, environment.clone());
-            self.map_inventory_item_error = Some(node);
-        }
-        {
-            let node = Stream::derived(&config.streams.merge_inventory_result.stream, (*stream_builder_ref(&self.get_inventory_item_data, "get_inventory_item_data")?).environment().clone(), (*stream_builder_ref(&self.get_inventory_item_data, "get_inventory_item_data")?).get_serde());
-            self.merge_inventory_result = Some(node);
-        }
+        self.process_inventory_item = Some(
+            input::create(&config.streams.process_inventory_item, environment.clone())
+        );
+        self.get_inventory_item_data = Some(
+            process::create(&config.streams.get_inventory_item_data, environment.clone())
+        );
+        self.get_inventory_item_error = Some(
+            error::create(&config.streams.get_inventory_item_data.stream, environment.clone()),
+        );
+        self.map_inventory_item_error = Some(
+            map::create(&config.streams.map_inventory_item_error, environment.clone())
+        );
+        self.merge_inventory_result = Some(
+            merge::create(&config.streams.merge_inventory_result, &(*stream_builder_ref(&self.get_inventory_item_data, "get_inventory_item_data")?))
+        );
         Ok(())
     }
 
