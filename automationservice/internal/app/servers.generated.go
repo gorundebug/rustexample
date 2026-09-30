@@ -5,10 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	log "github.com/gorundebug/servicelib/runtime/environment/log"
 	"net"
 	"net/http"
 	"sync"
+
+	log "github.com/gorundebug/servicelib/runtime/environment/log"
 )
 
 type serviceServers struct {

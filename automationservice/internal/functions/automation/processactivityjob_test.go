@@ -4,8 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gorundebug/servicelib/runtime"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gorundebug/servicelib/runtime"
 )
 
 // Record Activity progress with DurableCallHeartbeat and return the processed job result.

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use example_model::types::OrderProcessed;
+
 use servicelib::{
     MessageContext, Payload,
     datasink::kafka::{EndpointHandler, HandlerResult, SinkMessage, StreamContext},
@@ -7,6 +7,8 @@ use servicelib::{
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
+
+use example_model::types::OrderProcessed;
 
 #[derive(Default)]
 pub struct OrderProcessedEndpointSink;

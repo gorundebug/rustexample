@@ -4,8 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gorundebug/servicelib/runtime"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gorundebug/servicelib/runtime"
 )
 
 // Return Activity C's typed fan-out result.

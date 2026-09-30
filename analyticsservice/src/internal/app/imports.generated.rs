@@ -22,19 +22,10 @@ pub(super) use servicelib::{
         serviceapp::ServiceApp,
     },
 };
-pub(super) use example_model::model_types::*;
-
-
-
-
 pub(super) use servicelib::datasource::kafka::RdkafkaKafkaDataSource;
-
 pub(super) use servicelib::datasource::cron::{CronDataSource, make_croner_endpoint_consumer};
-
 pub(super) use servicelib::datasource::localsource::{CustomDataSource, make_custom_endpoint_consumer as make_custom_source_endpoint_consumer};
-
 pub(super) use servicelib::datasink::localsink::make_custom_endpoint_consumer as make_custom_sink_endpoint_consumer;
 
-
-
+pub(super) use example_model::model_types::*;
 pub(super) use crate::internal::{config::Config, functions::*, types::*};

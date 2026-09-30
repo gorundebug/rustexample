@@ -4,15 +4,18 @@ package app
 import (
 	"context"
 	"fmt"
-	config "github.com/gorundebug/rustexample-automationservice/internal/config"
-	"github.com/gorundebug/servicelib/runtime"
-	"github.com/gorundebug/servicelib/runtime/environment"
-	log "github.com/gorundebug/servicelib/runtime/environment/log"
-	temporalworkflow "go.temporal.io/sdk/workflow"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	temporalworkflow "go.temporal.io/sdk/workflow"
+
+	"github.com/gorundebug/servicelib/runtime"
+	"github.com/gorundebug/servicelib/runtime/environment"
+	log "github.com/gorundebug/servicelib/runtime/environment/log"
+
+	config "github.com/gorundebug/rustexample-automationservice/internal/config"
 )
 
 type Service struct {

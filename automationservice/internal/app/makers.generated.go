@@ -3,9 +3,10 @@ package app
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/gorundebug/servicelib/runtime"
 	"github.com/gorundebug/servicelib/runtime/environment"
-	"net/http"
 
 	activity "github.com/gorundebug/rustexample-automationservice/internal/functions/activity"
 	automation "github.com/gorundebug/rustexample-automationservice/internal/functions/automation"

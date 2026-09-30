@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	serviceapp "github.com/gorundebug/rustexample-automationservice/internal/app"
 	datasourcetemporal "github.com/gorundebug/servicelib/datasource/temporal"
+
+	serviceapp "github.com/gorundebug/rustexample-automationservice/internal/app"
 )
 
 func main() {

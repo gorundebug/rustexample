@@ -1,5 +1,5 @@
 use chrono::Utc;
-use example_model::types::OrderItemResult;
+
 use servicelib::{
     MessageContext,
     operators::MapFunction,
@@ -9,6 +9,7 @@ use servicelib::{
     },
 };
 
+use example_model::types::OrderItemResult;
 use crate::internal::types::OrderState;
 
 #[derive(Default)]

@@ -1,4 +1,3 @@
-use crate::internal::types::AnalyticsResult;
 use servicelib::{
     MessageContext,
     operators::BuildSwitchFunction,
@@ -6,6 +5,8 @@ use servicelib::{
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
+
+use crate::internal::types::AnalyticsResult;
 
 #[derive(Clone, Default)]
 pub struct RouteAnalyticsResult;

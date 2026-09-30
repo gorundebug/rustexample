@@ -9,10 +9,9 @@ use std::{
 use async_trait::async_trait;
 use axum::http::{HeaderValue, StatusCode, header::CONTENT_TYPE};
 use chrono::Utc;
-use example_model::types::{OrderItem, OrderItemResult};
-use order_service_api::models::{
-    ProcessOrderRequest, ProcessOrderResponse, ProcessOrderResponseItem,
-};
+use tokio::sync::Mutex;
+use uuid::Uuid;
+
 use servicelib::{
     MessageContext, Payload,
     datasource::http::{
@@ -23,9 +22,11 @@ use servicelib::{
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
-use tokio::sync::Mutex;
-use uuid::Uuid;
 
+use example_model::types::{OrderItem, OrderItemResult};
+use order_service_api::models::{
+    ProcessOrderRequest, ProcessOrderResponse, ProcessOrderResponseItem,
+};
 use crate::internal::types::{Order, OrderState};
 
 #[derive(Clone)]

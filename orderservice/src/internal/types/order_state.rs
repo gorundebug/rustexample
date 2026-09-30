@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
-use example_model::types::OrderItemResult;
 use serde::{Deserialize, Serialize};
+
+use example_model::types::OrderItemResult;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct OrderState {

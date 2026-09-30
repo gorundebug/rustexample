@@ -1,12 +1,5 @@
-use inventory_service::internal;
-
 use std::sync::Arc;
 
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
-
-use internal::app::Service;
-use internal::config::Config;
 use servicelib::runtime::{
     config::{CallSemantics, ConfigLoader},
     environment::{
@@ -17,6 +10,13 @@ use servicelib::runtime::{
         Config as OpenTelemetryConfig, OpenTelemetry, environment_flag_enabled, install_stdout,
     },
 };
+
+use inventory_service::internal;
+use internal::app::Service;
+use internal::config::Config;
+
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[tokio::main]
 async fn main() {

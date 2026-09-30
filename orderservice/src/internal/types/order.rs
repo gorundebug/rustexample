@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
-use example_model::types::OrderItem;
 use serde::{Deserialize, Serialize};
+
+use example_model::types::OrderItem;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[allow(dead_code)]

@@ -3,8 +3,6 @@ use std::{
     sync::atomic::{AtomicI32, Ordering},
 };
 
-use crate::internal::types::InventoryFailure;
-use example_model::types::{OrderItem, OrderItemResult};
 use servicelib::{
     MessageContext,
     operators::process::ProcessFunction,
@@ -13,6 +11,9 @@ use servicelib::{
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
+
+use crate::internal::types::InventoryFailure;
+use example_model::types::{OrderItem, OrderItemResult};
 
 pub struct GetInventoryItemData {
     stock: HashMap<String, AtomicI32>,

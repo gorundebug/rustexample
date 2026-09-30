@@ -22,9 +22,6 @@ pub(super) use servicelib::{
         serviceapp::ServiceApp,
     },
 };
-pub(super) use example_model::model_types::*;
-
-
 pub(super) use servicelib::datasink::grpc::{
     NoStreamingClientFunction, ServerStreamingClientFunction,
     ClientStreamingClientFunction, BidiStreamingClientFunction,
@@ -34,18 +31,12 @@ pub(super) use servicelib::datasink::grpc::{
     make_grpc_client_streaming_endpoint_consumer,
     make_grpc_bidi_streaming_endpoint_consumer,
 };
-
 pub(super) use servicelib::{
     datasink::kafka::{RdkafkaKafkaDataSink, make_rdkafka_kafka_endpoint_consumer},
 };
-
-
-
-
-
 pub(super) use servicelib::{
     datasource::http::{AxumDataSource, EndpointHandler as _},
 };
 
-
+pub(super) use example_model::model_types::*;
 pub(super) use crate::internal::{config::Config, functions::*, types::*};

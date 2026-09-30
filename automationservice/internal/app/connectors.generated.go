@@ -3,9 +3,11 @@ package app
 
 import (
 	"fmt"
-	config "github.com/gorundebug/rustexample-automationservice/internal/config"
+
 	datasourcetemporal "github.com/gorundebug/servicelib/datasource/temporal"
 	"github.com/gorundebug/servicelib/runtime"
+
+	config "github.com/gorundebug/rustexample-automationservice/internal/config"
 )
 
 // Connector resources are owned and registered by the runtime environment.

@@ -1,5 +1,7 @@
-use crate::internal::types::AnalyticsEvent;
+use std::sync::Arc;
+
 use async_trait::async_trait;
+
 use servicelib::{
     MessageContext,
     datasource::localsource::{
@@ -11,7 +13,8 @@ use servicelib::{
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
-use std::sync::Arc;
+
+use crate::internal::types::AnalyticsEvent;
 
 #[derive(Clone, Default)]
 pub struct AnalyticsPaymentsSource;

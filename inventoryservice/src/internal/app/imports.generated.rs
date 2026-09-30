@@ -4,6 +4,8 @@
 
 pub(super) use std::{future::Future, pin::Pin, sync::{Arc, OnceLock, Weak, mpsc}};
 
+pub(super) use tonic::{Request, Response, Status};
+
 pub(super) use servicelib::{
     MessageContext, Stream,
     operators::{InputStream, SinkStream, SinkStreamWithResult, MultiJoinStream, TypedCaseStream},
@@ -18,16 +20,6 @@ pub(super) use servicelib::{
         serviceapp::ServiceApp,
     },
 };
-pub(super) use example_model::model_types::*;
-
-
-
-
-
-
-
-
-
 pub(super) use servicelib::datasource::grpc::{
     NoStreamingEndpointConsumer, ServerStreamingEndpointConsumer,
     ClientStreamingEndpointConsumer, BidiStreamingEndpointConsumer, TonicDataSource,
@@ -36,10 +28,9 @@ pub(super) use servicelib::datasource::grpc::{
     make_grpc_client_streaming_endpoint_consumer as make_grpc_client_source_endpoint_consumer,
     make_grpc_bidi_streaming_endpoint_consumer as make_grpc_bidi_source_endpoint_consumer,
 };
-pub(super) use tonic::{Request, Response, Status};
+
+pub(super) use example_model::model_types::*;
 pub(super) use inventory_service_api::inventoryserviceapi::inventory_service_api_server::{
     InventoryServiceApi, InventoryServiceApiServer,
 };
-
-
 pub(super) use crate::internal::{config::Config, functions::*, types::*};

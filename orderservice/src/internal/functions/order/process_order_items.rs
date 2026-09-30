@@ -1,4 +1,3 @@
-use example_model::types::OrderItem;
 use servicelib::{
     MessageContext,
     operators::FlatMapFunction,
@@ -8,6 +7,7 @@ use servicelib::{
     },
 };
 
+use example_model::types::OrderItem;
 use crate::internal::types::Order;
 
 #[derive(Default)]

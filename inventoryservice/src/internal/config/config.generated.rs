@@ -5,7 +5,7 @@
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use super::custom::CustomConfig;
+
 use servicelib::api::{DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType, KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy, ScheduleOverlapPolicy, TypeDefinitionFormat};
 use servicelib::runtime::config::{
     CallSemantics, Config as ServiceConfigContract, CycleLinkStreamConfig,
@@ -20,6 +20,8 @@ use servicelib::runtime::config::{
     CustomDataConnectorConfig, HttpEndpointConfig, GrpcEndpointConfig, KafkaEndpointConfig,
     CustomEndpointConfig, CronEndpointConfig,
 };
+
+use super::custom::CustomConfig;
 
 pub const INVENTORY_SERVICE_ID: i32 = 3;
 pub const GET_INVENTORY_ITEM_DATA_STREAM_ID: i32 = 73;

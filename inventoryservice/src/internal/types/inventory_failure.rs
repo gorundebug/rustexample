@@ -1,5 +1,6 @@
-use example_model::types::OrderItem;
 use serde::{Deserialize, Serialize};
+
+use example_model::types::OrderItem;
 
 /// Inventory shortage data carried by the business error branch.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

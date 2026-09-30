@@ -1,4 +1,3 @@
-use crate::internal::types::{AnalyticsEvent, AnalyticsResult};
 use servicelib::{
     MessageContext,
     operators::{MultiJoinFunction, downcast_join_values},
@@ -8,6 +7,8 @@ use servicelib::{
         store::JoinValues,
     },
 };
+
+use crate::internal::types::{AnalyticsEvent, AnalyticsResult};
 
 #[derive(Clone, Default)]
 pub struct MultiJoinAnalyticsEvents;

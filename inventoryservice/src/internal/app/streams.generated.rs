@@ -2,9 +2,10 @@
 
 #![allow(dead_code, unused_imports)]
 
+use servicelib::operators::{case, delay, error, filter, flatmap, flatmapiterable, input, join, keyby, link, map, merge, multijoin, process, sink, split, substream};
+
 use super::imports::*;
 use super::functions_generated::ServiceFunctions;
-use servicelib::operators::{case, delay, error, filter, flatmap, flatmapiterable, input, join, keyby, link, map, merge, multijoin, process, sink, split, substream};
 
 pub struct GeneratedSharedCaseFunction<F>(pub Arc<F>);
 

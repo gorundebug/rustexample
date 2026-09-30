@@ -3,7 +3,6 @@ use std::sync::{
     atomic::{AtomicU64, Ordering},
 };
 
-use example_model::types::OrderProcessed;
 use servicelib::{
     MessageContext,
     operators::ProcessFunction,
@@ -12,6 +11,8 @@ use servicelib::{
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
+
+use example_model::types::OrderProcessed;
 
 #[derive(Default)]
 pub struct CountOrderProcessed {

@@ -5,7 +5,7 @@
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use super::custom::CustomConfig;
+
 use servicelib::api::{DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType, KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy, ScheduleOverlapPolicy, TypeDefinitionFormat};
 use servicelib::runtime::config::{
     CallSemantics, Config as ServiceConfigContract, CycleLinkStreamConfig,
@@ -20,6 +20,8 @@ use servicelib::runtime::config::{
     CustomDataConnectorConfig, HttpEndpointConfig, GrpcEndpointConfig, KafkaEndpointConfig,
     CustomEndpointConfig, CronEndpointConfig,
 };
+
+use super::custom::CustomConfig;
 
 pub const ANALYTICS_SERVICE_ID: i32 = 1;
 pub const ANALYTICS_SCHEDULE_STREAM_ID: i32 = 1;

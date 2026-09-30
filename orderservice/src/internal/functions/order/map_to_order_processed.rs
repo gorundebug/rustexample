@@ -1,4 +1,3 @@
-use example_model::types::OrderProcessed;
 use servicelib::{
     MessageContext,
     operators::MapFunction,
@@ -8,6 +7,7 @@ use servicelib::{
     },
 };
 
+use example_model::types::OrderProcessed;
 use crate::internal::types::OrderState;
 
 #[derive(Default)]

@@ -3,11 +3,13 @@
 #![allow(dead_code, unused_imports)]
 
 use std::sync::{Arc, OnceLock, Weak};
+
 use servicelib::{MessageContext, runtime::{
     config::ConfigLoader,
     environment::{RuntimeEnvironment, RuntimeResult},
     serviceapp::ServiceApp,
 }};
+
 use crate::internal::config::Config;
 use super::{
     bindings_generated::{ServiceBindings, ServiceRuntime},

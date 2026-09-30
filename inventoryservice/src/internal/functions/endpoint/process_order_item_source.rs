@@ -1,10 +1,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use example_model::types::{OrderItem, OrderItemResult};
-use inventory_service_api::inventoryserviceapi::processorderitem::{
-    ProcessOrderItemRequest, ProcessOrderItemResponse,
-};
+use tokio::sync::Mutex;
+
 use servicelib::{
     MessageContext, Payload,
     datasource::grpc::{EndpointHandler, HandlerResult, ResultContext, Sender, StreamContext},
@@ -12,7 +10,11 @@ use servicelib::{
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
-use tokio::sync::Mutex;
+
+use example_model::types::{OrderItem, OrderItemResult};
+use inventory_service_api::inventoryserviceapi::processorderitem::{
+    ProcessOrderItemRequest, ProcessOrderItemResponse,
+};
 
 #[derive(Clone, Default)]
 pub struct ProcessOrderItemSource;

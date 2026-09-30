@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"reflect"
 
+	"go.temporal.io/sdk/workflow"
+
 	datasourcetemporal "github.com/gorundebug/servicelib/datasource/temporal"
 	"github.com/gorundebug/servicelib/runtime"
 	runtimecfg "github.com/gorundebug/servicelib/runtime/config"
 	runtimeserde "github.com/gorundebug/servicelib/runtime/serde"
-	"go.temporal.io/sdk/workflow"
 
 	"github.com/gorundebug/rustexample-automationservice/internal/config"
 )

@@ -1,4 +1,3 @@
-use crate::internal::types::AnalyticsEvent;
 use servicelib::{
     MessageContext,
     operators::KeyByFunction,
@@ -8,6 +7,8 @@ use servicelib::{
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
+
+use crate::internal::types::AnalyticsEvent;
 
 #[derive(Clone, Default)]
 pub struct KeyShipmentsForMultiJoin;

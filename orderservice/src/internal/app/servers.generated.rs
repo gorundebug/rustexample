@@ -2,11 +2,10 @@
 
 #![allow(dead_code, unused_imports)]
 
+use futures_util::{Stream as FuturesStream, StreamExt};
+
 use super::imports::*;
 use super::service_generated::GeneratedService;
-
-
-use futures_util::{Stream as FuturesStream, StreamExt};
 
 fn grpc_request_stream<T>(receiver: tokio::sync::mpsc::Receiver<T>)
     -> impl FuturesStream<Item = T> + Send

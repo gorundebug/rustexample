@@ -1,5 +1,3 @@
-use crate::internal::types::InventoryFailure;
-use example_model::types::OrderItemResult;
 use servicelib::{
     MessageContext,
     operators::map::MapFunction,
@@ -8,6 +6,9 @@ use servicelib::{
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
+
+use crate::internal::types::InventoryFailure;
+use example_model::types::OrderItemResult;
 pub struct GetInventoryItemError;
 
 impl MapFunction<InventoryFailure, OrderItemResult> for GetInventoryItemError {

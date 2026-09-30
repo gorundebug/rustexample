@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use example_model::types::OrderProcessed;
+use tokio::sync::Mutex;
+
 use servicelib::{
     MessageContext,
     datasource::kafka::{
@@ -12,7 +13,8 @@ use servicelib::{
         environment::{RuntimeEnvironment, RuntimeResult},
     },
 };
-use tokio::sync::Mutex;
+
+use example_model::types::OrderProcessed;
 
 #[derive(Clone, Default)]
 pub struct OrderProcessedEndpointSource;

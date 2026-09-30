@@ -2,8 +2,9 @@
 package app
 
 import (
-	runtimeserde "github.com/gorundebug/servicelib/runtime/serde"
 	"reflect"
+
+	runtimeserde "github.com/gorundebug/servicelib/runtime/serde"
 )
 
 func (s *Service) GetSerde(valueType reflect.Type) (runtimeserde.Serializer, error) {

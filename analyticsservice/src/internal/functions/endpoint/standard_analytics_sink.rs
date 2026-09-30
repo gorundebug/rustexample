@@ -1,5 +1,5 @@
-use crate::internal::types::AnalyticsResult;
 use async_trait::async_trait;
+
 use servicelib::{
     MessageContext,
     datasink::localsink::{EndpointHandler, HandlerResult},
@@ -9,6 +9,8 @@ use servicelib::{
         stream::Stream,
     },
 };
+
+use crate::internal::types::AnalyticsResult;
 
 #[derive(Clone, Default)]
 pub struct StandardAnalyticsSink;

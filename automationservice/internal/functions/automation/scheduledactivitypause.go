@@ -2,12 +2,12 @@ package automation
 
 import (
 	"context"
+	"time"
 
 	"github.com/gorundebug/servicelib/runtime"
 	runtimecfg "github.com/gorundebug/servicelib/runtime/config"
 	"github.com/gorundebug/servicelib/runtime/environment"
 	"github.com/gorundebug/servicelib/transformation"
-	"time"
 )
 
 var _ transformation.DelayFunction[string] = (*ScheduledActivityPause)(nil)
