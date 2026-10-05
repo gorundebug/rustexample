@@ -1,0 +1,2 @@
+# servicegen template ownership v1alpha1
+create-only	automationservice/internal/config/config.go

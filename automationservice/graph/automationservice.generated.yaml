@@ -15,12 +15,15 @@ dataConnectors:
                 schedule: '*/5 * * * *'
                 timezone: UTC
                 tracingEnabled: false
-        goImplementation: go/gocron
+        implementations:
+            cppCoro: cpp/libcron
+            cppUserver: cpp/libcron
+            golang: go/gocron
+            python: python/apscheduler
+            rust: rust/croner
+            typescript: node/croner
         name: Local Cron
-        pythonImplementation: python/apscheduler
-        rustImplementation: rust/croner
         type: Cron
-        typeScriptImplementation: node/croner
     temporal:
         address: temporal:7233
         apiKey: ""
@@ -231,14 +234,15 @@ dataConnectors:
                 timezone: UTC
                 tracingEnabled: false
                 workflowExecutionTimeout: 60000
-        goImplementation: temporal/go
         identity: example-automation
+        implementations:
+            golang: temporal/go
+            python: temporal/python
+            typescript: temporal/typescript
         name: Temporal
         namespace: default
-        pythonImplementation: temporal/python
         tlsEnabled: false
         type: Temporal
-        typeScriptImplementation: temporal/typescript
         workerStopTimeout: 5000
 pools:
     defaultPool:

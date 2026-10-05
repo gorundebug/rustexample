@@ -175,6 +175,67 @@ is_generated_path() {
     [[ "$(basename "$1")" == *generated* ]]
 }
 
+# Explicit pack ownership takes precedence over the legacy basename heuristic.
+# Read both snapshots before merging: the installed manifest is needed to find
+# stale generated files that no longer occur in the incoming pack selection.
+TEMPLATE_OWNERSHIP_PATH="scripts/template-ownership.generated.tsv"
+INCOMING_TEMPLATE_POLICIES=()
+INCOMING_TEMPLATE_PATHS=()
+INSTALLED_TEMPLATE_POLICIES=()
+INSTALLED_TEMPLATE_PATHS=()
+load_template_ownership() {
+    local file="$1" target="$2" policy rel extra
+    [[ -f "$file" ]] || return 0
+    local header
+    IFS= read -r header < "$file" || true
+    if [[ "$header" != "# servicegen template ownership v1alpha1" ]]; then
+        log_error "[SG_MERGE_INVALID_PATH] unsupported template ownership manifest '$file'"
+        exit 1
+    fi
+    while IFS=$'\t' read -r policy rel extra || [[ -n "$policy$rel$extra" ]]; do
+        [[ -z "$policy$rel$extra" || "$policy" == \#* ]] && continue
+        if [[ "$policy" != "generated" && "$policy" != "create-only" ]] ||
+           [[ -n "$extra" || "$rel" == *$'\r'* || "$rel" == *'\'* ]] ||
+           ! validate_relative_path "$rel"; then
+            log_error "[SG_MERGE_INVALID_PATH] invalid template ownership entry in '$file'"
+            exit 1
+        fi
+        if [[ "$target" == "incoming" ]]; then
+            if [[ ! -f "$SRC_ROOT/$rel" ]]; then
+                log_error "[SG_MERGE_INVALID_PATH] template ownership references missing '$rel'"
+                exit 1
+            fi
+            INCOMING_TEMPLATE_POLICIES+=("$policy")
+            INCOMING_TEMPLATE_PATHS+=("$rel")
+        else
+            INSTALLED_TEMPLATE_POLICIES+=("$policy")
+            INSTALLED_TEMPLATE_PATHS+=("$rel")
+        fi
+    done < "$file"
+}
+load_template_ownership "$SRC_ROOT/$TEMPLATE_OWNERSHIP_PATH" incoming
+load_template_ownership "$PROJECT_DIR/$TEMPLATE_OWNERSHIP_PATH" installed
+
+template_policy() {
+    local rel="$1" target="$2" index
+    if [[ "$target" == "incoming" ]]; then
+        for ((index=0; index<${#INCOMING_TEMPLATE_PATHS[@]}; index++)); do
+            if [[ "${INCOMING_TEMPLATE_PATHS[index]}" == "$rel" ]]; then
+                printf '%s' "${INCOMING_TEMPLATE_POLICIES[index]}"
+                return 0
+            fi
+        done
+    else
+        for ((index=0; index<${#INSTALLED_TEMPLATE_PATHS[@]}; index++)); do
+            if [[ "${INSTALLED_TEMPLATE_PATHS[index]}" == "$rel" ]]; then
+                printf '%s' "${INSTALLED_TEMPLATE_POLICIES[index]}"
+                return 0
+            fi
+        done
+    fi
+    return 0
+}
+
 # These files are produced by language tools after the servicegen archive is
 # merged. Their own clean-generation commands own stale-file removal.
 is_external_generated_output() {
@@ -217,8 +278,13 @@ while IFS= read -r src; do
     overwrite_flag=0
     if is_generated_path "$rel"; then generated_flag=1; fi
     if is_overwrite_path "$rel"; then overwrite_flag=1; fi
+    ownership_policy="$(template_policy "$rel" incoming)"
     if [[ ! -f "$dst" ]]; then
         default_action="ADD"
+    elif [[ "$ownership_policy" == "create-only" ]]; then
+        default_action="SKP"
+    elif [[ "$ownership_policy" == "generated" ]]; then
+        default_action="UPD"
     elif [[ "$generated_flag" -eq 1 ]]; then
         default_action="UPD"
     elif [[ "$overwrite_flag" -eq 1 ]]; then
@@ -333,7 +399,12 @@ else
 fi
 while IFS= read -r current; do
     rel="${current#"$PROJECT_DIR"/}"
-    if ! is_generated_path "$rel" && \
+    ownership_policy="$(template_policy "$rel" incoming)"
+    if [[ -z "$ownership_policy" ]]; then
+        ownership_policy="$(template_policy "$rel" installed)"
+    fi
+    [[ "$ownership_policy" == "create-only" ]] && continue
+    if [[ "$ownership_policy" != "generated" ]] && ! is_generated_path "$rel" && \
         { [[ -z "$EXPLICIT_OVERWRITE_LIST" ]] || ! is_overwrite_path "$rel"; }; then
         continue
     fi

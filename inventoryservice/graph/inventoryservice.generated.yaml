@@ -15,13 +15,16 @@ dataConnectors:
                 methodName: ProcessOrderItem
                 name: Process Order Item
                 publicFunction: false
-        goImplementation: google/grpc
+        implementations:
+            cppCoro: google/grpc
+            cppUserver: userver/grpc
+            golang: google/grpc
+            python: google/grpc
+            rust: rust/tonic
+            typescript: grpc/grpc-js
         module: inventory_service_api
         name: Inventory Service API
-        pythonImplementation: google/grpc
-        rustImplementation: rust/tonic
         type: gRPC
-        typeScriptImplementation: grpc/grpc-js
 pools:
     inventoryPriorityWorkers:
         executorsCount: 2
