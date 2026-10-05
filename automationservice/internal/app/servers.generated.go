@@ -2,85 +2,86 @@
 package app
 
 import (
-	"context"
-	"errors"
-	"fmt"
-	"net"
-	"net/http"
-	"sync"
+"context"
+"net"
+"net/http"
+"sync"
+"fmt"
+"errors"
 
-	log "github.com/gorundebug/servicelib/runtime/environment/log"
+log "github.com/gorundebug/servicelib/runtime/environment/log"
 )
 
 type serviceServers struct {
-	httpServer     *http.Server
-	httpMux        *http.ServeMux
-	httpServerDone chan struct{}
+    httpServer *http.Server
+    httpMux *http.ServeMux
+    httpServerDone chan struct{}
+
 }
 
 func (s *Service) RegisterHTTPHandler(path string, handler http.Handler) {
-	if s.servers.httpMux != nil {
-		s.servers.httpMux.Handle(path, s.httpHandlerMiddleware(path, handler))
-	} else {
-		s.ServiceApp.RegisterHTTPHandler(path, s.httpHandlerMiddleware(path, handler))
-	}
+    if s.servers.httpMux != nil {
+        s.servers.httpMux.Handle(path, s.httpHandlerMiddleware(path, handler))
+    } else {
+        s.ServiceApp.RegisterHTTPHandler(path, s.httpHandlerMiddleware(path, handler))
+    }
 }
 
 func (s *Service) ServiceInit() error {
-	return nil
+    return nil
 }
 
 func (servers *serviceServers) start(ctx context.Context, s *Service) error {
-	var err error
+    var err error
 
-	if servers.httpMux != nil {
-		if s.makers.httpServerMaker != nil {
-			if servers.httpServer, err = s.makers.httpServerMaker(ctx, s); err != nil {
-				return fmt.Errorf("create http server failed: %w", err)
-			}
-		}
-	}
-	if servers.httpServer != nil {
-		servers.httpServerDone = make(chan struct{})
-		ln, err := net.Listen("tcp", servers.httpServer.Addr)
-		if err != nil {
-			return fmt.Errorf("failed to listen http port: %v", err)
-		}
-		go func() {
-			s.Log().Info(ctx, "HTTP server listening", log.Any("addr", servers.httpServer.Addr))
-			if err := servers.httpServer.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				s.Log().Error(ctx, "HTTP server stopped unexpectedly", log.Err(err))
-			}
-			close(servers.httpServerDone)
-		}()
-	}
-	return nil
+
+    if servers.httpMux != nil {
+        if s.makers.httpServerMaker != nil {
+            if servers.httpServer, err = s.makers.httpServerMaker(ctx, s); err != nil {
+                return fmt.Errorf("create http server failed: %w", err)
+            }
+        }
+    }
+    if servers.httpServer != nil {
+        servers.httpServerDone = make(chan struct{})
+        ln, err := net.Listen("tcp", servers.httpServer.Addr)
+        if err != nil {
+            return fmt.Errorf("failed to listen http port: %v", err)
+        }
+        go func() {
+            s.Log().Info(ctx, "HTTP server listening", log.Any("addr", servers.httpServer.Addr))
+            if err := servers.httpServer.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+                s.Log().Error(ctx, "HTTP server stopped unexpectedly", log.Err(err))
+            }
+            close(servers.httpServerDone)
+        }()
+    }
+    return nil
 }
 
 func (servers *serviceServers) stop(timeoutCtx context.Context, s *Service) {
-	// First stop transport admission and let requests already accepted by the
-	// HTTP/gRPC servers finish while the graph runtime and outbound clients
-	// are still available to their handlers.
-	wg := sync.WaitGroup{}
-	admissionDone := make(chan struct{})
-	if servers.httpServer != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := servers.httpServer.Shutdown(timeoutCtx); err != nil {
-				s.Log().Warn(timeoutCtx, "HTTP server shutdown", log.Err(err))
-			}
-			<-servers.httpServerDone
-		}()
-	}
-	go func() {
-		wg.Wait()
-		close(admissionDone)
-	}()
-	select {
-	case <-admissionDone:
-	case <-timeoutCtx.Done():
-		s.Log().Warn(timeoutCtx, "transport drain timed out", log.Err(timeoutCtx.Err()))
-	}
+    // First stop transport admission and let requests already accepted by the
+    // HTTP/gRPC servers finish while the graph runtime and outbound clients
+    // are still available to their handlers.
+    wg := sync.WaitGroup{}
+    admissionDone := make(chan struct{})
+    if servers.httpServer != nil {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            if err := servers.httpServer.Shutdown(timeoutCtx); err != nil {
+                s.Log().Warn(timeoutCtx, "HTTP server shutdown", log.Err(err))
+            }
+            <-servers.httpServerDone
+        }()
+    }
+    go func() {
+        wg.Wait()
+        close(admissionDone)
+    }()
+    select {
+    case <-admissionDone:
+    case <-timeoutCtx.Done():
+        s.Log().Warn(timeoutCtx, "transport drain timed out", log.Err(timeoutCtx.Err()))}
 
 }

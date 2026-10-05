@@ -2,3463 +2,3679 @@
 package config
 
 import (
-	"fmt"
-	"os"
-	"strconv"
+    "fmt"
+    "os"
+    "strconv"
 
-	"github.com/gorundebug/servicelib/api"
-	cfg "github.com/gorundebug/servicelib/runtime/config"
+    "github.com/gorundebug/servicelib/api"
+    cfg "github.com/gorundebug/servicelib/runtime/config"
 )
 
 var _ = api.DataTypeAny
 
 // Service IDs
 const (
-	automationServiceServiceID = iota + 1
+    automationServiceServiceID = iota + 1
 )
 
 // Stream IDs
 const (
-	activityPauseStreamID = iota + 1
-	callFanOutActivityAStreamID
-	callFanOutActivityBStreamID
-	callFanOutActivityCStreamID
-	callSequentialActivityAStreamID
-	callSequentialActivityBStreamID
-	consumeActivityJobStreamID
-	consumeFanOutActivityAStreamID
-	consumeFanOutActivityBStreamID
-	consumeFanOutActivityCStreamID
-	consumeFanOutWorkflowJobStreamID
-	consumeSequentialActivityAStreamID
-	consumeSequentialActivityBStreamID
-	consumeWorkflowJobStreamID
-	localScheduleStreamID
-	observeActivityResultStreamID
-	observeFanOutActivityBStreamID
-	observeFanOutActivityCStreamID
-	observeWorkflowResultStreamID
-	processActivityJobStreamID
-	processFanOutActivityAStreamID
-	processFanOutActivityBStreamID
-	processFanOutActivityCStreamID
-	processScheduledActivityStreamID
-	processScheduledWorkflowStreamID
-	processSequentialActivityAStreamID
-	processSequentialActivityBStreamID
-	processWorkflowJobStreamID
-	scheduledActivityPauseStreamID
-	scheduledWorkflowPauseStreamID
-	splitActivityAResultStreamID
-	splitOnDemandJobsStreamID
-	submitActivityJobStreamID
-	submitFanOutWorkflowJobStreamID
-	submitWorkflowJobStreamID
-	temporalActivityScheduleStreamID
-	temporalWorkflowScheduleStreamID
-	workflowPauseStreamID
+    activityPauseStreamID = iota + 1
+    callFanOutActivityAStreamID
+    callFanOutActivityBStreamID
+    callFanOutActivityCStreamID
+    callSequentialActivityAStreamID
+    callSequentialActivityBStreamID
+    consumeActivityJobStreamID
+    consumeFanOutActivityAStreamID
+    consumeFanOutActivityBStreamID
+    consumeFanOutActivityCStreamID
+    consumeFanOutWorkflowJobStreamID
+    consumeSequentialActivityAStreamID
+    consumeSequentialActivityBStreamID
+    consumeWorkflowJobStreamID
+    localScheduleStreamID
+    observeActivityResultStreamID
+    observeFanOutActivityBStreamID
+    observeFanOutActivityCStreamID
+    observeWorkflowResultStreamID
+    processActivityJobStreamID
+    processFanOutActivityAStreamID
+    processFanOutActivityBStreamID
+    processFanOutActivityCStreamID
+    processScheduledActivityStreamID
+    processScheduledWorkflowStreamID
+    processSequentialActivityAStreamID
+    processSequentialActivityBStreamID
+    processWorkflowJobStreamID
+    scheduledActivityPauseStreamID
+    scheduledWorkflowPauseStreamID
+    splitActivityAResultStreamID
+    splitOnDemandJobsStreamID
+    submitActivityJobStreamID
+    submitFanOutWorkflowJobStreamID
+    submitWorkflowJobStreamID
+    temporalActivityScheduleStreamID
+    temporalWorkflowScheduleStreamID
+    workflowPauseStreamID
 )
 
 // Endpoint IDs
 const (
-	activityJobEndpointID = iota + 1
-	fanOutActivityAEndpointID
-	fanOutActivityBEndpointID
-	fanOutActivityCEndpointID
-	fanOutWorkflowJobEndpointID
-	localScheduleEndpointID
-	sequentialActivityAEndpointID
-	sequentialActivityBEndpointID
-	temporalActivityScheduleEndpointID
-	temporalWorkflowScheduleEndpointID
-	workflowJobEndpointID
+    activityJobEndpointID = iota + 1
+    fanOutActivityAEndpointID
+    fanOutActivityBEndpointID
+    fanOutActivityCEndpointID
+    fanOutWorkflowJobEndpointID
+    localScheduleEndpointID
+    sequentialActivityAEndpointID
+    sequentialActivityBEndpointID
+    temporalActivityScheduleEndpointID
+    temporalWorkflowScheduleEndpointID
+    workflowJobEndpointID
 )
 
 // Connector IDs
 const (
-	localCronConnectorID = iota + 1
-	temporalConnectorID
+    localCronConnectorID = iota + 1
+    temporalConnectorID
 )
 
-type Config struct {
-	Services struct {
-		AutomationService cfg.ServiceConfig `yaml:"automationService" mapstructure:"automationService"`
-	} `yaml:"services" mapstructure:"services"`
+type Config struct{
+    Services struct {
+        AutomationService cfg.ServiceConfig `yaml:"automationService" mapstructure:"automationService"`
+    } `yaml:"services" mapstructure:"services"`
 
-	Streams struct {
-		ActivityPause              cfg.DelayStreamConfig `yaml:"activityPause" mapstructure:"activityPause"`
-		CallFanOutActivityA        cfg.SinkStreamConfig  `yaml:"callFanOutActivityA" mapstructure:"callFanOutActivityA"`
-		CallFanOutActivityB        cfg.SinkStreamConfig  `yaml:"callFanOutActivityB" mapstructure:"callFanOutActivityB"`
-		CallFanOutActivityC        cfg.SinkStreamConfig  `yaml:"callFanOutActivityC" mapstructure:"callFanOutActivityC"`
-		CallSequentialActivityA    cfg.SinkStreamConfig  `yaml:"callSequentialActivityA" mapstructure:"callSequentialActivityA"`
-		CallSequentialActivityB    cfg.SinkStreamConfig  `yaml:"callSequentialActivityB" mapstructure:"callSequentialActivityB"`
-		ConsumeActivityJob         cfg.InputStreamConfig `yaml:"consumeActivityJob" mapstructure:"consumeActivityJob"`
-		ConsumeFanOutActivityA     cfg.InputStreamConfig `yaml:"consumeFanOutActivityA" mapstructure:"consumeFanOutActivityA"`
-		ConsumeFanOutActivityB     cfg.InputStreamConfig `yaml:"consumeFanOutActivityB" mapstructure:"consumeFanOutActivityB"`
-		ConsumeFanOutActivityC     cfg.InputStreamConfig `yaml:"consumeFanOutActivityC" mapstructure:"consumeFanOutActivityC"`
-		ConsumeFanOutWorkflowJob   cfg.InputStreamConfig `yaml:"consumeFanOutWorkflowJob" mapstructure:"consumeFanOutWorkflowJob"`
-		ConsumeSequentialActivityA cfg.InputStreamConfig `yaml:"consumeSequentialActivityA" mapstructure:"consumeSequentialActivityA"`
-		ConsumeSequentialActivityB cfg.InputStreamConfig `yaml:"consumeSequentialActivityB" mapstructure:"consumeSequentialActivityB"`
-		ConsumeWorkflowJob         cfg.InputStreamConfig `yaml:"consumeWorkflowJob" mapstructure:"consumeWorkflowJob"`
-		LocalSchedule              cfg.InputStreamConfig `yaml:"localSchedule" mapstructure:"localSchedule"`
-		ObserveActivityResult      cfg.MapStreamConfig   `yaml:"observeActivityResult" mapstructure:"observeActivityResult"`
-		ObserveFanOutActivityB     cfg.MapStreamConfig   `yaml:"observeFanOutActivityB" mapstructure:"observeFanOutActivityB"`
-		ObserveFanOutActivityC     cfg.MapStreamConfig   `yaml:"observeFanOutActivityC" mapstructure:"observeFanOutActivityC"`
-		ObserveWorkflowResult      cfg.MapStreamConfig   `yaml:"observeWorkflowResult" mapstructure:"observeWorkflowResult"`
-		ProcessActivityJob         cfg.MapStreamConfig   `yaml:"processActivityJob" mapstructure:"processActivityJob"`
-		ProcessFanOutActivityA     cfg.MapStreamConfig   `yaml:"processFanOutActivityA" mapstructure:"processFanOutActivityA"`
-		ProcessFanOutActivityB     cfg.MapStreamConfig   `yaml:"processFanOutActivityB" mapstructure:"processFanOutActivityB"`
-		ProcessFanOutActivityC     cfg.MapStreamConfig   `yaml:"processFanOutActivityC" mapstructure:"processFanOutActivityC"`
-		ProcessScheduledActivity   cfg.MapStreamConfig   `yaml:"processScheduledActivity" mapstructure:"processScheduledActivity"`
-		ProcessScheduledWorkflow   cfg.MapStreamConfig   `yaml:"processScheduledWorkflow" mapstructure:"processScheduledWorkflow"`
-		ProcessSequentialActivityA cfg.MapStreamConfig   `yaml:"processSequentialActivityA" mapstructure:"processSequentialActivityA"`
-		ProcessSequentialActivityB cfg.MapStreamConfig   `yaml:"processSequentialActivityB" mapstructure:"processSequentialActivityB"`
-		ProcessWorkflowJob         cfg.MapStreamConfig   `yaml:"processWorkflowJob" mapstructure:"processWorkflowJob"`
-		ScheduledActivityPause     cfg.DelayStreamConfig `yaml:"scheduledActivityPause" mapstructure:"scheduledActivityPause"`
-		ScheduledWorkflowPause     cfg.DelayStreamConfig `yaml:"scheduledWorkflowPause" mapstructure:"scheduledWorkflowPause"`
-		SplitActivityAResult       cfg.SplitStreamConfig `yaml:"splitActivityAResult" mapstructure:"splitActivityAResult"`
-		SplitOnDemandJobs          cfg.SplitStreamConfig `yaml:"splitOnDemandJobs" mapstructure:"splitOnDemandJobs"`
-		SubmitActivityJob          cfg.SinkStreamConfig  `yaml:"submitActivityJob" mapstructure:"submitActivityJob"`
-		SubmitFanOutWorkflowJob    cfg.SinkStreamConfig  `yaml:"submitFanOutWorkflowJob" mapstructure:"submitFanOutWorkflowJob"`
-		SubmitWorkflowJob          cfg.SinkStreamConfig  `yaml:"submitWorkflowJob" mapstructure:"submitWorkflowJob"`
-		TemporalActivitySchedule   cfg.InputStreamConfig `yaml:"temporalActivitySchedule" mapstructure:"temporalActivitySchedule"`
-		TemporalWorkflowSchedule   cfg.InputStreamConfig `yaml:"temporalWorkflowSchedule" mapstructure:"temporalWorkflowSchedule"`
-		WorkflowPause              cfg.DelayStreamConfig `yaml:"workflowPause" mapstructure:"workflowPause"`
-	} `yaml:"streams" mapstructure:"streams"`
+    Streams struct {
+    
+        ActivityPause cfg.DelayStreamConfig `yaml:"activityPause" mapstructure:"activityPause"`
+        CallFanOutActivityA cfg.SinkStreamConfig `yaml:"callFanOutActivityA" mapstructure:"callFanOutActivityA"`
+        CallFanOutActivityB cfg.SinkStreamConfig `yaml:"callFanOutActivityB" mapstructure:"callFanOutActivityB"`
+        CallFanOutActivityC cfg.SinkStreamConfig `yaml:"callFanOutActivityC" mapstructure:"callFanOutActivityC"`
+        CallSequentialActivityA cfg.SinkStreamConfig `yaml:"callSequentialActivityA" mapstructure:"callSequentialActivityA"`
+        CallSequentialActivityB cfg.SinkStreamConfig `yaml:"callSequentialActivityB" mapstructure:"callSequentialActivityB"`
+        ConsumeActivityJob cfg.InputStreamConfig `yaml:"consumeActivityJob" mapstructure:"consumeActivityJob"`
+        ConsumeFanOutActivityA cfg.InputStreamConfig `yaml:"consumeFanOutActivityA" mapstructure:"consumeFanOutActivityA"`
+        ConsumeFanOutActivityB cfg.InputStreamConfig `yaml:"consumeFanOutActivityB" mapstructure:"consumeFanOutActivityB"`
+        ConsumeFanOutActivityC cfg.InputStreamConfig `yaml:"consumeFanOutActivityC" mapstructure:"consumeFanOutActivityC"`
+        ConsumeFanOutWorkflowJob cfg.InputStreamConfig `yaml:"consumeFanOutWorkflowJob" mapstructure:"consumeFanOutWorkflowJob"`
+        ConsumeSequentialActivityA cfg.InputStreamConfig `yaml:"consumeSequentialActivityA" mapstructure:"consumeSequentialActivityA"`
+        ConsumeSequentialActivityB cfg.InputStreamConfig `yaml:"consumeSequentialActivityB" mapstructure:"consumeSequentialActivityB"`
+        ConsumeWorkflowJob cfg.InputStreamConfig `yaml:"consumeWorkflowJob" mapstructure:"consumeWorkflowJob"`
+        LocalSchedule cfg.InputStreamConfig `yaml:"localSchedule" mapstructure:"localSchedule"`
+        ObserveActivityResult cfg.MapStreamConfig `yaml:"observeActivityResult" mapstructure:"observeActivityResult"`
+        ObserveFanOutActivityB cfg.MapStreamConfig `yaml:"observeFanOutActivityB" mapstructure:"observeFanOutActivityB"`
+        ObserveFanOutActivityC cfg.MapStreamConfig `yaml:"observeFanOutActivityC" mapstructure:"observeFanOutActivityC"`
+        ObserveWorkflowResult cfg.MapStreamConfig `yaml:"observeWorkflowResult" mapstructure:"observeWorkflowResult"`
+        ProcessActivityJob cfg.MapStreamConfig `yaml:"processActivityJob" mapstructure:"processActivityJob"`
+        ProcessFanOutActivityA cfg.MapStreamConfig `yaml:"processFanOutActivityA" mapstructure:"processFanOutActivityA"`
+        ProcessFanOutActivityB cfg.MapStreamConfig `yaml:"processFanOutActivityB" mapstructure:"processFanOutActivityB"`
+        ProcessFanOutActivityC cfg.MapStreamConfig `yaml:"processFanOutActivityC" mapstructure:"processFanOutActivityC"`
+        ProcessScheduledActivity cfg.MapStreamConfig `yaml:"processScheduledActivity" mapstructure:"processScheduledActivity"`
+        ProcessScheduledWorkflow cfg.MapStreamConfig `yaml:"processScheduledWorkflow" mapstructure:"processScheduledWorkflow"`
+        ProcessSequentialActivityA cfg.MapStreamConfig `yaml:"processSequentialActivityA" mapstructure:"processSequentialActivityA"`
+        ProcessSequentialActivityB cfg.MapStreamConfig `yaml:"processSequentialActivityB" mapstructure:"processSequentialActivityB"`
+        ProcessWorkflowJob cfg.MapStreamConfig `yaml:"processWorkflowJob" mapstructure:"processWorkflowJob"`
+        ScheduledActivityPause cfg.DelayStreamConfig `yaml:"scheduledActivityPause" mapstructure:"scheduledActivityPause"`
+        ScheduledWorkflowPause cfg.DelayStreamConfig `yaml:"scheduledWorkflowPause" mapstructure:"scheduledWorkflowPause"`
+        SplitActivityAResult cfg.SplitStreamConfig `yaml:"splitActivityAResult" mapstructure:"splitActivityAResult"`
+        SplitOnDemandJobs cfg.SplitStreamConfig `yaml:"splitOnDemandJobs" mapstructure:"splitOnDemandJobs"`
+        SubmitActivityJob cfg.SinkStreamConfig `yaml:"submitActivityJob" mapstructure:"submitActivityJob"`
+        SubmitFanOutWorkflowJob cfg.SinkStreamConfig `yaml:"submitFanOutWorkflowJob" mapstructure:"submitFanOutWorkflowJob"`
+        SubmitWorkflowJob cfg.SinkStreamConfig `yaml:"submitWorkflowJob" mapstructure:"submitWorkflowJob"`
+        TemporalActivitySchedule cfg.InputStreamConfig `yaml:"temporalActivitySchedule" mapstructure:"temporalActivitySchedule"`
+        TemporalWorkflowSchedule cfg.InputStreamConfig `yaml:"temporalWorkflowSchedule" mapstructure:"temporalWorkflowSchedule"`
+        WorkflowPause cfg.DelayStreamConfig `yaml:"workflowPause" mapstructure:"workflowPause"`
+    } `yaml:"streams" mapstructure:"streams"`
 
-	DataConnectors struct {
-		LocalCron cfg.CronDataConnectorConfig     `yaml:"localCron" mapstructure:"localCron"`
-		Temporal  cfg.TemporalDataConnectorConfig `yaml:"temporal" mapstructure:"temporal"`
-	} `yaml:"dataConnectors" mapstructure:"dataConnectors"`
+    DataConnectors struct {
+    
+        LocalCron cfg.CronDataConnectorConfig `yaml:"localCron" mapstructure:"localCron"`
+        Temporal cfg.TemporalDataConnectorConfig `yaml:"temporal" mapstructure:"temporal"`
+    } `yaml:"dataConnectors" mapstructure:"dataConnectors"`
 
-	Endpoints struct {
-		ActivityJob cfg.TemporalEndpointConfig `yaml:"activityJob" mapstructure:"activityJob"`
+    Endpoints struct {
+        
+        ActivityJob cfg.TemporalEndpointConfig `yaml:"activityJob" mapstructure:"activityJob"`
+        
+        FanOutActivityA cfg.TemporalEndpointConfig `yaml:"fanOutActivityA" mapstructure:"fanOutActivityA"`
+        
+        FanOutActivityB cfg.TemporalEndpointConfig `yaml:"fanOutActivityB" mapstructure:"fanOutActivityB"`
+        
+        FanOutActivityC cfg.TemporalEndpointConfig `yaml:"fanOutActivityC" mapstructure:"fanOutActivityC"`
+        
+        FanOutWorkflowJob cfg.TemporalEndpointConfig `yaml:"fanOutWorkflowJob" mapstructure:"fanOutWorkflowJob"`
+        
+        LocalSchedule cfg.CronEndpointConfig `yaml:"localSchedule" mapstructure:"localSchedule"`
+        
+        SequentialActivityA cfg.TemporalEndpointConfig `yaml:"sequentialActivityA" mapstructure:"sequentialActivityA"`
+        
+        SequentialActivityB cfg.TemporalEndpointConfig `yaml:"sequentialActivityB" mapstructure:"sequentialActivityB"`
+        
+        TemporalActivitySchedule cfg.TemporalEndpointConfig `yaml:"temporalActivitySchedule" mapstructure:"temporalActivitySchedule"`
+        
+        TemporalWorkflowSchedule cfg.TemporalEndpointConfig `yaml:"temporalWorkflowSchedule" mapstructure:"temporalWorkflowSchedule"`
+        
+        WorkflowJob cfg.TemporalEndpointConfig `yaml:"workflowJob" mapstructure:"workflowJob"`
+    } `yaml:"endpoints" mapstructure:"endpoints"`
 
-		FanOutActivityA cfg.TemporalEndpointConfig `yaml:"fanOutActivityA" mapstructure:"fanOutActivityA"`
+    Pools struct {
+        DefaultPool cfg.PoolConfig `yaml:"defaultPool" mapstructure:"defaultPool"`
+    } `yaml:"pools" mapstructure:"pools"`
 
-		FanOutActivityB cfg.TemporalEndpointConfig `yaml:"fanOutActivityB" mapstructure:"fanOutActivityB"`
+    Links struct{
+        CallSequentialActivityAToCallSequentialActivityB cfg.LinkConfig `yaml:"callSequentialActivityAToCallSequentialActivityB" mapstructure:"callSequentialActivityAToCallSequentialActivityB"`
+        CallSequentialActivityBToProcessWorkflowJob cfg.LinkConfig `yaml:"callSequentialActivityBToProcessWorkflowJob" mapstructure:"callSequentialActivityBToProcessWorkflowJob"`
+        ConsumeActivityJobToActivityPause cfg.LinkConfig `yaml:"consumeActivityJobToActivityPause" mapstructure:"consumeActivityJobToActivityPause"`
+        ConsumeFanOutActivityAToProcessFanOutActivityA cfg.LinkConfig `yaml:"consumeFanOutActivityAToProcessFanOutActivityA" mapstructure:"consumeFanOutActivityAToProcessFanOutActivityA"`
+        ConsumeFanOutActivityBToProcessFanOutActivityB cfg.LinkConfig `yaml:"consumeFanOutActivityBToProcessFanOutActivityB" mapstructure:"consumeFanOutActivityBToProcessFanOutActivityB"`
+        ConsumeFanOutActivityCToProcessFanOutActivityC cfg.LinkConfig `yaml:"consumeFanOutActivityCToProcessFanOutActivityC" mapstructure:"consumeFanOutActivityCToProcessFanOutActivityC"`
+        ConsumeFanOutWorkflowJobToCallFanOutActivityA cfg.LinkConfig `yaml:"consumeFanOutWorkflowJobToCallFanOutActivityA" mapstructure:"consumeFanOutWorkflowJobToCallFanOutActivityA"`
+        ConsumeSequentialActivityAToProcessSequentialActivityA cfg.LinkConfig `yaml:"consumeSequentialActivityAToProcessSequentialActivityA" mapstructure:"consumeSequentialActivityAToProcessSequentialActivityA"`
+        ConsumeSequentialActivityBToProcessSequentialActivityB cfg.LinkConfig `yaml:"consumeSequentialActivityBToProcessSequentialActivityB" mapstructure:"consumeSequentialActivityBToProcessSequentialActivityB"`
+        ConsumeWorkflowJobToWorkflowPause cfg.LinkConfig `yaml:"consumeWorkflowJobToWorkflowPause" mapstructure:"consumeWorkflowJobToWorkflowPause"`
+        SplitActivityAResultToCallFanOutActivityB cfg.LinkConfig `yaml:"splitActivityAResultToCallFanOutActivityB" mapstructure:"splitActivityAResultToCallFanOutActivityB"`
+        SplitActivityAResultToCallFanOutActivityC cfg.LinkConfig `yaml:"splitActivityAResultToCallFanOutActivityC" mapstructure:"splitActivityAResultToCallFanOutActivityC"`
+        WorkflowPauseToCallSequentialActivityA cfg.LinkConfig `yaml:"workflowPauseToCallSequentialActivityA" mapstructure:"workflowPauseToCallSequentialActivityA"`
+    } `yaml:"links" mapstructure:"links"`
 
-		FanOutActivityC cfg.TemporalEndpointConfig `yaml:"fanOutActivityC" mapstructure:"fanOutActivityC"`
+    Modules struct {
+        InventoryServiceApi cfg.ModuleConfig `yaml:"inventoryServiceApi" mapstructure:"inventoryServiceApi"`
+        Model cfg.ModuleConfig `yaml:"model" mapstructure:"model"`
+        OrderServiceApi cfg.ModuleConfig `yaml:"orderServiceApi" mapstructure:"orderServiceApi"`
+    } `yaml:"modules" mapstructure:"modules"`
 
-		FanOutWorkflowJob cfg.TemporalEndpointConfig `yaml:"fanOutWorkflowJob" mapstructure:"fanOutWorkflowJob"`
+    Types struct {
+    
+        AutomationJob cfg.TypeConfig `yaml:"automationJob" mapstructure:"automationJob"`
+    } `yaml:"types" mapstructure:"types"`
 
-		LocalSchedule cfg.CronEndpointConfig `yaml:"localSchedule" mapstructure:"localSchedule"`
-
-		SequentialActivityA cfg.TemporalEndpointConfig `yaml:"sequentialActivityA" mapstructure:"sequentialActivityA"`
-
-		SequentialActivityB cfg.TemporalEndpointConfig `yaml:"sequentialActivityB" mapstructure:"sequentialActivityB"`
-
-		TemporalActivitySchedule cfg.TemporalEndpointConfig `yaml:"temporalActivitySchedule" mapstructure:"temporalActivitySchedule"`
-
-		TemporalWorkflowSchedule cfg.TemporalEndpointConfig `yaml:"temporalWorkflowSchedule" mapstructure:"temporalWorkflowSchedule"`
-
-		WorkflowJob cfg.TemporalEndpointConfig `yaml:"workflowJob" mapstructure:"workflowJob"`
-	} `yaml:"endpoints" mapstructure:"endpoints"`
-
-	Pools struct {
-		DefaultPool cfg.PoolConfig `yaml:"defaultPool" mapstructure:"defaultPool"`
-	} `yaml:"pools" mapstructure:"pools"`
-
-	Links struct {
-		CallSequentialActivityAToCallSequentialActivityB       cfg.LinkConfig `yaml:"callSequentialActivityAToCallSequentialActivityB" mapstructure:"callSequentialActivityAToCallSequentialActivityB"`
-		CallSequentialActivityBToProcessWorkflowJob            cfg.LinkConfig `yaml:"callSequentialActivityBToProcessWorkflowJob" mapstructure:"callSequentialActivityBToProcessWorkflowJob"`
-		ConsumeActivityJobToActivityPause                      cfg.LinkConfig `yaml:"consumeActivityJobToActivityPause" mapstructure:"consumeActivityJobToActivityPause"`
-		ConsumeFanOutActivityAToProcessFanOutActivityA         cfg.LinkConfig `yaml:"consumeFanOutActivityAToProcessFanOutActivityA" mapstructure:"consumeFanOutActivityAToProcessFanOutActivityA"`
-		ConsumeFanOutActivityBToProcessFanOutActivityB         cfg.LinkConfig `yaml:"consumeFanOutActivityBToProcessFanOutActivityB" mapstructure:"consumeFanOutActivityBToProcessFanOutActivityB"`
-		ConsumeFanOutActivityCToProcessFanOutActivityC         cfg.LinkConfig `yaml:"consumeFanOutActivityCToProcessFanOutActivityC" mapstructure:"consumeFanOutActivityCToProcessFanOutActivityC"`
-		ConsumeFanOutWorkflowJobToCallFanOutActivityA          cfg.LinkConfig `yaml:"consumeFanOutWorkflowJobToCallFanOutActivityA" mapstructure:"consumeFanOutWorkflowJobToCallFanOutActivityA"`
-		ConsumeSequentialActivityAToProcessSequentialActivityA cfg.LinkConfig `yaml:"consumeSequentialActivityAToProcessSequentialActivityA" mapstructure:"consumeSequentialActivityAToProcessSequentialActivityA"`
-		ConsumeSequentialActivityBToProcessSequentialActivityB cfg.LinkConfig `yaml:"consumeSequentialActivityBToProcessSequentialActivityB" mapstructure:"consumeSequentialActivityBToProcessSequentialActivityB"`
-		ConsumeWorkflowJobToWorkflowPause                      cfg.LinkConfig `yaml:"consumeWorkflowJobToWorkflowPause" mapstructure:"consumeWorkflowJobToWorkflowPause"`
-		SplitActivityAResultToCallFanOutActivityB              cfg.LinkConfig `yaml:"splitActivityAResultToCallFanOutActivityB" mapstructure:"splitActivityAResultToCallFanOutActivityB"`
-		SplitActivityAResultToCallFanOutActivityC              cfg.LinkConfig `yaml:"splitActivityAResultToCallFanOutActivityC" mapstructure:"splitActivityAResultToCallFanOutActivityC"`
-		WorkflowPauseToCallSequentialActivityA                 cfg.LinkConfig `yaml:"workflowPauseToCallSequentialActivityA" mapstructure:"workflowPauseToCallSequentialActivityA"`
-	} `yaml:"links" mapstructure:"links"`
-
-	Modules struct {
-		InventoryServiceApi cfg.ModuleConfig `yaml:"inventoryServiceApi" mapstructure:"inventoryServiceApi"`
-		Model               cfg.ModuleConfig `yaml:"model" mapstructure:"model"`
-		OrderServiceApi     cfg.ModuleConfig `yaml:"orderServiceApi" mapstructure:"orderServiceApi"`
-	} `yaml:"modules" mapstructure:"modules"`
-
-	Types struct {
-		AutomationJob cfg.TypeConfig `yaml:"automationJob" mapstructure:"automationJob"`
-	} `yaml:"types" mapstructure:"types"`
-
-	Custom     CustomConfig           `yaml:",inline" mapstructure:",squash"`
-	Properties map[string]interface{} `yaml:",inline" mapstructure:",remain"`
+    Custom     CustomConfig             `yaml:",inline" mapstructure:",squash"`
+    Properties map[string]interface{}   `yaml:",inline" mapstructure:",remain"`
 }
 
 func (c *Config) GetProperty(name string) interface{} {
-	return c.Properties[name]
+    return c.Properties[name]
 }
 
 func (c *Config) GetServices() []*cfg.ServiceConfig {
-	return []*cfg.ServiceConfig{
-		&c.Services.AutomationService,
-	}
+    return []*cfg.ServiceConfig {
+                &c.Services.AutomationService,
+        }
 }
 
 func (c *Config) GetStreams() []cfg.StreamConfig {
-	return []cfg.StreamConfig{
-		&c.Streams.ActivityPause,
-		&c.Streams.CallFanOutActivityA,
-		&c.Streams.CallFanOutActivityB,
-		&c.Streams.CallFanOutActivityC,
-		&c.Streams.CallSequentialActivityA,
-		&c.Streams.CallSequentialActivityB,
-		&c.Streams.ConsumeActivityJob,
-		&c.Streams.ConsumeFanOutActivityA,
-		&c.Streams.ConsumeFanOutActivityB,
-		&c.Streams.ConsumeFanOutActivityC,
-		&c.Streams.ConsumeFanOutWorkflowJob,
-		&c.Streams.ConsumeSequentialActivityA,
-		&c.Streams.ConsumeSequentialActivityB,
-		&c.Streams.ConsumeWorkflowJob,
-		&c.Streams.LocalSchedule,
-		&c.Streams.ObserveActivityResult,
-		&c.Streams.ObserveFanOutActivityB,
-		&c.Streams.ObserveFanOutActivityC,
-		&c.Streams.ObserveWorkflowResult,
-		&c.Streams.ProcessActivityJob,
-		&c.Streams.ProcessFanOutActivityA,
-		&c.Streams.ProcessFanOutActivityB,
-		&c.Streams.ProcessFanOutActivityC,
-		&c.Streams.ProcessScheduledActivity,
-		&c.Streams.ProcessScheduledWorkflow,
-		&c.Streams.ProcessSequentialActivityA,
-		&c.Streams.ProcessSequentialActivityB,
-		&c.Streams.ProcessWorkflowJob,
-		&c.Streams.ScheduledActivityPause,
-		&c.Streams.ScheduledWorkflowPause,
-		&c.Streams.SplitActivityAResult,
-		&c.Streams.SplitOnDemandJobs,
-		&c.Streams.SubmitActivityJob,
-		&c.Streams.SubmitFanOutWorkflowJob,
-		&c.Streams.SubmitWorkflowJob,
-		&c.Streams.TemporalActivitySchedule,
-		&c.Streams.TemporalWorkflowSchedule,
-		&c.Streams.WorkflowPause,
-	}
+    return []cfg.StreamConfig {
+                &c.Streams.ActivityPause,
+                &c.Streams.CallFanOutActivityA,
+                &c.Streams.CallFanOutActivityB,
+                &c.Streams.CallFanOutActivityC,
+                &c.Streams.CallSequentialActivityA,
+                &c.Streams.CallSequentialActivityB,
+                &c.Streams.ConsumeActivityJob,
+                &c.Streams.ConsumeFanOutActivityA,
+                &c.Streams.ConsumeFanOutActivityB,
+                &c.Streams.ConsumeFanOutActivityC,
+                &c.Streams.ConsumeFanOutWorkflowJob,
+                &c.Streams.ConsumeSequentialActivityA,
+                &c.Streams.ConsumeSequentialActivityB,
+                &c.Streams.ConsumeWorkflowJob,
+                &c.Streams.LocalSchedule,
+                &c.Streams.ObserveActivityResult,
+                &c.Streams.ObserveFanOutActivityB,
+                &c.Streams.ObserveFanOutActivityC,
+                &c.Streams.ObserveWorkflowResult,
+                &c.Streams.ProcessActivityJob,
+                &c.Streams.ProcessFanOutActivityA,
+                &c.Streams.ProcessFanOutActivityB,
+                &c.Streams.ProcessFanOutActivityC,
+                &c.Streams.ProcessScheduledActivity,
+                &c.Streams.ProcessScheduledWorkflow,
+                &c.Streams.ProcessSequentialActivityA,
+                &c.Streams.ProcessSequentialActivityB,
+                &c.Streams.ProcessWorkflowJob,
+                &c.Streams.ScheduledActivityPause,
+                &c.Streams.ScheduledWorkflowPause,
+                &c.Streams.SplitActivityAResult,
+                &c.Streams.SplitOnDemandJobs,
+                &c.Streams.SubmitActivityJob,
+                &c.Streams.SubmitFanOutWorkflowJob,
+                &c.Streams.SubmitWorkflowJob,
+                &c.Streams.TemporalActivitySchedule,
+                &c.Streams.TemporalWorkflowSchedule,
+                &c.Streams.WorkflowPause,
+        }
 }
 
 func (c *Config) GetDataConnectors() []cfg.DataConnectorConfig {
-	return []cfg.DataConnectorConfig{
-		&c.DataConnectors.LocalCron,
-		&c.DataConnectors.Temporal,
-	}
+    return []cfg.DataConnectorConfig {
+                &c.DataConnectors.LocalCron,
+                &c.DataConnectors.Temporal,
+        }
 }
 
 func (c *Config) GetEndpoints() []cfg.EndpointConfig {
-	return []cfg.EndpointConfig{
-		&c.Endpoints.ActivityJob,
-		&c.Endpoints.FanOutActivityA,
-		&c.Endpoints.FanOutActivityB,
-		&c.Endpoints.FanOutActivityC,
-		&c.Endpoints.FanOutWorkflowJob,
-		&c.Endpoints.LocalSchedule,
-		&c.Endpoints.SequentialActivityA,
-		&c.Endpoints.SequentialActivityB,
-		&c.Endpoints.TemporalActivitySchedule,
-		&c.Endpoints.TemporalWorkflowSchedule,
-		&c.Endpoints.WorkflowJob,
-	}
+    return []cfg.EndpointConfig {
+                &c.Endpoints.ActivityJob,
+                &c.Endpoints.FanOutActivityA,
+                &c.Endpoints.FanOutActivityB,
+                &c.Endpoints.FanOutActivityC,
+                &c.Endpoints.FanOutWorkflowJob,
+                &c.Endpoints.LocalSchedule,
+                &c.Endpoints.SequentialActivityA,
+                &c.Endpoints.SequentialActivityB,
+                &c.Endpoints.TemporalActivitySchedule,
+                &c.Endpoints.TemporalWorkflowSchedule,
+                &c.Endpoints.WorkflowJob,
+        }
 }
 
 func (c *Config) GetPools() []*cfg.PoolConfig {
-	return []*cfg.PoolConfig{
-		&c.Pools.DefaultPool,
-	}
+    return []*cfg.PoolConfig {
+                &c.Pools.DefaultPool,
+        }
 }
 
 func (c *Config) GetLinks() []*cfg.LinkConfig {
-	return []*cfg.LinkConfig{
-		&c.Links.CallSequentialActivityAToCallSequentialActivityB,
-		&c.Links.CallSequentialActivityBToProcessWorkflowJob,
-		&c.Links.ConsumeActivityJobToActivityPause,
-		&c.Links.ConsumeFanOutActivityAToProcessFanOutActivityA,
-		&c.Links.ConsumeFanOutActivityBToProcessFanOutActivityB,
-		&c.Links.ConsumeFanOutActivityCToProcessFanOutActivityC,
-		&c.Links.ConsumeFanOutWorkflowJobToCallFanOutActivityA,
-		&c.Links.ConsumeSequentialActivityAToProcessSequentialActivityA,
-		&c.Links.ConsumeSequentialActivityBToProcessSequentialActivityB,
-		&c.Links.ConsumeWorkflowJobToWorkflowPause,
-		&c.Links.SplitActivityAResultToCallFanOutActivityB,
-		&c.Links.SplitActivityAResultToCallFanOutActivityC,
-		&c.Links.WorkflowPauseToCallSequentialActivityA,
-	}
+    return []*cfg.LinkConfig {
+                &c.Links.CallSequentialActivityAToCallSequentialActivityB,
+                &c.Links.CallSequentialActivityBToProcessWorkflowJob,
+                &c.Links.ConsumeActivityJobToActivityPause,
+                &c.Links.ConsumeFanOutActivityAToProcessFanOutActivityA,
+                &c.Links.ConsumeFanOutActivityBToProcessFanOutActivityB,
+                &c.Links.ConsumeFanOutActivityCToProcessFanOutActivityC,
+                &c.Links.ConsumeFanOutWorkflowJobToCallFanOutActivityA,
+                &c.Links.ConsumeSequentialActivityAToProcessSequentialActivityA,
+                &c.Links.ConsumeSequentialActivityBToProcessSequentialActivityB,
+                &c.Links.ConsumeWorkflowJobToWorkflowPause,
+                &c.Links.SplitActivityAResultToCallFanOutActivityB,
+                &c.Links.SplitActivityAResultToCallFanOutActivityC,
+                &c.Links.WorkflowPauseToCallSequentialActivityA,
+        }
 }
 
 func (c *Config) GetModules() []*cfg.ModuleConfig {
-	return []*cfg.ModuleConfig{
-		&c.Modules.InventoryServiceApi,
-		&c.Modules.Model,
-		&c.Modules.OrderServiceApi,
-	}
+    return []*cfg.ModuleConfig {
+                &c.Modules.InventoryServiceApi,
+                &c.Modules.Model,
+                &c.Modules.OrderServiceApi,
+        }
 }
 
 func (c *Config) GetTypes() []*cfg.TypeConfig {
-	return []*cfg.TypeConfig{
-		&c.Types.AutomationJob,
-	}
+    return []*cfg.TypeConfig {
+                &c.Types.AutomationJob,
+        }
 }
 
+
 func (c *Config) ApplyEnvironment() error {
-	if err := c.applyActivityJobActivityHeartbeatTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyActivityJobActivityStartToCloseTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyActivityJobEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyActivityJobMaxConcurrentActivities(); err != nil {
-		return err
-	}
-	if err := c.applyActivityJobMaximumAttempts(); err != nil {
-		return err
-	}
-	if err := c.applyActivityJobMissedRunPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyActivityJobOverlapPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyActivityJobSchedule(); err != nil {
-		return err
-	}
-	if err := c.applyActivityJobTaskQueue(); err != nil {
-		return err
-	}
-	if err := c.applyActivityJobTimezone(); err != nil {
-		return err
-	}
-	if err := c.applyActivityJobTracingEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyActivityJobWorkflowExecutionTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyActivityPauseDuration(); err != nil {
-		return err
-	}
-	if err := c.applyAutomationServiceDefaultGrpcTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyAutomationServiceEnvironment(); err != nil {
-		return err
-	}
-	if err := c.applyAutomationServiceGrpcHost(); err != nil {
-		return err
-	}
-	if err := c.applyAutomationServiceGrpcPort(); err != nil {
-		return err
-	}
-	if err := c.applyAutomationServiceHttpHost(); err != nil {
-		return err
-	}
-	if err := c.applyAutomationServiceHttpPort(); err != nil {
-		return err
-	}
-	if err := c.applyDefaultPoolExecutorsCount(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityAActivityHeartbeatTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityAActivityStartToCloseTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityAEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityAMaxConcurrentActivities(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityAMaximumAttempts(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityAMissedRunPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityAOverlapPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityASchedule(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityATaskQueue(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityATimezone(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityATracingEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityAWorkflowExecutionTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityBActivityHeartbeatTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityBActivityStartToCloseTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityBEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityBMaxConcurrentActivities(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityBMaximumAttempts(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityBMissedRunPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityBOverlapPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityBSchedule(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityBTaskQueue(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityBTimezone(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityBTracingEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityBWorkflowExecutionTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityCActivityHeartbeatTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityCActivityStartToCloseTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityCEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityCMaxConcurrentActivities(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityCMaximumAttempts(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityCMissedRunPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityCOverlapPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityCSchedule(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityCTaskQueue(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityCTimezone(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityCTracingEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutActivityCWorkflowExecutionTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutWorkflowJobEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutWorkflowJobMaxConcurrentWorkflowTasks(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutWorkflowJobMaximumAttempts(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutWorkflowJobMissedRunPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutWorkflowJobOverlapPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutWorkflowJobSchedule(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutWorkflowJobTaskQueue(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutWorkflowJobTimezone(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutWorkflowJobTracingEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyFanOutWorkflowJobWorkflowExecutionTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyLocalScheduleEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyLocalScheduleMissedRunPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyLocalScheduleOverlapPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyLocalScheduleSchedule(); err != nil {
-		return err
-	}
-	if err := c.applyLocalScheduleTimezone(); err != nil {
-		return err
-	}
-	if err := c.applyLocalScheduleTracingEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyScheduledActivityPauseDuration(); err != nil {
-		return err
-	}
-	if err := c.applyScheduledWorkflowPauseDuration(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityAActivityHeartbeatTimeout(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityAActivityStartToCloseTimeout(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityAEnabled(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityAMaxConcurrentActivities(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityAMaximumAttempts(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityAMissedRunPolicy(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityAOverlapPolicy(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityASchedule(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityATaskQueue(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityATimezone(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityATracingEnabled(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityAWorkflowExecutionTimeout(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityBActivityHeartbeatTimeout(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityBActivityStartToCloseTimeout(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityBEnabled(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityBMaxConcurrentActivities(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityBMaximumAttempts(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityBMissedRunPolicy(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityBOverlapPolicy(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityBSchedule(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityBTaskQueue(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityBTimezone(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityBTracingEnabled(); err != nil {
-		return err
-	}
-	if err := c.applySequentialActivityBWorkflowExecutionTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalApiKey(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalActivityScheduleActivityHeartbeatTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalActivityScheduleActivityStartToCloseTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalActivityScheduleEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalActivityScheduleMaxConcurrentActivities(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalActivityScheduleMaximumAttempts(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalActivityScheduleMissedRunPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalActivityScheduleOverlapPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalActivityScheduleSchedule(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalActivityScheduleTaskQueue(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalActivityScheduleTimezone(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalActivityScheduleTracingEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalActivityScheduleWorkflowExecutionTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalAddress(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalIdentity(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalNamespace(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalTlsEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalWorkerStopTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalWorkflowScheduleEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalWorkflowScheduleMaxConcurrentWorkflowTasks(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalWorkflowScheduleMaximumAttempts(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalWorkflowScheduleMissedRunPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalWorkflowScheduleOverlapPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalWorkflowScheduleSchedule(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalWorkflowScheduleTaskQueue(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalWorkflowScheduleTimezone(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalWorkflowScheduleTracingEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyTemporalWorkflowScheduleWorkflowExecutionTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyWorkflowJobEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyWorkflowJobMaxConcurrentWorkflowTasks(); err != nil {
-		return err
-	}
-	if err := c.applyWorkflowJobMaximumAttempts(); err != nil {
-		return err
-	}
-	if err := c.applyWorkflowJobMissedRunPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyWorkflowJobOverlapPolicy(); err != nil {
-		return err
-	}
-	if err := c.applyWorkflowJobSchedule(); err != nil {
-		return err
-	}
-	if err := c.applyWorkflowJobTaskQueue(); err != nil {
-		return err
-	}
-	if err := c.applyWorkflowJobTimezone(); err != nil {
-		return err
-	}
-	if err := c.applyWorkflowJobTracingEnabled(); err != nil {
-		return err
-	}
-	if err := c.applyWorkflowJobWorkflowExecutionTimeout(); err != nil {
-		return err
-	}
-	if err := c.applyWorkflowPauseDuration(); err != nil {
-		return err
-	}
-	return nil
+    if err := c.applyActivityJobActivityHeartbeatTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyActivityJobActivityStartToCloseTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyActivityJobEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyActivityJobMaxConcurrentActivities(); err != nil {
+        return err
+    }
+    if err := c.applyActivityJobMaximumAttempts(); err != nil {
+        return err
+    }
+    if err := c.applyActivityJobMissedRunPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyActivityJobOverlapPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyActivityJobSchedule(); err != nil {
+        return err
+    }
+    if err := c.applyActivityJobTaskQueue(); err != nil {
+        return err
+    }
+    if err := c.applyActivityJobTimezone(); err != nil {
+        return err
+    }
+    if err := c.applyActivityJobTracingEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyActivityJobWorkflowExecutionTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyActivityPauseDuration(); err != nil {
+        return err
+    }
+    if err := c.applyAutomationServiceDefaultGrpcTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyAutomationServiceEnvironment(); err != nil {
+        return err
+    }
+    if err := c.applyAutomationServiceGrpcHost(); err != nil {
+        return err
+    }
+    if err := c.applyAutomationServiceGrpcPort(); err != nil {
+        return err
+    }
+    if err := c.applyAutomationServiceHttpHost(); err != nil {
+        return err
+    }
+    if err := c.applyAutomationServiceHttpPort(); err != nil {
+        return err
+    }
+    if err := c.applyDefaultPoolExecutorsCount(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityAActivityHeartbeatTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityAActivityStartToCloseTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityAEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityAMaxConcurrentActivities(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityAMaximumAttempts(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityAMissedRunPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityAOverlapPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityASchedule(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityATaskQueue(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityATimezone(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityATracingEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityAWorkflowExecutionTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityBActivityHeartbeatTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityBActivityStartToCloseTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityBEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityBMaxConcurrentActivities(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityBMaximumAttempts(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityBMissedRunPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityBOverlapPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityBSchedule(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityBTaskQueue(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityBTimezone(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityBTracingEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityBWorkflowExecutionTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityCActivityHeartbeatTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityCActivityStartToCloseTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityCEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityCMaxConcurrentActivities(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityCMaximumAttempts(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityCMissedRunPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityCOverlapPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityCSchedule(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityCTaskQueue(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityCTimezone(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityCTracingEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutActivityCWorkflowExecutionTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutWorkflowJobEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutWorkflowJobMaxConcurrentWorkflowTasks(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutWorkflowJobMaximumAttempts(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutWorkflowJobMissedRunPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutWorkflowJobOverlapPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutWorkflowJobSchedule(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutWorkflowJobTaskQueue(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutWorkflowJobTimezone(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutWorkflowJobTracingEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyFanOutWorkflowJobWorkflowExecutionTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyLocalScheduleEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyLocalScheduleMissedRunPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyLocalScheduleOverlapPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyLocalScheduleSchedule(); err != nil {
+        return err
+    }
+    if err := c.applyLocalScheduleTimezone(); err != nil {
+        return err
+    }
+    if err := c.applyLocalScheduleTracingEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyScheduledActivityPauseDuration(); err != nil {
+        return err
+    }
+    if err := c.applyScheduledWorkflowPauseDuration(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityAActivityHeartbeatTimeout(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityAActivityStartToCloseTimeout(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityAEnabled(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityAMaxConcurrentActivities(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityAMaximumAttempts(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityAMissedRunPolicy(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityAOverlapPolicy(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityASchedule(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityATaskQueue(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityATimezone(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityATracingEnabled(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityAWorkflowExecutionTimeout(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityBActivityHeartbeatTimeout(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityBActivityStartToCloseTimeout(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityBEnabled(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityBMaxConcurrentActivities(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityBMaximumAttempts(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityBMissedRunPolicy(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityBOverlapPolicy(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityBSchedule(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityBTaskQueue(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityBTimezone(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityBTracingEnabled(); err != nil {
+        return err
+    }
+    if err := c.applySequentialActivityBWorkflowExecutionTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalApiKey(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalActivityScheduleActivityHeartbeatTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalActivityScheduleActivityStartToCloseTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalActivityScheduleEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalActivityScheduleMaxConcurrentActivities(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalActivityScheduleMaximumAttempts(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalActivityScheduleMissedRunPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalActivityScheduleOverlapPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalActivityScheduleSchedule(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalActivityScheduleTaskQueue(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalActivityScheduleTimezone(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalActivityScheduleTracingEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalActivityScheduleWorkflowExecutionTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalAddress(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalIdentity(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalNamespace(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalTlsEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalWorkerStopTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalWorkflowScheduleEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalWorkflowScheduleMaxConcurrentWorkflowTasks(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalWorkflowScheduleMaximumAttempts(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalWorkflowScheduleMissedRunPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalWorkflowScheduleOverlapPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalWorkflowScheduleSchedule(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalWorkflowScheduleTaskQueue(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalWorkflowScheduleTimezone(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalWorkflowScheduleTracingEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyTemporalWorkflowScheduleWorkflowExecutionTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyWorkflowJobEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyWorkflowJobMaxConcurrentWorkflowTasks(); err != nil {
+        return err
+    }
+    if err := c.applyWorkflowJobMaximumAttempts(); err != nil {
+        return err
+    }
+    if err := c.applyWorkflowJobMissedRunPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyWorkflowJobOverlapPolicy(); err != nil {
+        return err
+    }
+    if err := c.applyWorkflowJobSchedule(); err != nil {
+        return err
+    }
+    if err := c.applyWorkflowJobTaskQueue(); err != nil {
+        return err
+    }
+    if err := c.applyWorkflowJobTimezone(); err != nil {
+        return err
+    }
+    if err := c.applyWorkflowJobTracingEnabled(); err != nil {
+        return err
+    }
+    if err := c.applyWorkflowJobWorkflowExecutionTimeout(); err != nil {
+        return err
+    }
+    if err := c.applyWorkflowPauseDuration(); err != nil {
+        return err
+    }
+    return nil
 }
 
 func (c *Config) applyActivityJobActivityHeartbeatTimeout() error {
-	value, exists := os.LookupEnv("ACTIVITY_JOB_ACTIVITY_HEARTBEAT_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("ACTIVITY_JOB_ACTIVITY_HEARTBEAT_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert ACTIVITY_JOB_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.ActivityJob.ActivityHeartbeatTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert ACTIVITY_JOB_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.ActivityJob.ActivityHeartbeatTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyActivityJobActivityStartToCloseTimeout() error {
-	value, exists := os.LookupEnv("ACTIVITY_JOB_ACTIVITY_START_TO_CLOSE_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("ACTIVITY_JOB_ACTIVITY_START_TO_CLOSE_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert ACTIVITY_JOB_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.ActivityJob.ActivityStartToCloseTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert ACTIVITY_JOB_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.ActivityJob.ActivityStartToCloseTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyActivityJobEnabled() error {
-	value, exists := os.LookupEnv("ACTIVITY_JOB_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("ACTIVITY_JOB_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert ACTIVITY_JOB_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.ActivityJob.Enabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert ACTIVITY_JOB_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.ActivityJob.Enabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyActivityJobMaxConcurrentActivities() error {
-	value, exists := os.LookupEnv("ACTIVITY_JOB_MAX_CONCURRENT_ACTIVITIES")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("ACTIVITY_JOB_MAX_CONCURRENT_ACTIVITIES")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert ACTIVITY_JOB_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
-	}
-	c.Endpoints.ActivityJob.MaxConcurrentActivities = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert ACTIVITY_JOB_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
+    }
+    c.Endpoints.ActivityJob.MaxConcurrentActivities = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyActivityJobMaximumAttempts() error {
-	value, exists := os.LookupEnv("ACTIVITY_JOB_MAXIMUM_ATTEMPTS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("ACTIVITY_JOB_MAXIMUM_ATTEMPTS")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert ACTIVITY_JOB_MAXIMUM_ATTEMPTS to int: %w", err)
-	}
-	c.Endpoints.ActivityJob.MaximumAttempts = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert ACTIVITY_JOB_MAXIMUM_ATTEMPTS to int: %w", err)
+    }
+    c.Endpoints.ActivityJob.MaximumAttempts = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyActivityJobMissedRunPolicy() error {
-	value, exists := os.LookupEnv("ACTIVITY_JOB_MISSED_RUN_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("ACTIVITY_JOB_MISSED_RUN_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.ActivityJob.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
+    c.Endpoints.ActivityJob.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyActivityJobOverlapPolicy() error {
-	value, exists := os.LookupEnv("ACTIVITY_JOB_OVERLAP_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("ACTIVITY_JOB_OVERLAP_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.ActivityJob.OverlapPolicy = api.ScheduleOverlapPolicy(value)
+    c.Endpoints.ActivityJob.OverlapPolicy = api.ScheduleOverlapPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyActivityJobSchedule() error {
-	value, exists := os.LookupEnv("ACTIVITY_JOB_SCHEDULE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("ACTIVITY_JOB_SCHEDULE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.ActivityJob.Schedule = value
+    c.Endpoints.ActivityJob.Schedule = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyActivityJobTaskQueue() error {
-	value, exists := os.LookupEnv("ACTIVITY_JOB_TASK_QUEUE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("ACTIVITY_JOB_TASK_QUEUE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.ActivityJob.TaskQueue = value
+    c.Endpoints.ActivityJob.TaskQueue = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyActivityJobTimezone() error {
-	value, exists := os.LookupEnv("ACTIVITY_JOB_TIMEZONE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("ACTIVITY_JOB_TIMEZONE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.ActivityJob.Timezone = value
+    c.Endpoints.ActivityJob.Timezone = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyActivityJobTracingEnabled() error {
-	value, exists := os.LookupEnv("ACTIVITY_JOB_TRACING_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("ACTIVITY_JOB_TRACING_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert ACTIVITY_JOB_TRACING_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.ActivityJob.TracingEnabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert ACTIVITY_JOB_TRACING_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.ActivityJob.TracingEnabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyActivityJobWorkflowExecutionTimeout() error {
-	value, exists := os.LookupEnv("ACTIVITY_JOB_WORKFLOW_EXECUTION_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("ACTIVITY_JOB_WORKFLOW_EXECUTION_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert ACTIVITY_JOB_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.ActivityJob.WorkflowExecutionTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert ACTIVITY_JOB_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.ActivityJob.WorkflowExecutionTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyActivityPauseDuration() error {
-	value, exists := os.LookupEnv("ACTIVITY_PAUSE_DURATION")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("ACTIVITY_PAUSE_DURATION")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert ACTIVITY_PAUSE_DURATION to int: %w", err)
-	}
-	c.Streams.ActivityPause.Duration = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert ACTIVITY_PAUSE_DURATION to int: %w", err)
+    }
+    c.Streams.ActivityPause.Duration = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyAutomationServiceDefaultGrpcTimeout() error {
-	value, exists := os.LookupEnv("AUTOMATION_SERVICE_DEFAULT_GRPC_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("AUTOMATION_SERVICE_DEFAULT_GRPC_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert AUTOMATION_SERVICE_DEFAULT_GRPC_TIMEOUT to int: %w", err)
-	}
-	c.Services.AutomationService.DefaultGrpcTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert AUTOMATION_SERVICE_DEFAULT_GRPC_TIMEOUT to int: %w", err)
+    }
+    c.Services.AutomationService.DefaultGrpcTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyAutomationServiceEnvironment() error {
-	value, exists := os.LookupEnv("AUTOMATION_SERVICE_ENVIRONMENT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("AUTOMATION_SERVICE_ENVIRONMENT")
+    if !exists {
+        return nil
+    }
 
-	c.Services.AutomationService.Environment = api.Environment(value)
+    c.Services.AutomationService.Environment = api.Environment(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyAutomationServiceGrpcHost() error {
-	value, exists := os.LookupEnv("AUTOMATION_SERVICE_GRPC_HOST")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("AUTOMATION_SERVICE_GRPC_HOST")
+    if !exists {
+        return nil
+    }
 
-	c.Services.AutomationService.GrpcHost = value
+    c.Services.AutomationService.GrpcHost = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyAutomationServiceGrpcPort() error {
-	value, exists := os.LookupEnv("AUTOMATION_SERVICE_GRPC_PORT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("AUTOMATION_SERVICE_GRPC_PORT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert AUTOMATION_SERVICE_GRPC_PORT to int: %w", err)
-	}
-	c.Services.AutomationService.GrpcPort = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert AUTOMATION_SERVICE_GRPC_PORT to int: %w", err)
+    }
+    c.Services.AutomationService.GrpcPort = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyAutomationServiceHttpHost() error {
-	value, exists := os.LookupEnv("AUTOMATION_SERVICE_HTTP_HOST")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("AUTOMATION_SERVICE_HTTP_HOST")
+    if !exists {
+        return nil
+    }
 
-	c.Services.AutomationService.HttpHost = value
+    c.Services.AutomationService.HttpHost = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyAutomationServiceHttpPort() error {
-	value, exists := os.LookupEnv("AUTOMATION_SERVICE_HTTP_PORT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("AUTOMATION_SERVICE_HTTP_PORT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert AUTOMATION_SERVICE_HTTP_PORT to int: %w", err)
-	}
-	c.Services.AutomationService.HttpPort = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert AUTOMATION_SERVICE_HTTP_PORT to int: %w", err)
+    }
+    c.Services.AutomationService.HttpPort = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyDefaultPoolExecutorsCount() error {
-	value, exists := os.LookupEnv("DEFAULT_POOL_EXECUTORS_COUNT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("DEFAULT_POOL_EXECUTORS_COUNT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert DEFAULT_POOL_EXECUTORS_COUNT to int: %w", err)
-	}
-	c.Pools.DefaultPool.ExecutorsCount = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert DEFAULT_POOL_EXECUTORS_COUNT to int: %w", err)
+    }
+    c.Pools.DefaultPool.ExecutorsCount = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityAActivityHeartbeatTimeout() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_ACTIVITY_HEARTBEAT_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_ACTIVITY_HEARTBEAT_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityA.ActivityHeartbeatTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityA.ActivityHeartbeatTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityAActivityStartToCloseTimeout() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_ACTIVITY_START_TO_CLOSE_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_ACTIVITY_START_TO_CLOSE_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityA.ActivityStartToCloseTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityA.ActivityStartToCloseTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityAEnabled() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.FanOutActivityA.Enabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.FanOutActivityA.Enabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityAMaxConcurrentActivities() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_MAX_CONCURRENT_ACTIVITIES")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_MAX_CONCURRENT_ACTIVITIES")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityA.MaxConcurrentActivities = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityA.MaxConcurrentActivities = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityAMaximumAttempts() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_MAXIMUM_ATTEMPTS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_MAXIMUM_ATTEMPTS")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_MAXIMUM_ATTEMPTS to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityA.MaximumAttempts = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_MAXIMUM_ATTEMPTS to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityA.MaximumAttempts = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityAMissedRunPolicy() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_MISSED_RUN_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_MISSED_RUN_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityA.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
+    c.Endpoints.FanOutActivityA.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityAOverlapPolicy() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_OVERLAP_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_OVERLAP_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityA.OverlapPolicy = api.ScheduleOverlapPolicy(value)
+    c.Endpoints.FanOutActivityA.OverlapPolicy = api.ScheduleOverlapPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityASchedule() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_SCHEDULE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_SCHEDULE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityA.Schedule = value
+    c.Endpoints.FanOutActivityA.Schedule = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityATaskQueue() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_TASK_QUEUE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_TASK_QUEUE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityA.TaskQueue = value
+    c.Endpoints.FanOutActivityA.TaskQueue = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityATimezone() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_TIMEZONE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_TIMEZONE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityA.Timezone = value
+    c.Endpoints.FanOutActivityA.Timezone = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityATracingEnabled() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_TRACING_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_TRACING_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_TRACING_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.FanOutActivityA.TracingEnabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_TRACING_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.FanOutActivityA.TracingEnabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityAWorkflowExecutionTimeout() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_WORKFLOW_EXECUTION_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_A_WORKFLOW_EXECUTION_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityA.WorkflowExecutionTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_A_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityA.WorkflowExecutionTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityBActivityHeartbeatTimeout() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_ACTIVITY_HEARTBEAT_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_ACTIVITY_HEARTBEAT_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityB.ActivityHeartbeatTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityB.ActivityHeartbeatTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityBActivityStartToCloseTimeout() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_ACTIVITY_START_TO_CLOSE_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_ACTIVITY_START_TO_CLOSE_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityB.ActivityStartToCloseTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityB.ActivityStartToCloseTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityBEnabled() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.FanOutActivityB.Enabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.FanOutActivityB.Enabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityBMaxConcurrentActivities() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_MAX_CONCURRENT_ACTIVITIES")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_MAX_CONCURRENT_ACTIVITIES")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityB.MaxConcurrentActivities = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityB.MaxConcurrentActivities = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityBMaximumAttempts() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_MAXIMUM_ATTEMPTS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_MAXIMUM_ATTEMPTS")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_MAXIMUM_ATTEMPTS to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityB.MaximumAttempts = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_MAXIMUM_ATTEMPTS to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityB.MaximumAttempts = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityBMissedRunPolicy() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_MISSED_RUN_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_MISSED_RUN_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityB.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
+    c.Endpoints.FanOutActivityB.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityBOverlapPolicy() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_OVERLAP_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_OVERLAP_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityB.OverlapPolicy = api.ScheduleOverlapPolicy(value)
+    c.Endpoints.FanOutActivityB.OverlapPolicy = api.ScheduleOverlapPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityBSchedule() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_SCHEDULE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_SCHEDULE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityB.Schedule = value
+    c.Endpoints.FanOutActivityB.Schedule = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityBTaskQueue() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_TASK_QUEUE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_TASK_QUEUE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityB.TaskQueue = value
+    c.Endpoints.FanOutActivityB.TaskQueue = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityBTimezone() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_TIMEZONE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_TIMEZONE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityB.Timezone = value
+    c.Endpoints.FanOutActivityB.Timezone = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityBTracingEnabled() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_TRACING_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_TRACING_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_TRACING_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.FanOutActivityB.TracingEnabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_TRACING_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.FanOutActivityB.TracingEnabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityBWorkflowExecutionTimeout() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_WORKFLOW_EXECUTION_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_B_WORKFLOW_EXECUTION_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityB.WorkflowExecutionTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_B_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityB.WorkflowExecutionTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityCActivityHeartbeatTimeout() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_ACTIVITY_HEARTBEAT_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_ACTIVITY_HEARTBEAT_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityC.ActivityHeartbeatTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityC.ActivityHeartbeatTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityCActivityStartToCloseTimeout() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_ACTIVITY_START_TO_CLOSE_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_ACTIVITY_START_TO_CLOSE_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityC.ActivityStartToCloseTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityC.ActivityStartToCloseTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityCEnabled() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.FanOutActivityC.Enabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.FanOutActivityC.Enabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityCMaxConcurrentActivities() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_MAX_CONCURRENT_ACTIVITIES")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_MAX_CONCURRENT_ACTIVITIES")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityC.MaxConcurrentActivities = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityC.MaxConcurrentActivities = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityCMaximumAttempts() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_MAXIMUM_ATTEMPTS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_MAXIMUM_ATTEMPTS")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_MAXIMUM_ATTEMPTS to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityC.MaximumAttempts = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_MAXIMUM_ATTEMPTS to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityC.MaximumAttempts = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityCMissedRunPolicy() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_MISSED_RUN_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_MISSED_RUN_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityC.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
+    c.Endpoints.FanOutActivityC.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityCOverlapPolicy() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_OVERLAP_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_OVERLAP_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityC.OverlapPolicy = api.ScheduleOverlapPolicy(value)
+    c.Endpoints.FanOutActivityC.OverlapPolicy = api.ScheduleOverlapPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityCSchedule() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_SCHEDULE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_SCHEDULE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityC.Schedule = value
+    c.Endpoints.FanOutActivityC.Schedule = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityCTaskQueue() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_TASK_QUEUE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_TASK_QUEUE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityC.TaskQueue = value
+    c.Endpoints.FanOutActivityC.TaskQueue = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityCTimezone() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_TIMEZONE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_TIMEZONE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutActivityC.Timezone = value
+    c.Endpoints.FanOutActivityC.Timezone = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityCTracingEnabled() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_TRACING_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_TRACING_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_TRACING_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.FanOutActivityC.TracingEnabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_TRACING_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.FanOutActivityC.TracingEnabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutActivityCWorkflowExecutionTimeout() error {
-	value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_WORKFLOW_EXECUTION_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_ACTIVITY_C_WORKFLOW_EXECUTION_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.FanOutActivityC.WorkflowExecutionTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_ACTIVITY_C_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.FanOutActivityC.WorkflowExecutionTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutWorkflowJobEnabled() error {
-	value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_WORKFLOW_JOB_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.FanOutWorkflowJob.Enabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_WORKFLOW_JOB_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.FanOutWorkflowJob.Enabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutWorkflowJobMaxConcurrentWorkflowTasks() error {
-	value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_MAX_CONCURRENT_WORKFLOW_TASKS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_MAX_CONCURRENT_WORKFLOW_TASKS")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_WORKFLOW_JOB_MAX_CONCURRENT_WORKFLOW_TASKS to int: %w", err)
-	}
-	c.Endpoints.FanOutWorkflowJob.MaxConcurrentWorkflowTasks = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_WORKFLOW_JOB_MAX_CONCURRENT_WORKFLOW_TASKS to int: %w", err)
+    }
+    c.Endpoints.FanOutWorkflowJob.MaxConcurrentWorkflowTasks = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutWorkflowJobMaximumAttempts() error {
-	value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_MAXIMUM_ATTEMPTS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_MAXIMUM_ATTEMPTS")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_WORKFLOW_JOB_MAXIMUM_ATTEMPTS to int: %w", err)
-	}
-	c.Endpoints.FanOutWorkflowJob.MaximumAttempts = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_WORKFLOW_JOB_MAXIMUM_ATTEMPTS to int: %w", err)
+    }
+    c.Endpoints.FanOutWorkflowJob.MaximumAttempts = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutWorkflowJobMissedRunPolicy() error {
-	value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_MISSED_RUN_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_MISSED_RUN_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutWorkflowJob.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
+    c.Endpoints.FanOutWorkflowJob.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutWorkflowJobOverlapPolicy() error {
-	value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_OVERLAP_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_OVERLAP_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutWorkflowJob.OverlapPolicy = api.ScheduleOverlapPolicy(value)
+    c.Endpoints.FanOutWorkflowJob.OverlapPolicy = api.ScheduleOverlapPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutWorkflowJobSchedule() error {
-	value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_SCHEDULE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_SCHEDULE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutWorkflowJob.Schedule = value
+    c.Endpoints.FanOutWorkflowJob.Schedule = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutWorkflowJobTaskQueue() error {
-	value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_TASK_QUEUE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_TASK_QUEUE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutWorkflowJob.TaskQueue = value
+    c.Endpoints.FanOutWorkflowJob.TaskQueue = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutWorkflowJobTimezone() error {
-	value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_TIMEZONE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_TIMEZONE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.FanOutWorkflowJob.Timezone = value
+    c.Endpoints.FanOutWorkflowJob.Timezone = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutWorkflowJobTracingEnabled() error {
-	value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_TRACING_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_TRACING_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_WORKFLOW_JOB_TRACING_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.FanOutWorkflowJob.TracingEnabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_WORKFLOW_JOB_TRACING_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.FanOutWorkflowJob.TracingEnabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyFanOutWorkflowJobWorkflowExecutionTimeout() error {
-	value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_WORKFLOW_EXECUTION_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("FAN_OUT_WORKFLOW_JOB_WORKFLOW_EXECUTION_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert FAN_OUT_WORKFLOW_JOB_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.FanOutWorkflowJob.WorkflowExecutionTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert FAN_OUT_WORKFLOW_JOB_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.FanOutWorkflowJob.WorkflowExecutionTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyLocalScheduleEnabled() error {
-	value, exists := os.LookupEnv("LOCAL_SCHEDULE_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("LOCAL_SCHEDULE_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert LOCAL_SCHEDULE_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.LocalSchedule.Enabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert LOCAL_SCHEDULE_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.LocalSchedule.Enabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyLocalScheduleMissedRunPolicy() error {
-	value, exists := os.LookupEnv("LOCAL_SCHEDULE_MISSED_RUN_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("LOCAL_SCHEDULE_MISSED_RUN_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.LocalSchedule.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
+    c.Endpoints.LocalSchedule.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyLocalScheduleOverlapPolicy() error {
-	value, exists := os.LookupEnv("LOCAL_SCHEDULE_OVERLAP_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("LOCAL_SCHEDULE_OVERLAP_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.LocalSchedule.OverlapPolicy = api.ScheduleOverlapPolicy(value)
+    c.Endpoints.LocalSchedule.OverlapPolicy = api.ScheduleOverlapPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyLocalScheduleSchedule() error {
-	value, exists := os.LookupEnv("LOCAL_SCHEDULE_SCHEDULE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("LOCAL_SCHEDULE_SCHEDULE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.LocalSchedule.Schedule = value
+    c.Endpoints.LocalSchedule.Schedule = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyLocalScheduleTimezone() error {
-	value, exists := os.LookupEnv("LOCAL_SCHEDULE_TIMEZONE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("LOCAL_SCHEDULE_TIMEZONE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.LocalSchedule.Timezone = value
+    c.Endpoints.LocalSchedule.Timezone = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyLocalScheduleTracingEnabled() error {
-	value, exists := os.LookupEnv("LOCAL_SCHEDULE_TRACING_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("LOCAL_SCHEDULE_TRACING_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert LOCAL_SCHEDULE_TRACING_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.LocalSchedule.TracingEnabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert LOCAL_SCHEDULE_TRACING_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.LocalSchedule.TracingEnabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyScheduledActivityPauseDuration() error {
-	value, exists := os.LookupEnv("SCHEDULED_ACTIVITY_PAUSE_DURATION")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SCHEDULED_ACTIVITY_PAUSE_DURATION")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SCHEDULED_ACTIVITY_PAUSE_DURATION to int: %w", err)
-	}
-	c.Streams.ScheduledActivityPause.Duration = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SCHEDULED_ACTIVITY_PAUSE_DURATION to int: %w", err)
+    }
+    c.Streams.ScheduledActivityPause.Duration = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyScheduledWorkflowPauseDuration() error {
-	value, exists := os.LookupEnv("SCHEDULED_WORKFLOW_PAUSE_DURATION")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SCHEDULED_WORKFLOW_PAUSE_DURATION")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SCHEDULED_WORKFLOW_PAUSE_DURATION to int: %w", err)
-	}
-	c.Streams.ScheduledWorkflowPause.Duration = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SCHEDULED_WORKFLOW_PAUSE_DURATION to int: %w", err)
+    }
+    c.Streams.ScheduledWorkflowPause.Duration = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityAActivityHeartbeatTimeout() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_ACTIVITY_HEARTBEAT_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_ACTIVITY_HEARTBEAT_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.SequentialActivityA.ActivityHeartbeatTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.SequentialActivityA.ActivityHeartbeatTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityAActivityStartToCloseTimeout() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_ACTIVITY_START_TO_CLOSE_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_ACTIVITY_START_TO_CLOSE_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.SequentialActivityA.ActivityStartToCloseTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.SequentialActivityA.ActivityStartToCloseTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityAEnabled() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.SequentialActivityA.Enabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.SequentialActivityA.Enabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityAMaxConcurrentActivities() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_MAX_CONCURRENT_ACTIVITIES")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_MAX_CONCURRENT_ACTIVITIES")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
-	}
-	c.Endpoints.SequentialActivityA.MaxConcurrentActivities = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
+    }
+    c.Endpoints.SequentialActivityA.MaxConcurrentActivities = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityAMaximumAttempts() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_MAXIMUM_ATTEMPTS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_MAXIMUM_ATTEMPTS")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_MAXIMUM_ATTEMPTS to int: %w", err)
-	}
-	c.Endpoints.SequentialActivityA.MaximumAttempts = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_MAXIMUM_ATTEMPTS to int: %w", err)
+    }
+    c.Endpoints.SequentialActivityA.MaximumAttempts = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityAMissedRunPolicy() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_MISSED_RUN_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_MISSED_RUN_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.SequentialActivityA.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
+    c.Endpoints.SequentialActivityA.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityAOverlapPolicy() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_OVERLAP_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_OVERLAP_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.SequentialActivityA.OverlapPolicy = api.ScheduleOverlapPolicy(value)
+    c.Endpoints.SequentialActivityA.OverlapPolicy = api.ScheduleOverlapPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityASchedule() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_SCHEDULE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_SCHEDULE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.SequentialActivityA.Schedule = value
+    c.Endpoints.SequentialActivityA.Schedule = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityATaskQueue() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_TASK_QUEUE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_TASK_QUEUE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.SequentialActivityA.TaskQueue = value
+    c.Endpoints.SequentialActivityA.TaskQueue = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityATimezone() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_TIMEZONE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_TIMEZONE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.SequentialActivityA.Timezone = value
+    c.Endpoints.SequentialActivityA.Timezone = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityATracingEnabled() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_TRACING_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_TRACING_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_TRACING_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.SequentialActivityA.TracingEnabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_TRACING_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.SequentialActivityA.TracingEnabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityAWorkflowExecutionTimeout() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_WORKFLOW_EXECUTION_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_A_WORKFLOW_EXECUTION_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.SequentialActivityA.WorkflowExecutionTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_A_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.SequentialActivityA.WorkflowExecutionTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityBActivityHeartbeatTimeout() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_ACTIVITY_HEARTBEAT_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_ACTIVITY_HEARTBEAT_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.SequentialActivityB.ActivityHeartbeatTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.SequentialActivityB.ActivityHeartbeatTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityBActivityStartToCloseTimeout() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_ACTIVITY_START_TO_CLOSE_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_ACTIVITY_START_TO_CLOSE_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.SequentialActivityB.ActivityStartToCloseTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.SequentialActivityB.ActivityStartToCloseTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityBEnabled() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.SequentialActivityB.Enabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.SequentialActivityB.Enabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityBMaxConcurrentActivities() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_MAX_CONCURRENT_ACTIVITIES")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_MAX_CONCURRENT_ACTIVITIES")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
-	}
-	c.Endpoints.SequentialActivityB.MaxConcurrentActivities = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
+    }
+    c.Endpoints.SequentialActivityB.MaxConcurrentActivities = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityBMaximumAttempts() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_MAXIMUM_ATTEMPTS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_MAXIMUM_ATTEMPTS")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_MAXIMUM_ATTEMPTS to int: %w", err)
-	}
-	c.Endpoints.SequentialActivityB.MaximumAttempts = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_MAXIMUM_ATTEMPTS to int: %w", err)
+    }
+    c.Endpoints.SequentialActivityB.MaximumAttempts = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityBMissedRunPolicy() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_MISSED_RUN_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_MISSED_RUN_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.SequentialActivityB.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
+    c.Endpoints.SequentialActivityB.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityBOverlapPolicy() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_OVERLAP_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_OVERLAP_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.SequentialActivityB.OverlapPolicy = api.ScheduleOverlapPolicy(value)
+    c.Endpoints.SequentialActivityB.OverlapPolicy = api.ScheduleOverlapPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityBSchedule() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_SCHEDULE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_SCHEDULE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.SequentialActivityB.Schedule = value
+    c.Endpoints.SequentialActivityB.Schedule = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityBTaskQueue() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_TASK_QUEUE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_TASK_QUEUE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.SequentialActivityB.TaskQueue = value
+    c.Endpoints.SequentialActivityB.TaskQueue = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityBTimezone() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_TIMEZONE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_TIMEZONE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.SequentialActivityB.Timezone = value
+    c.Endpoints.SequentialActivityB.Timezone = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityBTracingEnabled() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_TRACING_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_TRACING_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_TRACING_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.SequentialActivityB.TracingEnabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_TRACING_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.SequentialActivityB.TracingEnabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applySequentialActivityBWorkflowExecutionTimeout() error {
-	value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_WORKFLOW_EXECUTION_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("SEQUENTIAL_ACTIVITY_B_WORKFLOW_EXECUTION_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.SequentialActivityB.WorkflowExecutionTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert SEQUENTIAL_ACTIVITY_B_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.SequentialActivityB.WorkflowExecutionTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalApiKey() error {
-	value, exists := os.LookupEnv("TEMPORAL_API_KEY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_API_KEY")
+    if !exists {
+        return nil
+    }
 
-	c.DataConnectors.Temporal.APIKey = value
+    c.DataConnectors.Temporal.APIKey = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalActivityScheduleActivityHeartbeatTimeout() error {
-	value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_ACTIVITY_HEARTBEAT_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_ACTIVITY_HEARTBEAT_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.TemporalActivitySchedule.ActivityHeartbeatTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_ACTIVITY_HEARTBEAT_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.TemporalActivitySchedule.ActivityHeartbeatTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalActivityScheduleActivityStartToCloseTimeout() error {
-	value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_ACTIVITY_START_TO_CLOSE_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_ACTIVITY_START_TO_CLOSE_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.TemporalActivitySchedule.ActivityStartToCloseTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_ACTIVITY_START_TO_CLOSE_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.TemporalActivitySchedule.ActivityStartToCloseTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalActivityScheduleEnabled() error {
-	value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.TemporalActivitySchedule.Enabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.TemporalActivitySchedule.Enabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalActivityScheduleMaxConcurrentActivities() error {
-	value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_MAX_CONCURRENT_ACTIVITIES")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_MAX_CONCURRENT_ACTIVITIES")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
-	}
-	c.Endpoints.TemporalActivitySchedule.MaxConcurrentActivities = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_MAX_CONCURRENT_ACTIVITIES to int: %w", err)
+    }
+    c.Endpoints.TemporalActivitySchedule.MaxConcurrentActivities = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalActivityScheduleMaximumAttempts() error {
-	value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_MAXIMUM_ATTEMPTS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_MAXIMUM_ATTEMPTS")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_MAXIMUM_ATTEMPTS to int: %w", err)
-	}
-	c.Endpoints.TemporalActivitySchedule.MaximumAttempts = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_MAXIMUM_ATTEMPTS to int: %w", err)
+    }
+    c.Endpoints.TemporalActivitySchedule.MaximumAttempts = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalActivityScheduleMissedRunPolicy() error {
-	value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_MISSED_RUN_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_MISSED_RUN_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.TemporalActivitySchedule.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
+    c.Endpoints.TemporalActivitySchedule.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalActivityScheduleOverlapPolicy() error {
-	value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_OVERLAP_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_OVERLAP_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.TemporalActivitySchedule.OverlapPolicy = api.ScheduleOverlapPolicy(value)
+    c.Endpoints.TemporalActivitySchedule.OverlapPolicy = api.ScheduleOverlapPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalActivityScheduleSchedule() error {
-	value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_SCHEDULE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_SCHEDULE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.TemporalActivitySchedule.Schedule = value
+    c.Endpoints.TemporalActivitySchedule.Schedule = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalActivityScheduleTaskQueue() error {
-	value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_TASK_QUEUE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_TASK_QUEUE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.TemporalActivitySchedule.TaskQueue = value
+    c.Endpoints.TemporalActivitySchedule.TaskQueue = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalActivityScheduleTimezone() error {
-	value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_TIMEZONE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_TIMEZONE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.TemporalActivitySchedule.Timezone = value
+    c.Endpoints.TemporalActivitySchedule.Timezone = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalActivityScheduleTracingEnabled() error {
-	value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_TRACING_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_TRACING_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_TRACING_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.TemporalActivitySchedule.TracingEnabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_TRACING_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.TemporalActivitySchedule.TracingEnabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalActivityScheduleWorkflowExecutionTimeout() error {
-	value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_WORKFLOW_EXECUTION_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_ACTIVITY_SCHEDULE_WORKFLOW_EXECUTION_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.TemporalActivitySchedule.WorkflowExecutionTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_ACTIVITY_SCHEDULE_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.TemporalActivitySchedule.WorkflowExecutionTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalAddress() error {
-	value, exists := os.LookupEnv("TEMPORAL_ADDRESS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_ADDRESS")
+    if !exists {
+        return nil
+    }
 
-	c.DataConnectors.Temporal.Address = value
+    c.DataConnectors.Temporal.Address = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalIdentity() error {
-	value, exists := os.LookupEnv("TEMPORAL_IDENTITY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_IDENTITY")
+    if !exists {
+        return nil
+    }
 
-	c.DataConnectors.Temporal.Identity = value
+    c.DataConnectors.Temporal.Identity = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalNamespace() error {
-	value, exists := os.LookupEnv("TEMPORAL_NAMESPACE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_NAMESPACE")
+    if !exists {
+        return nil
+    }
 
-	c.DataConnectors.Temporal.Namespace = value
+    c.DataConnectors.Temporal.Namespace = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalTlsEnabled() error {
-	value, exists := os.LookupEnv("TEMPORAL_TLS_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_TLS_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_TLS_ENABLED to bool: %w", err)
-	}
-	c.DataConnectors.Temporal.TLSEnabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_TLS_ENABLED to bool: %w", err)
+    }
+    c.DataConnectors.Temporal.TLSEnabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalWorkerStopTimeout() error {
-	value, exists := os.LookupEnv("TEMPORAL_WORKER_STOP_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_WORKER_STOP_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_WORKER_STOP_TIMEOUT to int: %w", err)
-	}
-	c.DataConnectors.Temporal.WorkerStopTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_WORKER_STOP_TIMEOUT to int: %w", err)
+    }
+    c.DataConnectors.Temporal.WorkerStopTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalWorkflowScheduleEnabled() error {
-	value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_WORKFLOW_SCHEDULE_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.TemporalWorkflowSchedule.Enabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_WORKFLOW_SCHEDULE_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.TemporalWorkflowSchedule.Enabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalWorkflowScheduleMaxConcurrentWorkflowTasks() error {
-	value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_MAX_CONCURRENT_WORKFLOW_TASKS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_MAX_CONCURRENT_WORKFLOW_TASKS")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_WORKFLOW_SCHEDULE_MAX_CONCURRENT_WORKFLOW_TASKS to int: %w", err)
-	}
-	c.Endpoints.TemporalWorkflowSchedule.MaxConcurrentWorkflowTasks = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_WORKFLOW_SCHEDULE_MAX_CONCURRENT_WORKFLOW_TASKS to int: %w", err)
+    }
+    c.Endpoints.TemporalWorkflowSchedule.MaxConcurrentWorkflowTasks = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalWorkflowScheduleMaximumAttempts() error {
-	value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_MAXIMUM_ATTEMPTS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_MAXIMUM_ATTEMPTS")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_WORKFLOW_SCHEDULE_MAXIMUM_ATTEMPTS to int: %w", err)
-	}
-	c.Endpoints.TemporalWorkflowSchedule.MaximumAttempts = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_WORKFLOW_SCHEDULE_MAXIMUM_ATTEMPTS to int: %w", err)
+    }
+    c.Endpoints.TemporalWorkflowSchedule.MaximumAttempts = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalWorkflowScheduleMissedRunPolicy() error {
-	value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_MISSED_RUN_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_MISSED_RUN_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.TemporalWorkflowSchedule.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
+    c.Endpoints.TemporalWorkflowSchedule.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalWorkflowScheduleOverlapPolicy() error {
-	value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_OVERLAP_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_OVERLAP_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.TemporalWorkflowSchedule.OverlapPolicy = api.ScheduleOverlapPolicy(value)
+    c.Endpoints.TemporalWorkflowSchedule.OverlapPolicy = api.ScheduleOverlapPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalWorkflowScheduleSchedule() error {
-	value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_SCHEDULE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_SCHEDULE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.TemporalWorkflowSchedule.Schedule = value
+    c.Endpoints.TemporalWorkflowSchedule.Schedule = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalWorkflowScheduleTaskQueue() error {
-	value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_TASK_QUEUE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_TASK_QUEUE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.TemporalWorkflowSchedule.TaskQueue = value
+    c.Endpoints.TemporalWorkflowSchedule.TaskQueue = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalWorkflowScheduleTimezone() error {
-	value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_TIMEZONE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_TIMEZONE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.TemporalWorkflowSchedule.Timezone = value
+    c.Endpoints.TemporalWorkflowSchedule.Timezone = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalWorkflowScheduleTracingEnabled() error {
-	value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_TRACING_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_TRACING_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_WORKFLOW_SCHEDULE_TRACING_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.TemporalWorkflowSchedule.TracingEnabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_WORKFLOW_SCHEDULE_TRACING_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.TemporalWorkflowSchedule.TracingEnabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyTemporalWorkflowScheduleWorkflowExecutionTimeout() error {
-	value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_WORKFLOW_EXECUTION_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("TEMPORAL_WORKFLOW_SCHEDULE_WORKFLOW_EXECUTION_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert TEMPORAL_WORKFLOW_SCHEDULE_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.TemporalWorkflowSchedule.WorkflowExecutionTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert TEMPORAL_WORKFLOW_SCHEDULE_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.TemporalWorkflowSchedule.WorkflowExecutionTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyWorkflowJobEnabled() error {
-	value, exists := os.LookupEnv("WORKFLOW_JOB_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("WORKFLOW_JOB_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert WORKFLOW_JOB_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.WorkflowJob.Enabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert WORKFLOW_JOB_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.WorkflowJob.Enabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyWorkflowJobMaxConcurrentWorkflowTasks() error {
-	value, exists := os.LookupEnv("WORKFLOW_JOB_MAX_CONCURRENT_WORKFLOW_TASKS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("WORKFLOW_JOB_MAX_CONCURRENT_WORKFLOW_TASKS")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert WORKFLOW_JOB_MAX_CONCURRENT_WORKFLOW_TASKS to int: %w", err)
-	}
-	c.Endpoints.WorkflowJob.MaxConcurrentWorkflowTasks = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert WORKFLOW_JOB_MAX_CONCURRENT_WORKFLOW_TASKS to int: %w", err)
+    }
+    c.Endpoints.WorkflowJob.MaxConcurrentWorkflowTasks = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyWorkflowJobMaximumAttempts() error {
-	value, exists := os.LookupEnv("WORKFLOW_JOB_MAXIMUM_ATTEMPTS")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("WORKFLOW_JOB_MAXIMUM_ATTEMPTS")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert WORKFLOW_JOB_MAXIMUM_ATTEMPTS to int: %w", err)
-	}
-	c.Endpoints.WorkflowJob.MaximumAttempts = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert WORKFLOW_JOB_MAXIMUM_ATTEMPTS to int: %w", err)
+    }
+    c.Endpoints.WorkflowJob.MaximumAttempts = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyWorkflowJobMissedRunPolicy() error {
-	value, exists := os.LookupEnv("WORKFLOW_JOB_MISSED_RUN_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("WORKFLOW_JOB_MISSED_RUN_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.WorkflowJob.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
+    c.Endpoints.WorkflowJob.MissedRunPolicy = api.ScheduleMissedRunPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyWorkflowJobOverlapPolicy() error {
-	value, exists := os.LookupEnv("WORKFLOW_JOB_OVERLAP_POLICY")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("WORKFLOW_JOB_OVERLAP_POLICY")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.WorkflowJob.OverlapPolicy = api.ScheduleOverlapPolicy(value)
+    c.Endpoints.WorkflowJob.OverlapPolicy = api.ScheduleOverlapPolicy(value)
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyWorkflowJobSchedule() error {
-	value, exists := os.LookupEnv("WORKFLOW_JOB_SCHEDULE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("WORKFLOW_JOB_SCHEDULE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.WorkflowJob.Schedule = value
+    c.Endpoints.WorkflowJob.Schedule = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyWorkflowJobTaskQueue() error {
-	value, exists := os.LookupEnv("WORKFLOW_JOB_TASK_QUEUE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("WORKFLOW_JOB_TASK_QUEUE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.WorkflowJob.TaskQueue = value
+    c.Endpoints.WorkflowJob.TaskQueue = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyWorkflowJobTimezone() error {
-	value, exists := os.LookupEnv("WORKFLOW_JOB_TIMEZONE")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("WORKFLOW_JOB_TIMEZONE")
+    if !exists {
+        return nil
+    }
 
-	c.Endpoints.WorkflowJob.Timezone = value
+    c.Endpoints.WorkflowJob.Timezone = value
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyWorkflowJobTracingEnabled() error {
-	value, exists := os.LookupEnv("WORKFLOW_JOB_TRACING_ENABLED")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("WORKFLOW_JOB_TRACING_ENABLED")
+    if !exists {
+        return nil
+    }
 
-	boolVal, err := strconv.ParseBool(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert WORKFLOW_JOB_TRACING_ENABLED to bool: %w", err)
-	}
-	c.Endpoints.WorkflowJob.TracingEnabled = boolVal
+    boolVal, err := strconv.ParseBool(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert WORKFLOW_JOB_TRACING_ENABLED to bool: %w", err)
+    }
+    c.Endpoints.WorkflowJob.TracingEnabled = boolVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyWorkflowJobWorkflowExecutionTimeout() error {
-	value, exists := os.LookupEnv("WORKFLOW_JOB_WORKFLOW_EXECUTION_TIMEOUT")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("WORKFLOW_JOB_WORKFLOW_EXECUTION_TIMEOUT")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert WORKFLOW_JOB_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
-	}
-	c.Endpoints.WorkflowJob.WorkflowExecutionTimeout = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert WORKFLOW_JOB_WORKFLOW_EXECUTION_TIMEOUT to int: %w", err)
+    }
+    c.Endpoints.WorkflowJob.WorkflowExecutionTimeout = intVal
 
-	return nil
+
+    return nil
 }
 
 func (c *Config) applyWorkflowPauseDuration() error {
-	value, exists := os.LookupEnv("WORKFLOW_PAUSE_DURATION")
-	if !exists {
-		return nil
-	}
+    value, exists := os.LookupEnv("WORKFLOW_PAUSE_DURATION")
+    if !exists {
+        return nil
+    }
 
-	intVal, err := strconv.Atoi(value)
-	if err != nil {
-		return fmt.Errorf("failed to convert WORKFLOW_PAUSE_DURATION to int: %w", err)
-	}
-	c.Streams.WorkflowPause.Duration = intVal
+    intVal, err := strconv.Atoi(value)
+    if err != nil {
+        return fmt.Errorf("failed to convert WORKFLOW_PAUSE_DURATION to int: %w", err)
+    }
+    c.Streams.WorkflowPause.Duration = intVal
 
-	return nil
+
+    return nil
 }
 
+
 func MakeConfig() *Config {
-	return &Config{
-		Services: struct {
-			AutomationService cfg.ServiceConfig `yaml:"automationService" mapstructure:"automationService"`
-		}{
-			AutomationService: cfg.ServiceConfig{
-				ID:    automationServiceServiceID,
-				Name:  "Automation Service",
-				Color: "#00A86B",
-				DefaultCallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
+    return &Config{
+        Services: struct {
+            AutomationService cfg.ServiceConfig `yaml:"automationService" mapstructure:"automationService"`
+        }{
+            AutomationService: cfg.ServiceConfig{
+                ID: automationServiceServiceID,
+                Name: "Automation Service",
+                Color: "#00A86B",
+                DefaultCallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{},
+                    },
+                GrpcHost: "0.0.0.0",
+                GrpcPort: 9204,
+                HttpHost: "0.0.0.0",
+                HttpPort: 9094,
+                MetricsHandler: "metrics",
+                StartupHandler: "health/startup",
+                ReadinessHandler: "health/ready",
+                LivenessHandler: "health/live",
+                KubernetesWorkloadType: "Deployment",
+                ShutdownTimeout: 30000,
+                StatusHandler: "status",
+                GolangVersion: "1.25.4",
+                ModulePath: "github.com/gorundebug/rustexample-automationservice",
+                },
+        },
+        Streams: struct {
+        
+            ActivityPause cfg.DelayStreamConfig `yaml:"activityPause" mapstructure:"activityPause"`
+            CallFanOutActivityA cfg.SinkStreamConfig `yaml:"callFanOutActivityA" mapstructure:"callFanOutActivityA"`
+            CallFanOutActivityB cfg.SinkStreamConfig `yaml:"callFanOutActivityB" mapstructure:"callFanOutActivityB"`
+            CallFanOutActivityC cfg.SinkStreamConfig `yaml:"callFanOutActivityC" mapstructure:"callFanOutActivityC"`
+            CallSequentialActivityA cfg.SinkStreamConfig `yaml:"callSequentialActivityA" mapstructure:"callSequentialActivityA"`
+            CallSequentialActivityB cfg.SinkStreamConfig `yaml:"callSequentialActivityB" mapstructure:"callSequentialActivityB"`
+            ConsumeActivityJob cfg.InputStreamConfig `yaml:"consumeActivityJob" mapstructure:"consumeActivityJob"`
+            ConsumeFanOutActivityA cfg.InputStreamConfig `yaml:"consumeFanOutActivityA" mapstructure:"consumeFanOutActivityA"`
+            ConsumeFanOutActivityB cfg.InputStreamConfig `yaml:"consumeFanOutActivityB" mapstructure:"consumeFanOutActivityB"`
+            ConsumeFanOutActivityC cfg.InputStreamConfig `yaml:"consumeFanOutActivityC" mapstructure:"consumeFanOutActivityC"`
+            ConsumeFanOutWorkflowJob cfg.InputStreamConfig `yaml:"consumeFanOutWorkflowJob" mapstructure:"consumeFanOutWorkflowJob"`
+            ConsumeSequentialActivityA cfg.InputStreamConfig `yaml:"consumeSequentialActivityA" mapstructure:"consumeSequentialActivityA"`
+            ConsumeSequentialActivityB cfg.InputStreamConfig `yaml:"consumeSequentialActivityB" mapstructure:"consumeSequentialActivityB"`
+            ConsumeWorkflowJob cfg.InputStreamConfig `yaml:"consumeWorkflowJob" mapstructure:"consumeWorkflowJob"`
+            LocalSchedule cfg.InputStreamConfig `yaml:"localSchedule" mapstructure:"localSchedule"`
+            ObserveActivityResult cfg.MapStreamConfig `yaml:"observeActivityResult" mapstructure:"observeActivityResult"`
+            ObserveFanOutActivityB cfg.MapStreamConfig `yaml:"observeFanOutActivityB" mapstructure:"observeFanOutActivityB"`
+            ObserveFanOutActivityC cfg.MapStreamConfig `yaml:"observeFanOutActivityC" mapstructure:"observeFanOutActivityC"`
+            ObserveWorkflowResult cfg.MapStreamConfig `yaml:"observeWorkflowResult" mapstructure:"observeWorkflowResult"`
+            ProcessActivityJob cfg.MapStreamConfig `yaml:"processActivityJob" mapstructure:"processActivityJob"`
+            ProcessFanOutActivityA cfg.MapStreamConfig `yaml:"processFanOutActivityA" mapstructure:"processFanOutActivityA"`
+            ProcessFanOutActivityB cfg.MapStreamConfig `yaml:"processFanOutActivityB" mapstructure:"processFanOutActivityB"`
+            ProcessFanOutActivityC cfg.MapStreamConfig `yaml:"processFanOutActivityC" mapstructure:"processFanOutActivityC"`
+            ProcessScheduledActivity cfg.MapStreamConfig `yaml:"processScheduledActivity" mapstructure:"processScheduledActivity"`
+            ProcessScheduledWorkflow cfg.MapStreamConfig `yaml:"processScheduledWorkflow" mapstructure:"processScheduledWorkflow"`
+            ProcessSequentialActivityA cfg.MapStreamConfig `yaml:"processSequentialActivityA" mapstructure:"processSequentialActivityA"`
+            ProcessSequentialActivityB cfg.MapStreamConfig `yaml:"processSequentialActivityB" mapstructure:"processSequentialActivityB"`
+            ProcessWorkflowJob cfg.MapStreamConfig `yaml:"processWorkflowJob" mapstructure:"processWorkflowJob"`
+            ScheduledActivityPause cfg.DelayStreamConfig `yaml:"scheduledActivityPause" mapstructure:"scheduledActivityPause"`
+            ScheduledWorkflowPause cfg.DelayStreamConfig `yaml:"scheduledWorkflowPause" mapstructure:"scheduledWorkflowPause"`
+            SplitActivityAResult cfg.SplitStreamConfig `yaml:"splitActivityAResult" mapstructure:"splitActivityAResult"`
+            SplitOnDemandJobs cfg.SplitStreamConfig `yaml:"splitOnDemandJobs" mapstructure:"splitOnDemandJobs"`
+            SubmitActivityJob cfg.SinkStreamConfig `yaml:"submitActivityJob" mapstructure:"submitActivityJob"`
+            SubmitFanOutWorkflowJob cfg.SinkStreamConfig `yaml:"submitFanOutWorkflowJob" mapstructure:"submitFanOutWorkflowJob"`
+            SubmitWorkflowJob cfg.SinkStreamConfig `yaml:"submitWorkflowJob" mapstructure:"submitWorkflowJob"`
+            TemporalActivitySchedule cfg.InputStreamConfig `yaml:"temporalActivitySchedule" mapstructure:"temporalActivitySchedule"`
+            TemporalWorkflowSchedule cfg.InputStreamConfig `yaml:"temporalWorkflowSchedule" mapstructure:"temporalWorkflowSchedule"`
+            WorkflowPause cfg.DelayStreamConfig `yaml:"workflowPause" mapstructure:"workflowPause"`
+        }{
+            ActivityPause: cfg.DelayStreamConfig{
+                ID: activityPauseStreamID,
+                Name: "Activity Pause",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: consumeActivityJobStreamID,
+                XPos: -251,
+                YPos: 219,
+                Duration: 250,
+                FunctionPackage: "automation",
+                FunctionName: "ActivityPause",
+                FunctionDescription: "Apply the ordinary local Delay while processing an on-demand Temporal Activity.\n",
+                },
+
+            
+            CallFanOutActivityA: cfg.SinkStreamConfig{
+                ID: callFanOutActivityAStreamID,
+                Name: "Call Fan-Out Activity A",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: consumeFanOutWorkflowJobStreamID,
+                XPos: -271,
+                YPos: 1284,
+                ValueType: "AutomationJob",
+                IdEndpoint: fanOutActivityAEndpointID,
+                },
+
+            
+            CallFanOutActivityB: cfg.SinkStreamConfig{
+                ID: callFanOutActivityBStreamID,
+                Name: "Call Fan-Out Activity B",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: splitActivityAResultStreamID,
+                XPos: 7,
+                YPos: 990,
+                ValueType: "AutomationJob",
+                IdEndpoint: fanOutActivityBEndpointID,
+                },
+
+            
+            CallFanOutActivityC: cfg.SinkStreamConfig{
+                ID: callFanOutActivityCStreamID,
+                Name: "Call Fan-Out Activity C",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: splitActivityAResultStreamID,
+                XPos: 317,
+                YPos: 1313,
+                ValueType: "AutomationJob",
+                IdEndpoint: fanOutActivityCEndpointID,
+                },
+
+            
+            CallSequentialActivityA: cfg.SinkStreamConfig{
+                ID: callSequentialActivityAStreamID,
+                Name: "Call Sequential Activity A",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: workflowPauseStreamID,
+                XPos: 49,
+                YPos: 473,
+                ValueType: "AutomationJob",
+                IdEndpoint: sequentialActivityAEndpointID,
+                },
+
+            
+            CallSequentialActivityB: cfg.SinkStreamConfig{
+                ID: callSequentialActivityBStreamID,
+                Name: "Call Sequential Activity B",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: callSequentialActivityAStreamID,
+                XPos: 270,
+                YPos: 650,
+                ValueType: "AutomationJob",
+                IdEndpoint: sequentialActivityBEndpointID,
+                },
+
+            
+            ConsumeActivityJob: cfg.InputStreamConfig{
+                ID: consumeActivityJobStreamID,
+                Name: "Consume Activity Job",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: processActivityJobStreamID,
+                XPos: -500,
+                YPos: 350,
+                ValueType: "AutomationJob",
+                IdEndpoint: activityJobEndpointID,
+                },
+
+            
+            ConsumeFanOutActivityA: cfg.InputStreamConfig{
+                ID: consumeFanOutActivityAStreamID,
+                Name: "Consume Fan-Out Activity A",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: processFanOutActivityAStreamID,
+                XPos: -277,
+                YPos: 1051,
+                ValueType: "AutomationJob",
+                IdEndpoint: fanOutActivityAEndpointID,
+                },
+
+            
+            ConsumeFanOutActivityB: cfg.InputStreamConfig{
+                ID: consumeFanOutActivityBStreamID,
+                Name: "Consume Fan-Out Activity B",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: processFanOutActivityBStreamID,
+                XPos: 295,
+                YPos: 996,
+                ValueType: "AutomationJob",
+                IdEndpoint: fanOutActivityBEndpointID,
+                },
+
+            
+            ConsumeFanOutActivityC: cfg.InputStreamConfig{
+                ID: consumeFanOutActivityCStreamID,
+                Name: "Consume Fan-Out Activity C",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: processFanOutActivityCStreamID,
+                XPos: 553,
+                YPos: 1503,
+                ValueType: "AutomationJob",
+                IdEndpoint: fanOutActivityCEndpointID,
+                },
+
+            
+            ConsumeFanOutWorkflowJob: cfg.InputStreamConfig{
+                ID: consumeFanOutWorkflowJobStreamID,
+                Name: "Consume Fan-Out Workflow Job",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                XPos: -635,
+                YPos: 1287,
+                ValueType: "AutomationJob",
+                IdEndpoint: fanOutWorkflowJobEndpointID,
+                },
+
+            
+            ConsumeSequentialActivityA: cfg.InputStreamConfig{
+                ID: consumeSequentialActivityAStreamID,
+                Name: "Consume Sequential Activity A",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: processSequentialActivityAStreamID,
+                XPos: 302,
+                YPos: 489,
+                ValueType: "AutomationJob",
+                IdEndpoint: sequentialActivityAEndpointID,
+                },
+
+            
+            ConsumeSequentialActivityB: cfg.InputStreamConfig{
+                ID: consumeSequentialActivityBStreamID,
+                Name: "Consume Sequential Activity B",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: processSequentialActivityBStreamID,
+                XPos: 503,
+                YPos: 658,
+                ValueType: "AutomationJob",
+                IdEndpoint: sequentialActivityBEndpointID,
+                },
+
+            
+            ConsumeWorkflowJob: cfg.InputStreamConfig{
+                ID: consumeWorkflowJobStreamID,
+                Name: "Consume Workflow Job",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: processWorkflowJobStreamID,
+                XPos: -515,
+                YPos: 635,
+                ValueType: "AutomationJob",
+                IdEndpoint: workflowJobEndpointID,
+                },
+
+            
+            LocalSchedule: cfg.InputStreamConfig{
+                ID: localScheduleStreamID,
+                Name: "Local Schedule",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                XPos: -1250,
+                YPos: 500,
+                ValueType: "AutomationJob",
+                IdEndpoint: localScheduleEndpointID,
+                },
+
+            
+            ObserveActivityResult: cfg.MapStreamConfig{
+                ID: observeActivityResultStreamID,
+                Name: "Observe Activity Result",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: submitActivityJobStreamID,
+                XPos: -500,
+                YPos: 500,
+                ValueType: "AutomationJob",
+                FunctionPackage: "automation",
+                FunctionName: "ObserveActivityResult",
+                FunctionDescription: "Preserve the result returned through the on-demand Activity endpoint.\n",
+                },
+
+            
+            ObserveFanOutActivityB: cfg.MapStreamConfig{
+                ID: observeFanOutActivityBStreamID,
+                Name: "Observe Fan-Out Activity B",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: callFanOutActivityBStreamID,
+                XPos: -11,
+                YPos: 793,
+                ValueType: "AutomationJob",
+                FunctionPackage: "automation",
+                FunctionName: "ObserveFanoutActivityB",
+                FunctionDescription: "Observe the typed result returned by the Activity B fan-out branch.\n",
+                },
+
+            
+            ObserveFanOutActivityC: cfg.MapStreamConfig{
+                ID: observeFanOutActivityCStreamID,
+                Name: "Observe Fan-Out Activity C",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: callFanOutActivityCStreamID,
+                XPos: 587,
+                YPos: 1121,
+                ValueType: "AutomationJob",
+                FunctionPackage: "automation",
+                FunctionName: "ObserveFanoutActivityC",
+                FunctionDescription: "Observe the typed result returned by the Activity C fan-out branch.\n",
+                },
+
+            
+            ObserveWorkflowResult: cfg.MapStreamConfig{
+                ID: observeWorkflowResultStreamID,
+                Name: "Observe Workflow Result",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: submitWorkflowJobStreamID,
+                XPos: -650,
+                YPos: 788,
+                ValueType: "AutomationJob",
+                FunctionPackage: "automation",
+                FunctionName: "ObserveWorkflowResult",
+                FunctionDescription: "Preserve the result returned through the on-demand Workflow endpoint.\n",
+                },
+
+            
+            ProcessActivityJob: cfg.MapStreamConfig{
+                ID: processActivityJobStreamID,
+                Name: "Process Activity Job",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: activityPauseStreamID,
+                XPos: 10,
+                YPos: 350,
+                ValueType: "AutomationJob",
+                FunctionPackage: "automation",
+                FunctionName: "ProcessActivityJob",
+                FunctionDescription: "Record Activity progress with DurableCallHeartbeat and return the processed job result.\n",
+                },
+
+            
+            ProcessFanOutActivityA: cfg.MapStreamConfig{
+                ID: processFanOutActivityAStreamID,
+                Name: "Process Fan-Out Activity A",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: consumeFanOutActivityAStreamID,
+                XPos: -268,
+                YPos: 819,
+                ValueType: "AutomationJob",
+                FunctionPackage: "automation",
+                FunctionName: "ProcessFanoutActivityA",
+                FunctionDescription: "Return Activity A's typed result before the Workflow Split.\n",
+                },
+
+            
+            ProcessFanOutActivityB: cfg.MapStreamConfig{
+                ID: processFanOutActivityBStreamID,
+                Name: "Process Fan-Out Activity B",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: consumeFanOutActivityBStreamID,
+                XPos: 705,
+                YPos: 1001,
+                ValueType: "AutomationJob",
+                FunctionPackage: "automation",
+                FunctionName: "ProcessFanoutActivityB",
+                FunctionDescription: "Return Activity B's typed fan-out result.\n",
+                },
+
+            
+            ProcessFanOutActivityC: cfg.MapStreamConfig{
+                ID: processFanOutActivityCStreamID,
+                Name: "Process Fan-Out Activity C",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: consumeFanOutActivityCStreamID,
+                XPos: 931,
+                YPos: 1493,
+                ValueType: "AutomationJob",
+                FunctionPackage: "automation",
+                FunctionName: "ProcessFanoutActivityC",
+                FunctionDescription: "Return Activity C's typed fan-out result.\n",
+                },
+
+            
+            ProcessScheduledActivity: cfg.MapStreamConfig{
+                ID: processScheduledActivityStreamID,
+                Name: "Process Scheduled Activity",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: scheduledActivityPauseStreamID,
+                XPos: -1442,
+                YPos: 655,
+                ValueType: "AutomationJob",
+                FunctionPackage: "automation",
+                FunctionName: "ProcessScheduledActivity",
+                FunctionDescription: "Return the visible result of one scheduled Activity execution.\n",
+                },
+
+            
+            ProcessScheduledWorkflow: cfg.MapStreamConfig{
+                ID: processScheduledWorkflowStreamID,
+                Name: "Process Scheduled Workflow",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: scheduledWorkflowPauseStreamID,
+                XPos: -1411,
+                YPos: 856,
+                ValueType: "AutomationJob",
+                FunctionPackage: "automation",
+                FunctionName: "ProcessScheduledWorkflow",
+                FunctionDescription: "Return the visible result of one scheduled Workflow execution.\n",
+                },
+
+            
+            ProcessSequentialActivityA: cfg.MapStreamConfig{
+                ID: processSequentialActivityAStreamID,
+                Name: "Process Sequential Activity A",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: consumeSequentialActivityAStreamID,
+                XPos: 568,
+                YPos: 486,
+                ValueType: "AutomationJob",
+                FunctionPackage: "automation",
+                FunctionName: "ProcessSequentialActivityA",
+                FunctionDescription: "Return sequential Activity A's typed result to its Temporal sink.\n",
+                },
+
+            
+            ProcessSequentialActivityB: cfg.MapStreamConfig{
+                ID: processSequentialActivityBStreamID,
+                Name: "Process Sequential Activity B",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: consumeSequentialActivityBStreamID,
+                XPos: 804,
+                YPos: 660,
+                ValueType: "AutomationJob",
+                FunctionPackage: "automation",
+                FunctionName: "ProcessSequentialActivityB",
+                FunctionDescription: "Return sequential Activity B's typed result to its Temporal sink.\n",
+                },
+
+            
+            ProcessWorkflowJob: cfg.MapStreamConfig{
+                ID: processWorkflowJobStreamID,
+                Name: "Process Workflow Job",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: callSequentialActivityBStreamID,
+                XPos: -59,
+                YPos: 654,
+                ValueType: "AutomationJob",
+                FunctionPackage: "automation",
+                FunctionName: "ProcessWorkflowJob",
+                FunctionDescription: "Continue the Workflow as new once, then return its final result.\n",
+                },
+
+            
+            ScheduledActivityPause: cfg.DelayStreamConfig{
+                ID: scheduledActivityPauseStreamID,
+                Name: "Scheduled Activity Pause",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: temporalActivityScheduleStreamID,
+                XPos: -1661,
+                YPos: 402,
+                Duration: 250,
+                FunctionPackage: "automation",
+                FunctionName: "ScheduledActivityPause",
+                FunctionDescription: "Apply the ordinary local Delay inside an Activity started by Temporal Schedule.\n",
+                },
+
+            
+            ScheduledWorkflowPause: cfg.DelayStreamConfig{
+                ID: scheduledWorkflowPauseStreamID,
+                Name: "Scheduled Workflow Pause",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: temporalWorkflowScheduleStreamID,
+                XPos: -1684,
+                YPos: 1167,
+                Duration: 250,
+                FunctionPackage: "automation",
+                FunctionName: "ScheduledWorkflowPause",
+                FunctionDescription: "Use the official Temporal Workflow timer for a scheduled Workflow.\n",
+                },
+
+            
+            SplitActivityAResult: cfg.SplitStreamConfig{
+                ID: splitActivityAResultStreamID,
+                Name: "Split Activity A Result",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: callFanOutActivityAStreamID,
+                XPos: 40,
+                YPos: 1312,
+                },
+
+            
+            SplitOnDemandJobs: cfg.SplitStreamConfig{
+                ID: splitOnDemandJobsStreamID,
+                Name: "Split On-Demand Jobs",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: localScheduleStreamID,
+                XPos: -1010,
+                YPos: 500,
+                },
+
+            
+            SubmitActivityJob: cfg.SinkStreamConfig{
+                ID: submitActivityJobStreamID,
+                Name: "Submit Activity Job",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: splitOnDemandJobsStreamID,
+                XPos: -760,
+                YPos: 350,
+                ValueType: "AutomationJob",
+                IdEndpoint: activityJobEndpointID,
+                },
+
+            
+            SubmitFanOutWorkflowJob: cfg.SinkStreamConfig{
+                ID: submitFanOutWorkflowJobStreamID,
+                Name: "Submit Fan-Out Workflow Job",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: splitOnDemandJobsStreamID,
+                XPos: -967,
+                YPos: 1034,
+                ValueType: "AutomationJob",
+                IdEndpoint: fanOutWorkflowJobEndpointID,
+                },
+
+            
+            SubmitWorkflowJob: cfg.SinkStreamConfig{
+                ID: submitWorkflowJobStreamID,
+                Name: "Submit Workflow Job",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: splitOnDemandJobsStreamID,
+                XPos: -807,
+                YPos: 629,
+                ValueType: "AutomationJob",
+                IdEndpoint: workflowJobEndpointID,
+                },
+
+            
+            TemporalActivitySchedule: cfg.InputStreamConfig{
+                ID: temporalActivityScheduleStreamID,
+                Name: "Temporal Activity Schedule",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: processScheduledActivityStreamID,
+                XPos: -1917,
+                YPos: 639,
+                ValueType: "AutomationJob",
+                IdEndpoint: temporalActivityScheduleEndpointID,
+                },
+
+            
+            TemporalWorkflowSchedule: cfg.InputStreamConfig{
+                ID: temporalWorkflowScheduleStreamID,
+                Name: "Temporal Workflow Schedule",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: processScheduledWorkflowStreamID,
+                XPos: -1906,
+                YPos: 846,
+                ValueType: "AutomationJob",
+                IdEndpoint: temporalWorkflowScheduleEndpointID,
+                },
+
+            
+            WorkflowPause: cfg.DelayStreamConfig{
+                ID: workflowPauseStreamID,
+                Name: "Workflow Pause",
+                Pipeline: "automation",
+                IdService: automationServiceServiceID,
+                IdSource: consumeWorkflowJobStreamID,
+                XPos: -233,
+                YPos: 504,
+                Duration: 250,
+                FunctionPackage: "automation",
+                FunctionName: "WorkflowPause",
+                FunctionDescription: "Use the same Delay contract backed by the Temporal Workflow timer.\n",
+                },
+
+            
+        },
+        DataConnectors: struct {
+        
+            LocalCron cfg.CronDataConnectorConfig `yaml:"localCron" mapstructure:"localCron"`
+            Temporal cfg.TemporalDataConnectorConfig `yaml:"temporal" mapstructure:"temporal"`
+        }{
+            LocalCron: cfg.CronDataConnectorConfig{
+                ID: localCronConnectorID,
+                Name: "Local Cron",
+                Implementation: api.DataConnectorImplementationGoGocron,
+                },
+
+            
+            Temporal: cfg.TemporalDataConnectorConfig{
+                ID: temporalConnectorID,
+                Name: "Temporal",
+                Implementation: api.DataConnectorImplementationTemporalGo,
+                Address: "temporal:7233",
+                Namespace: "default",
+                Identity: "example-automation",
+                WorkerStopTimeout: 5000,
 				},
-				GrpcHost:               "0.0.0.0",
-				GrpcPort:               9204,
-				HttpHost:               "0.0.0.0",
-				HttpPort:               9094,
-				MetricsHandler:         "metrics",
-				StartupHandler:         "health/startup",
-				ReadinessHandler:       "health/ready",
-				LivenessHandler:        "health/live",
-				KubernetesWorkloadType: "Deployment",
-				ShutdownTimeout:        30000,
-				StatusHandler:          "status",
-				GolangVersion:          "1.25.4",
-				ModulePath:             "github.com/gorundebug/rustexample-automationservice",
-			},
-		},
-		Streams: struct {
-			ActivityPause              cfg.DelayStreamConfig `yaml:"activityPause" mapstructure:"activityPause"`
-			CallFanOutActivityA        cfg.SinkStreamConfig  `yaml:"callFanOutActivityA" mapstructure:"callFanOutActivityA"`
-			CallFanOutActivityB        cfg.SinkStreamConfig  `yaml:"callFanOutActivityB" mapstructure:"callFanOutActivityB"`
-			CallFanOutActivityC        cfg.SinkStreamConfig  `yaml:"callFanOutActivityC" mapstructure:"callFanOutActivityC"`
-			CallSequentialActivityA    cfg.SinkStreamConfig  `yaml:"callSequentialActivityA" mapstructure:"callSequentialActivityA"`
-			CallSequentialActivityB    cfg.SinkStreamConfig  `yaml:"callSequentialActivityB" mapstructure:"callSequentialActivityB"`
-			ConsumeActivityJob         cfg.InputStreamConfig `yaml:"consumeActivityJob" mapstructure:"consumeActivityJob"`
-			ConsumeFanOutActivityA     cfg.InputStreamConfig `yaml:"consumeFanOutActivityA" mapstructure:"consumeFanOutActivityA"`
-			ConsumeFanOutActivityB     cfg.InputStreamConfig `yaml:"consumeFanOutActivityB" mapstructure:"consumeFanOutActivityB"`
-			ConsumeFanOutActivityC     cfg.InputStreamConfig `yaml:"consumeFanOutActivityC" mapstructure:"consumeFanOutActivityC"`
-			ConsumeFanOutWorkflowJob   cfg.InputStreamConfig `yaml:"consumeFanOutWorkflowJob" mapstructure:"consumeFanOutWorkflowJob"`
-			ConsumeSequentialActivityA cfg.InputStreamConfig `yaml:"consumeSequentialActivityA" mapstructure:"consumeSequentialActivityA"`
-			ConsumeSequentialActivityB cfg.InputStreamConfig `yaml:"consumeSequentialActivityB" mapstructure:"consumeSequentialActivityB"`
-			ConsumeWorkflowJob         cfg.InputStreamConfig `yaml:"consumeWorkflowJob" mapstructure:"consumeWorkflowJob"`
-			LocalSchedule              cfg.InputStreamConfig `yaml:"localSchedule" mapstructure:"localSchedule"`
-			ObserveActivityResult      cfg.MapStreamConfig   `yaml:"observeActivityResult" mapstructure:"observeActivityResult"`
-			ObserveFanOutActivityB     cfg.MapStreamConfig   `yaml:"observeFanOutActivityB" mapstructure:"observeFanOutActivityB"`
-			ObserveFanOutActivityC     cfg.MapStreamConfig   `yaml:"observeFanOutActivityC" mapstructure:"observeFanOutActivityC"`
-			ObserveWorkflowResult      cfg.MapStreamConfig   `yaml:"observeWorkflowResult" mapstructure:"observeWorkflowResult"`
-			ProcessActivityJob         cfg.MapStreamConfig   `yaml:"processActivityJob" mapstructure:"processActivityJob"`
-			ProcessFanOutActivityA     cfg.MapStreamConfig   `yaml:"processFanOutActivityA" mapstructure:"processFanOutActivityA"`
-			ProcessFanOutActivityB     cfg.MapStreamConfig   `yaml:"processFanOutActivityB" mapstructure:"processFanOutActivityB"`
-			ProcessFanOutActivityC     cfg.MapStreamConfig   `yaml:"processFanOutActivityC" mapstructure:"processFanOutActivityC"`
-			ProcessScheduledActivity   cfg.MapStreamConfig   `yaml:"processScheduledActivity" mapstructure:"processScheduledActivity"`
-			ProcessScheduledWorkflow   cfg.MapStreamConfig   `yaml:"processScheduledWorkflow" mapstructure:"processScheduledWorkflow"`
-			ProcessSequentialActivityA cfg.MapStreamConfig   `yaml:"processSequentialActivityA" mapstructure:"processSequentialActivityA"`
-			ProcessSequentialActivityB cfg.MapStreamConfig   `yaml:"processSequentialActivityB" mapstructure:"processSequentialActivityB"`
-			ProcessWorkflowJob         cfg.MapStreamConfig   `yaml:"processWorkflowJob" mapstructure:"processWorkflowJob"`
-			ScheduledActivityPause     cfg.DelayStreamConfig `yaml:"scheduledActivityPause" mapstructure:"scheduledActivityPause"`
-			ScheduledWorkflowPause     cfg.DelayStreamConfig `yaml:"scheduledWorkflowPause" mapstructure:"scheduledWorkflowPause"`
-			SplitActivityAResult       cfg.SplitStreamConfig `yaml:"splitActivityAResult" mapstructure:"splitActivityAResult"`
-			SplitOnDemandJobs          cfg.SplitStreamConfig `yaml:"splitOnDemandJobs" mapstructure:"splitOnDemandJobs"`
-			SubmitActivityJob          cfg.SinkStreamConfig  `yaml:"submitActivityJob" mapstructure:"submitActivityJob"`
-			SubmitFanOutWorkflowJob    cfg.SinkStreamConfig  `yaml:"submitFanOutWorkflowJob" mapstructure:"submitFanOutWorkflowJob"`
-			SubmitWorkflowJob          cfg.SinkStreamConfig  `yaml:"submitWorkflowJob" mapstructure:"submitWorkflowJob"`
-			TemporalActivitySchedule   cfg.InputStreamConfig `yaml:"temporalActivitySchedule" mapstructure:"temporalActivitySchedule"`
-			TemporalWorkflowSchedule   cfg.InputStreamConfig `yaml:"temporalWorkflowSchedule" mapstructure:"temporalWorkflowSchedule"`
-			WorkflowPause              cfg.DelayStreamConfig `yaml:"workflowPause" mapstructure:"workflowPause"`
-		}{
-			ActivityPause: cfg.DelayStreamConfig{
-				ID:                  activityPauseStreamID,
-				Name:                "Activity Pause",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            consumeActivityJobStreamID,
-				XPos:                -251,
-				YPos:                219,
-				Duration:            250,
-				FunctionPackage:     "automation",
-				FunctionName:        "ActivityPause",
-				FunctionDescription: "Apply the ordinary local Delay while processing an on-demand Temporal Activity.\n",
-			},
 
-			CallFanOutActivityA: cfg.SinkStreamConfig{
-				ID:         callFanOutActivityAStreamID,
-				Name:       "Call Fan-Out Activity A",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   consumeFanOutWorkflowJobStreamID,
-				XPos:       -271,
-				YPos:       1284,
-				ValueType:  "AutomationJob",
-				IdEndpoint: fanOutActivityAEndpointID,
-			},
+        },
+        Endpoints: struct {
+          ActivityJob cfg.TemporalEndpointConfig `yaml:"activityJob" mapstructure:"activityJob"`
+          FanOutActivityA cfg.TemporalEndpointConfig `yaml:"fanOutActivityA" mapstructure:"fanOutActivityA"`
+          FanOutActivityB cfg.TemporalEndpointConfig `yaml:"fanOutActivityB" mapstructure:"fanOutActivityB"`
+          FanOutActivityC cfg.TemporalEndpointConfig `yaml:"fanOutActivityC" mapstructure:"fanOutActivityC"`
+          FanOutWorkflowJob cfg.TemporalEndpointConfig `yaml:"fanOutWorkflowJob" mapstructure:"fanOutWorkflowJob"`
+          LocalSchedule cfg.CronEndpointConfig `yaml:"localSchedule" mapstructure:"localSchedule"`
+          SequentialActivityA cfg.TemporalEndpointConfig `yaml:"sequentialActivityA" mapstructure:"sequentialActivityA"`
+          SequentialActivityB cfg.TemporalEndpointConfig `yaml:"sequentialActivityB" mapstructure:"sequentialActivityB"`
+          TemporalActivitySchedule cfg.TemporalEndpointConfig `yaml:"temporalActivitySchedule" mapstructure:"temporalActivitySchedule"`
+          TemporalWorkflowSchedule cfg.TemporalEndpointConfig `yaml:"temporalWorkflowSchedule" mapstructure:"temporalWorkflowSchedule"`
+          WorkflowJob cfg.TemporalEndpointConfig `yaml:"workflowJob" mapstructure:"workflowJob"`
+        }{
+            ActivityJob: cfg.TemporalEndpointConfig{
+                ID: activityJobEndpointID,
+                Name: "Activity Job",
+                IdDataConnector: temporalConnectorID,
+                Enabled: true,
+                TaskQueue: "automation-activity-jobs",
+				TemporalExecutionType: api.Activity,
+				MaxConcurrentActivities: 2,
+				Timezone: "UTC",
+                OverlapPolicy: api.ScheduleOverlapPolicySkip,
+                MissedRunPolicy: api.ScheduleMissedRunPolicyFireOnce,
+                WorkflowExecutionTimeout: 60000,
+                ActivityStartToCloseTimeout: 30000,
+                ActivityHeartbeatTimeout: 5000,
+                MaximumAttempts: 3,
+                FunctionName: "ActivityJobEndpoint",
+                FunctionPackage: "activity",
+                },
 
-			CallFanOutActivityB: cfg.SinkStreamConfig{
-				ID:         callFanOutActivityBStreamID,
-				Name:       "Call Fan-Out Activity B",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   splitActivityAResultStreamID,
-				XPos:       7,
-				YPos:       990,
-				ValueType:  "AutomationJob",
-				IdEndpoint: fanOutActivityBEndpointID,
-			},
+            FanOutActivityA: cfg.TemporalEndpointConfig{
+                ID: fanOutActivityAEndpointID,
+                Name: "Fan-Out Activity A",
+                IdDataConnector: temporalConnectorID,
+                Enabled: true,
+                TaskQueue: "automation-activity-jobs",
+				TemporalExecutionType: api.Activity,
+				MaxConcurrentActivities: 2,
+				Timezone: "UTC",
+                OverlapPolicy: api.ScheduleOverlapPolicySkip,
+                MissedRunPolicy: api.ScheduleMissedRunPolicyFireOnce,
+                WorkflowExecutionTimeout: 60000,
+                ActivityStartToCloseTimeout: 30000,
+                ActivityHeartbeatTimeout: 5000,
+                MaximumAttempts: 3,
+                FunctionName: "FanoutActivityAEndpoint",
+                FunctionPackage: "activity",
+                },
 
-			CallFanOutActivityC: cfg.SinkStreamConfig{
-				ID:         callFanOutActivityCStreamID,
-				Name:       "Call Fan-Out Activity C",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   splitActivityAResultStreamID,
-				XPos:       317,
-				YPos:       1313,
-				ValueType:  "AutomationJob",
-				IdEndpoint: fanOutActivityCEndpointID,
-			},
+            FanOutActivityB: cfg.TemporalEndpointConfig{
+                ID: fanOutActivityBEndpointID,
+                Name: "Fan-Out Activity B",
+                IdDataConnector: temporalConnectorID,
+                Enabled: true,
+                TaskQueue: "automation-activity-jobs",
+				TemporalExecutionType: api.Activity,
+				MaxConcurrentActivities: 2,
+				Timezone: "UTC",
+                OverlapPolicy: api.ScheduleOverlapPolicySkip,
+                MissedRunPolicy: api.ScheduleMissedRunPolicyFireOnce,
+                WorkflowExecutionTimeout: 60000,
+                ActivityStartToCloseTimeout: 30000,
+                ActivityHeartbeatTimeout: 5000,
+                MaximumAttempts: 3,
+                FunctionName: "FanoutActivityBEndpoint",
+                FunctionPackage: "activity",
+                },
 
-			CallSequentialActivityA: cfg.SinkStreamConfig{
-				ID:         callSequentialActivityAStreamID,
-				Name:       "Call Sequential Activity A",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   workflowPauseStreamID,
-				XPos:       49,
-				YPos:       473,
-				ValueType:  "AutomationJob",
-				IdEndpoint: sequentialActivityAEndpointID,
-			},
+            FanOutActivityC: cfg.TemporalEndpointConfig{
+                ID: fanOutActivityCEndpointID,
+                Name: "Fan-Out Activity C",
+                IdDataConnector: temporalConnectorID,
+                Enabled: true,
+                TaskQueue: "automation-heavy-activities",
+				TemporalExecutionType: api.Activity,
+				MaxConcurrentActivities: 1,
+				Timezone: "UTC",
+                OverlapPolicy: api.ScheduleOverlapPolicySkip,
+                MissedRunPolicy: api.ScheduleMissedRunPolicyFireOnce,
+                WorkflowExecutionTimeout: 60000,
+                ActivityStartToCloseTimeout: 30000,
+                ActivityHeartbeatTimeout: 5000,
+                MaximumAttempts: 3,
+                FunctionName: "FanoutActivityCEndpoint",
+                FunctionPackage: "activity",
+                },
 
-			CallSequentialActivityB: cfg.SinkStreamConfig{
-				ID:         callSequentialActivityBStreamID,
-				Name:       "Call Sequential Activity B",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   callSequentialActivityAStreamID,
-				XPos:       270,
-				YPos:       650,
-				ValueType:  "AutomationJob",
-				IdEndpoint: sequentialActivityBEndpointID,
-			},
-
-			ConsumeActivityJob: cfg.InputStreamConfig{
-				ID:         consumeActivityJobStreamID,
-				Name:       "Consume Activity Job",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   processActivityJobStreamID,
-				XPos:       -500,
-				YPos:       350,
-				ValueType:  "AutomationJob",
-				IdEndpoint: activityJobEndpointID,
-			},
-
-			ConsumeFanOutActivityA: cfg.InputStreamConfig{
-				ID:         consumeFanOutActivityAStreamID,
-				Name:       "Consume Fan-Out Activity A",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   processFanOutActivityAStreamID,
-				XPos:       -277,
-				YPos:       1051,
-				ValueType:  "AutomationJob",
-				IdEndpoint: fanOutActivityAEndpointID,
-			},
-
-			ConsumeFanOutActivityB: cfg.InputStreamConfig{
-				ID:         consumeFanOutActivityBStreamID,
-				Name:       "Consume Fan-Out Activity B",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   processFanOutActivityBStreamID,
-				XPos:       295,
-				YPos:       996,
-				ValueType:  "AutomationJob",
-				IdEndpoint: fanOutActivityBEndpointID,
-			},
-
-			ConsumeFanOutActivityC: cfg.InputStreamConfig{
-				ID:         consumeFanOutActivityCStreamID,
-				Name:       "Consume Fan-Out Activity C",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   processFanOutActivityCStreamID,
-				XPos:       553,
-				YPos:       1503,
-				ValueType:  "AutomationJob",
-				IdEndpoint: fanOutActivityCEndpointID,
-			},
-
-			ConsumeFanOutWorkflowJob: cfg.InputStreamConfig{
-				ID:         consumeFanOutWorkflowJobStreamID,
-				Name:       "Consume Fan-Out Workflow Job",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				XPos:       -635,
-				YPos:       1287,
-				ValueType:  "AutomationJob",
-				IdEndpoint: fanOutWorkflowJobEndpointID,
-			},
-
-			ConsumeSequentialActivityA: cfg.InputStreamConfig{
-				ID:         consumeSequentialActivityAStreamID,
-				Name:       "Consume Sequential Activity A",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   processSequentialActivityAStreamID,
-				XPos:       302,
-				YPos:       489,
-				ValueType:  "AutomationJob",
-				IdEndpoint: sequentialActivityAEndpointID,
-			},
-
-			ConsumeSequentialActivityB: cfg.InputStreamConfig{
-				ID:         consumeSequentialActivityBStreamID,
-				Name:       "Consume Sequential Activity B",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   processSequentialActivityBStreamID,
-				XPos:       503,
-				YPos:       658,
-				ValueType:  "AutomationJob",
-				IdEndpoint: sequentialActivityBEndpointID,
-			},
-
-			ConsumeWorkflowJob: cfg.InputStreamConfig{
-				ID:         consumeWorkflowJobStreamID,
-				Name:       "Consume Workflow Job",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   processWorkflowJobStreamID,
-				XPos:       -515,
-				YPos:       635,
-				ValueType:  "AutomationJob",
-				IdEndpoint: workflowJobEndpointID,
-			},
-
-			LocalSchedule: cfg.InputStreamConfig{
-				ID:         localScheduleStreamID,
-				Name:       "Local Schedule",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				XPos:       -1250,
-				YPos:       500,
-				ValueType:  "AutomationJob",
-				IdEndpoint: localScheduleEndpointID,
-			},
-
-			ObserveActivityResult: cfg.MapStreamConfig{
-				ID:                  observeActivityResultStreamID,
-				Name:                "Observe Activity Result",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            submitActivityJobStreamID,
-				XPos:                -500,
-				YPos:                500,
-				ValueType:           "AutomationJob",
-				FunctionPackage:     "automation",
-				FunctionName:        "ObserveActivityResult",
-				FunctionDescription: "Preserve the result returned through the on-demand Activity endpoint.\n",
-			},
-
-			ObserveFanOutActivityB: cfg.MapStreamConfig{
-				ID:                  observeFanOutActivityBStreamID,
-				Name:                "Observe Fan-Out Activity B",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            callFanOutActivityBStreamID,
-				XPos:                -11,
-				YPos:                793,
-				ValueType:           "AutomationJob",
-				FunctionPackage:     "automation",
-				FunctionName:        "ObserveFanoutActivityB",
-				FunctionDescription: "Observe the typed result returned by the Activity B fan-out branch.\n",
-			},
-
-			ObserveFanOutActivityC: cfg.MapStreamConfig{
-				ID:                  observeFanOutActivityCStreamID,
-				Name:                "Observe Fan-Out Activity C",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            callFanOutActivityCStreamID,
-				XPos:                587,
-				YPos:                1121,
-				ValueType:           "AutomationJob",
-				FunctionPackage:     "automation",
-				FunctionName:        "ObserveFanoutActivityC",
-				FunctionDescription: "Observe the typed result returned by the Activity C fan-out branch.\n",
-			},
-
-			ObserveWorkflowResult: cfg.MapStreamConfig{
-				ID:                  observeWorkflowResultStreamID,
-				Name:                "Observe Workflow Result",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            submitWorkflowJobStreamID,
-				XPos:                -650,
-				YPos:                788,
-				ValueType:           "AutomationJob",
-				FunctionPackage:     "automation",
-				FunctionName:        "ObserveWorkflowResult",
-				FunctionDescription: "Preserve the result returned through the on-demand Workflow endpoint.\n",
-			},
-
-			ProcessActivityJob: cfg.MapStreamConfig{
-				ID:                  processActivityJobStreamID,
-				Name:                "Process Activity Job",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            activityPauseStreamID,
-				XPos:                10,
-				YPos:                350,
-				ValueType:           "AutomationJob",
-				FunctionPackage:     "automation",
-				FunctionName:        "ProcessActivityJob",
-				FunctionDescription: "Record Activity progress with DurableCallHeartbeat and return the processed job result.\n",
-			},
-
-			ProcessFanOutActivityA: cfg.MapStreamConfig{
-				ID:                  processFanOutActivityAStreamID,
-				Name:                "Process Fan-Out Activity A",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            consumeFanOutActivityAStreamID,
-				XPos:                -268,
-				YPos:                819,
-				ValueType:           "AutomationJob",
-				FunctionPackage:     "automation",
-				FunctionName:        "ProcessFanoutActivityA",
-				FunctionDescription: "Return Activity A's typed result before the Workflow Split.\n",
-			},
-
-			ProcessFanOutActivityB: cfg.MapStreamConfig{
-				ID:                  processFanOutActivityBStreamID,
-				Name:                "Process Fan-Out Activity B",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            consumeFanOutActivityBStreamID,
-				XPos:                705,
-				YPos:                1001,
-				ValueType:           "AutomationJob",
-				FunctionPackage:     "automation",
-				FunctionName:        "ProcessFanoutActivityB",
-				FunctionDescription: "Return Activity B's typed fan-out result.\n",
-			},
-
-			ProcessFanOutActivityC: cfg.MapStreamConfig{
-				ID:                  processFanOutActivityCStreamID,
-				Name:                "Process Fan-Out Activity C",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            consumeFanOutActivityCStreamID,
-				XPos:                931,
-				YPos:                1493,
-				ValueType:           "AutomationJob",
-				FunctionPackage:     "automation",
-				FunctionName:        "ProcessFanoutActivityC",
-				FunctionDescription: "Return Activity C's typed fan-out result.\n",
-			},
-
-			ProcessScheduledActivity: cfg.MapStreamConfig{
-				ID:                  processScheduledActivityStreamID,
-				Name:                "Process Scheduled Activity",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            scheduledActivityPauseStreamID,
-				XPos:                -1442,
-				YPos:                655,
-				ValueType:           "AutomationJob",
-				FunctionPackage:     "automation",
-				FunctionName:        "ProcessScheduledActivity",
-				FunctionDescription: "Return the visible result of one scheduled Activity execution.\n",
-			},
-
-			ProcessScheduledWorkflow: cfg.MapStreamConfig{
-				ID:                  processScheduledWorkflowStreamID,
-				Name:                "Process Scheduled Workflow",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            scheduledWorkflowPauseStreamID,
-				XPos:                -1411,
-				YPos:                856,
-				ValueType:           "AutomationJob",
-				FunctionPackage:     "automation",
-				FunctionName:        "ProcessScheduledWorkflow",
-				FunctionDescription: "Return the visible result of one scheduled Workflow execution.\n",
-			},
-
-			ProcessSequentialActivityA: cfg.MapStreamConfig{
-				ID:                  processSequentialActivityAStreamID,
-				Name:                "Process Sequential Activity A",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            consumeSequentialActivityAStreamID,
-				XPos:                568,
-				YPos:                486,
-				ValueType:           "AutomationJob",
-				FunctionPackage:     "automation",
-				FunctionName:        "ProcessSequentialActivityA",
-				FunctionDescription: "Return sequential Activity A's typed result to its Temporal sink.\n",
-			},
-
-			ProcessSequentialActivityB: cfg.MapStreamConfig{
-				ID:                  processSequentialActivityBStreamID,
-				Name:                "Process Sequential Activity B",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            consumeSequentialActivityBStreamID,
-				XPos:                804,
-				YPos:                660,
-				ValueType:           "AutomationJob",
-				FunctionPackage:     "automation",
-				FunctionName:        "ProcessSequentialActivityB",
-				FunctionDescription: "Return sequential Activity B's typed result to its Temporal sink.\n",
-			},
-
-			ProcessWorkflowJob: cfg.MapStreamConfig{
-				ID:                  processWorkflowJobStreamID,
-				Name:                "Process Workflow Job",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            callSequentialActivityBStreamID,
-				XPos:                -59,
-				YPos:                654,
-				ValueType:           "AutomationJob",
-				FunctionPackage:     "automation",
-				FunctionName:        "ProcessWorkflowJob",
-				FunctionDescription: "Continue the Workflow as new once, then return its final result.\n",
-			},
-
-			ScheduledActivityPause: cfg.DelayStreamConfig{
-				ID:                  scheduledActivityPauseStreamID,
-				Name:                "Scheduled Activity Pause",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            temporalActivityScheduleStreamID,
-				XPos:                -1661,
-				YPos:                402,
-				Duration:            250,
-				FunctionPackage:     "automation",
-				FunctionName:        "ScheduledActivityPause",
-				FunctionDescription: "Apply the ordinary local Delay inside an Activity started by Temporal Schedule.\n",
-			},
-
-			ScheduledWorkflowPause: cfg.DelayStreamConfig{
-				ID:                  scheduledWorkflowPauseStreamID,
-				Name:                "Scheduled Workflow Pause",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            temporalWorkflowScheduleStreamID,
-				XPos:                -1684,
-				YPos:                1167,
-				Duration:            250,
-				FunctionPackage:     "automation",
-				FunctionName:        "ScheduledWorkflowPause",
-				FunctionDescription: "Use the official Temporal Workflow timer for a scheduled Workflow.\n",
-			},
-
-			SplitActivityAResult: cfg.SplitStreamConfig{
-				ID:        splitActivityAResultStreamID,
-				Name:      "Split Activity A Result",
-				Pipeline:  "automation",
-				IdService: automationServiceServiceID,
-				IdSource:  callFanOutActivityAStreamID,
-				XPos:      40,
-				YPos:      1312,
-			},
-
-			SplitOnDemandJobs: cfg.SplitStreamConfig{
-				ID:        splitOnDemandJobsStreamID,
-				Name:      "Split On-Demand Jobs",
-				Pipeline:  "automation",
-				IdService: automationServiceServiceID,
-				IdSource:  localScheduleStreamID,
-				XPos:      -1010,
-				YPos:      500,
-			},
-
-			SubmitActivityJob: cfg.SinkStreamConfig{
-				ID:         submitActivityJobStreamID,
-				Name:       "Submit Activity Job",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   splitOnDemandJobsStreamID,
-				XPos:       -760,
-				YPos:       350,
-				ValueType:  "AutomationJob",
-				IdEndpoint: activityJobEndpointID,
-			},
-
-			SubmitFanOutWorkflowJob: cfg.SinkStreamConfig{
-				ID:         submitFanOutWorkflowJobStreamID,
-				Name:       "Submit Fan-Out Workflow Job",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   splitOnDemandJobsStreamID,
-				XPos:       -967,
-				YPos:       1034,
-				ValueType:  "AutomationJob",
-				IdEndpoint: fanOutWorkflowJobEndpointID,
-			},
-
-			SubmitWorkflowJob: cfg.SinkStreamConfig{
-				ID:         submitWorkflowJobStreamID,
-				Name:       "Submit Workflow Job",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   splitOnDemandJobsStreamID,
-				XPos:       -807,
-				YPos:       629,
-				ValueType:  "AutomationJob",
-				IdEndpoint: workflowJobEndpointID,
-			},
-
-			TemporalActivitySchedule: cfg.InputStreamConfig{
-				ID:         temporalActivityScheduleStreamID,
-				Name:       "Temporal Activity Schedule",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   processScheduledActivityStreamID,
-				XPos:       -1917,
-				YPos:       639,
-				ValueType:  "AutomationJob",
-				IdEndpoint: temporalActivityScheduleEndpointID,
-			},
-
-			TemporalWorkflowSchedule: cfg.InputStreamConfig{
-				ID:         temporalWorkflowScheduleStreamID,
-				Name:       "Temporal Workflow Schedule",
-				Pipeline:   "automation",
-				IdService:  automationServiceServiceID,
-				IdSource:   processScheduledWorkflowStreamID,
-				XPos:       -1906,
-				YPos:       846,
-				ValueType:  "AutomationJob",
-				IdEndpoint: temporalWorkflowScheduleEndpointID,
-			},
-
-			WorkflowPause: cfg.DelayStreamConfig{
-				ID:                  workflowPauseStreamID,
-				Name:                "Workflow Pause",
-				Pipeline:            "automation",
-				IdService:           automationServiceServiceID,
-				IdSource:            consumeWorkflowJobStreamID,
-				XPos:                -233,
-				YPos:                504,
-				Duration:            250,
-				FunctionPackage:     "automation",
-				FunctionName:        "WorkflowPause",
-				FunctionDescription: "Use the same Delay contract backed by the Temporal Workflow timer.\n",
-			},
-		},
-		DataConnectors: struct {
-			LocalCron cfg.CronDataConnectorConfig     `yaml:"localCron" mapstructure:"localCron"`
-			Temporal  cfg.TemporalDataConnectorConfig `yaml:"temporal" mapstructure:"temporal"`
-		}{
-			LocalCron: cfg.CronDataConnectorConfig{
-				ID:             localCronConnectorID,
-				Name:           "Local Cron",
-				Implementation: api.DataConnectorImplementationGoGocron,
-			},
-
-			Temporal: cfg.TemporalDataConnectorConfig{
-				ID:                temporalConnectorID,
-				Name:              "Temporal",
-				Implementation:    api.DataConnectorImplementationTemporalGo,
-				Address:           "temporal:7233",
-				Namespace:         "default",
-				Identity:          "example-automation",
-				WorkerStopTimeout: 5000,
-			},
-		},
-		Endpoints: struct {
-			ActivityJob              cfg.TemporalEndpointConfig `yaml:"activityJob" mapstructure:"activityJob"`
-			FanOutActivityA          cfg.TemporalEndpointConfig `yaml:"fanOutActivityA" mapstructure:"fanOutActivityA"`
-			FanOutActivityB          cfg.TemporalEndpointConfig `yaml:"fanOutActivityB" mapstructure:"fanOutActivityB"`
-			FanOutActivityC          cfg.TemporalEndpointConfig `yaml:"fanOutActivityC" mapstructure:"fanOutActivityC"`
-			FanOutWorkflowJob        cfg.TemporalEndpointConfig `yaml:"fanOutWorkflowJob" mapstructure:"fanOutWorkflowJob"`
-			LocalSchedule            cfg.CronEndpointConfig     `yaml:"localSchedule" mapstructure:"localSchedule"`
-			SequentialActivityA      cfg.TemporalEndpointConfig `yaml:"sequentialActivityA" mapstructure:"sequentialActivityA"`
-			SequentialActivityB      cfg.TemporalEndpointConfig `yaml:"sequentialActivityB" mapstructure:"sequentialActivityB"`
-			TemporalActivitySchedule cfg.TemporalEndpointConfig `yaml:"temporalActivitySchedule" mapstructure:"temporalActivitySchedule"`
-			TemporalWorkflowSchedule cfg.TemporalEndpointConfig `yaml:"temporalWorkflowSchedule" mapstructure:"temporalWorkflowSchedule"`
-			WorkflowJob              cfg.TemporalEndpointConfig `yaml:"workflowJob" mapstructure:"workflowJob"`
-		}{
-			ActivityJob: cfg.TemporalEndpointConfig{
-				ID:                          activityJobEndpointID,
-				Name:                        "Activity Job",
-				IdDataConnector:             temporalConnectorID,
-				Enabled:                     true,
-				TaskQueue:                   "automation-activity-jobs",
-				TemporalExecutionType:       api.Activity,
-				MaxConcurrentActivities:     2,
-				Timezone:                    "UTC",
-				OverlapPolicy:               api.ScheduleOverlapPolicySkip,
-				MissedRunPolicy:             api.ScheduleMissedRunPolicyFireOnce,
-				WorkflowExecutionTimeout:    60000,
-				ActivityStartToCloseTimeout: 30000,
-				ActivityHeartbeatTimeout:    5000,
-				MaximumAttempts:             3,
-				FunctionName:                "ActivityJobEndpoint",
-				FunctionPackage:             "activity",
-			},
-
-			FanOutActivityA: cfg.TemporalEndpointConfig{
-				ID:                          fanOutActivityAEndpointID,
-				Name:                        "Fan-Out Activity A",
-				IdDataConnector:             temporalConnectorID,
-				Enabled:                     true,
-				TaskQueue:                   "automation-activity-jobs",
-				TemporalExecutionType:       api.Activity,
-				MaxConcurrentActivities:     2,
-				Timezone:                    "UTC",
-				OverlapPolicy:               api.ScheduleOverlapPolicySkip,
-				MissedRunPolicy:             api.ScheduleMissedRunPolicyFireOnce,
-				WorkflowExecutionTimeout:    60000,
-				ActivityStartToCloseTimeout: 30000,
-				ActivityHeartbeatTimeout:    5000,
-				MaximumAttempts:             3,
-				FunctionName:                "FanoutActivityAEndpoint",
-				FunctionPackage:             "activity",
-			},
-
-			FanOutActivityB: cfg.TemporalEndpointConfig{
-				ID:                          fanOutActivityBEndpointID,
-				Name:                        "Fan-Out Activity B",
-				IdDataConnector:             temporalConnectorID,
-				Enabled:                     true,
-				TaskQueue:                   "automation-activity-jobs",
-				TemporalExecutionType:       api.Activity,
-				MaxConcurrentActivities:     2,
-				Timezone:                    "UTC",
-				OverlapPolicy:               api.ScheduleOverlapPolicySkip,
-				MissedRunPolicy:             api.ScheduleMissedRunPolicyFireOnce,
-				WorkflowExecutionTimeout:    60000,
-				ActivityStartToCloseTimeout: 30000,
-				ActivityHeartbeatTimeout:    5000,
-				MaximumAttempts:             3,
-				FunctionName:                "FanoutActivityBEndpoint",
-				FunctionPackage:             "activity",
-			},
-
-			FanOutActivityC: cfg.TemporalEndpointConfig{
-				ID:                          fanOutActivityCEndpointID,
-				Name:                        "Fan-Out Activity C",
-				IdDataConnector:             temporalConnectorID,
-				Enabled:                     true,
-				TaskQueue:                   "automation-heavy-activities",
-				TemporalExecutionType:       api.Activity,
-				MaxConcurrentActivities:     1,
-				Timezone:                    "UTC",
-				OverlapPolicy:               api.ScheduleOverlapPolicySkip,
-				MissedRunPolicy:             api.ScheduleMissedRunPolicyFireOnce,
-				WorkflowExecutionTimeout:    60000,
-				ActivityStartToCloseTimeout: 30000,
-				ActivityHeartbeatTimeout:    5000,
-				MaximumAttempts:             3,
-				FunctionName:                "FanoutActivityCEndpoint",
-				FunctionPackage:             "activity",
-			},
-
-			FanOutWorkflowJob: cfg.TemporalEndpointConfig{
-				ID:                         fanOutWorkflowJobEndpointID,
-				Name:                       "Fan-Out Workflow Job",
-				IdDataConnector:            temporalConnectorID,
-				Enabled:                    true,
-				TaskQueue:                  "automation-workflow-jobs",
-				TemporalExecutionType:      api.Workflow,
+            FanOutWorkflowJob: cfg.TemporalEndpointConfig{
+                ID: fanOutWorkflowJobEndpointID,
+                Name: "Fan-Out Workflow Job",
+                IdDataConnector: temporalConnectorID,
+                Enabled: true,
+                TaskQueue: "automation-workflow-jobs",
+				TemporalExecutionType: api.Workflow,
 				MaxConcurrentWorkflowTasks: 4,
-				Timezone:                   "UTC",
-				OverlapPolicy:              api.ScheduleOverlapPolicySkip,
-				MissedRunPolicy:            api.ScheduleMissedRunPolicyFireOnce,
-				WorkflowExecutionTimeout:   60000,
-				MaximumAttempts:            3,
-				FunctionName:               "FanoutWorkflowJobEndpoint",
-				FunctionPackage:            "workflow",
-			},
+                Timezone: "UTC",
+                OverlapPolicy: api.ScheduleOverlapPolicySkip,
+                MissedRunPolicy: api.ScheduleMissedRunPolicyFireOnce,
+                WorkflowExecutionTimeout: 60000,
+                MaximumAttempts: 3,
+                FunctionName: "FanoutWorkflowJobEndpoint",
+                FunctionPackage: "workflow",
+                },
 
-			LocalSchedule: cfg.CronEndpointConfig{
-				ID:                  localScheduleEndpointID,
-				Name:                "Local Schedule",
-				IdDataConnector:     localCronConnectorID,
-				Enabled:             true,
-				Schedule:            "*/5 * * * *",
-				Timezone:            "UTC",
-				OverlapPolicy:       api.ScheduleOverlapPolicySkip,
-				MissedRunPolicy:     api.ScheduleMissedRunPolicyFireOnce,
-				FunctionName:        "LocalSchedule",
-				FunctionPackage:     "cron",
-				FunctionDescription: "Create a job message identifying the local scheduled firing.\n",
-			},
+            LocalSchedule: cfg.CronEndpointConfig{
+                ID: localScheduleEndpointID,
+                Name: "Local Schedule",
+                IdDataConnector: localCronConnectorID,
+                Enabled: true,
+                Schedule: "*/5 * * * *",
+                Timezone: "UTC",
+                OverlapPolicy: api.ScheduleOverlapPolicySkip,
+                MissedRunPolicy: api.ScheduleMissedRunPolicyFireOnce,
+                FunctionName: "LocalSchedule",
+                FunctionPackage: "cron",
+                FunctionDescription: "Create a job message identifying the local scheduled firing.\n",
+                },
 
-			SequentialActivityA: cfg.TemporalEndpointConfig{
-				ID:                          sequentialActivityAEndpointID,
-				Name:                        "Sequential Activity A",
-				IdDataConnector:             temporalConnectorID,
-				Enabled:                     true,
-				TaskQueue:                   "automation-activity-jobs",
-				TemporalExecutionType:       api.Activity,
-				MaxConcurrentActivities:     2,
-				Timezone:                    "UTC",
-				OverlapPolicy:               api.ScheduleOverlapPolicySkip,
-				MissedRunPolicy:             api.ScheduleMissedRunPolicyFireOnce,
-				WorkflowExecutionTimeout:    60000,
-				ActivityStartToCloseTimeout: 30000,
-				ActivityHeartbeatTimeout:    5000,
-				MaximumAttempts:             3,
-				FunctionName:                "SequentialActivityAEndpoint",
-				FunctionPackage:             "activity",
-			},
+            
+            SequentialActivityA: cfg.TemporalEndpointConfig{
+                ID: sequentialActivityAEndpointID,
+                Name: "Sequential Activity A",
+                IdDataConnector: temporalConnectorID,
+                Enabled: true,
+                TaskQueue: "automation-activity-jobs",
+				TemporalExecutionType: api.Activity,
+				MaxConcurrentActivities: 2,
+				Timezone: "UTC",
+                OverlapPolicy: api.ScheduleOverlapPolicySkip,
+                MissedRunPolicy: api.ScheduleMissedRunPolicyFireOnce,
+                WorkflowExecutionTimeout: 60000,
+                ActivityStartToCloseTimeout: 30000,
+                ActivityHeartbeatTimeout: 5000,
+                MaximumAttempts: 3,
+                FunctionName: "SequentialActivityAEndpoint",
+                FunctionPackage: "activity",
+                },
 
-			SequentialActivityB: cfg.TemporalEndpointConfig{
-				ID:                          sequentialActivityBEndpointID,
-				Name:                        "Sequential Activity B",
-				IdDataConnector:             temporalConnectorID,
-				Enabled:                     true,
-				TaskQueue:                   "automation-activity-jobs",
-				TemporalExecutionType:       api.Activity,
-				MaxConcurrentActivities:     2,
-				Timezone:                    "UTC",
-				OverlapPolicy:               api.ScheduleOverlapPolicySkip,
-				MissedRunPolicy:             api.ScheduleMissedRunPolicyFireOnce,
-				WorkflowExecutionTimeout:    60000,
-				ActivityStartToCloseTimeout: 30000,
-				ActivityHeartbeatTimeout:    5000,
-				MaximumAttempts:             3,
-				FunctionName:                "SequentialActivityBEndpoint",
-				FunctionPackage:             "activity",
-			},
+            SequentialActivityB: cfg.TemporalEndpointConfig{
+                ID: sequentialActivityBEndpointID,
+                Name: "Sequential Activity B",
+                IdDataConnector: temporalConnectorID,
+                Enabled: true,
+                TaskQueue: "automation-activity-jobs",
+				TemporalExecutionType: api.Activity,
+				MaxConcurrentActivities: 2,
+				Timezone: "UTC",
+                OverlapPolicy: api.ScheduleOverlapPolicySkip,
+                MissedRunPolicy: api.ScheduleMissedRunPolicyFireOnce,
+                WorkflowExecutionTimeout: 60000,
+                ActivityStartToCloseTimeout: 30000,
+                ActivityHeartbeatTimeout: 5000,
+                MaximumAttempts: 3,
+                FunctionName: "SequentialActivityBEndpoint",
+                FunctionPackage: "activity",
+                },
 
-			TemporalActivitySchedule: cfg.TemporalEndpointConfig{
-				ID:                          temporalActivityScheduleEndpointID,
-				Name:                        "Temporal Activity Schedule",
-				IdDataConnector:             temporalConnectorID,
-				Enabled:                     true,
-				TaskQueue:                   "automation-activity-schedules",
-				TemporalExecutionType:       api.Activity,
-				MaxConcurrentActivities:     2,
-				Schedule:                    "*/10 * * * *",
-				ScheduleID:                  "example-automation-activity-schedule",
-				Timezone:                    "UTC",
-				OverlapPolicy:               api.ScheduleOverlapPolicySkip,
-				MissedRunPolicy:             api.ScheduleMissedRunPolicyFireOnce,
-				WorkflowExecutionTimeout:    60000,
-				ActivityStartToCloseTimeout: 30000,
-				ActivityHeartbeatTimeout:    5000,
-				MaximumAttempts:             3,
-				FunctionName:                "TemporalActivitySchedule",
-				FunctionPackage:             "activity",
-				FunctionDescription:         "Create an Activity job message identifying the durable scheduled firing.\n",
-			},
+            TemporalActivitySchedule: cfg.TemporalEndpointConfig{
+                ID: temporalActivityScheduleEndpointID,
+                Name: "Temporal Activity Schedule",
+                IdDataConnector: temporalConnectorID,
+                Enabled: true,
+                TaskQueue: "automation-activity-schedules",
+				TemporalExecutionType: api.Activity,
+				MaxConcurrentActivities: 2,
+				Schedule: "*/10 * * * *",
+                ScheduleID: "example-automation-activity-schedule",
+                Timezone: "UTC",
+                OverlapPolicy: api.ScheduleOverlapPolicySkip,
+                MissedRunPolicy: api.ScheduleMissedRunPolicyFireOnce,
+                WorkflowExecutionTimeout: 60000,
+                ActivityStartToCloseTimeout: 30000,
+                ActivityHeartbeatTimeout: 5000,
+                MaximumAttempts: 3,
+                FunctionName: "TemporalActivitySchedule",
+                FunctionPackage: "activity",
+                FunctionDescription: "Create an Activity job message identifying the durable scheduled firing.\n",
+                },
 
-			TemporalWorkflowSchedule: cfg.TemporalEndpointConfig{
-				ID:                         temporalWorkflowScheduleEndpointID,
-				Name:                       "Temporal Workflow Schedule",
-				IdDataConnector:            temporalConnectorID,
-				Enabled:                    true,
-				TaskQueue:                  "automation-workflow-schedules",
-				TemporalExecutionType:      api.Workflow,
+            TemporalWorkflowSchedule: cfg.TemporalEndpointConfig{
+                ID: temporalWorkflowScheduleEndpointID,
+                Name: "Temporal Workflow Schedule",
+                IdDataConnector: temporalConnectorID,
+                Enabled: true,
+                TaskQueue: "automation-workflow-schedules",
+				TemporalExecutionType: api.Workflow,
 				MaxConcurrentWorkflowTasks: 4,
-				Schedule:                   "*/10 * * * *",
-				ScheduleID:                 "example-automation-workflow-schedule",
-				Timezone:                   "UTC",
-				OverlapPolicy:              api.ScheduleOverlapPolicySkip,
-				MissedRunPolicy:            api.ScheduleMissedRunPolicyFireOnce,
-				WorkflowExecutionTimeout:   60000,
-				MaximumAttempts:            3,
-				FunctionName:               "TemporalWorkflowSchedule",
-				FunctionPackage:            "workflow",
-				FunctionDescription:        "Create a Workflow job message identifying the durable scheduled firing.\n",
-			},
+                Schedule: "*/10 * * * *",
+                ScheduleID: "example-automation-workflow-schedule",
+                Timezone: "UTC",
+                OverlapPolicy: api.ScheduleOverlapPolicySkip,
+                MissedRunPolicy: api.ScheduleMissedRunPolicyFireOnce,
+                WorkflowExecutionTimeout: 60000,
+                MaximumAttempts: 3,
+                FunctionName: "TemporalWorkflowSchedule",
+                FunctionPackage: "workflow",
+                FunctionDescription: "Create a Workflow job message identifying the durable scheduled firing.\n",
+                },
 
-			WorkflowJob: cfg.TemporalEndpointConfig{
-				ID:                         workflowJobEndpointID,
-				Name:                       "Workflow Job",
-				IdDataConnector:            temporalConnectorID,
-				Enabled:                    true,
-				TaskQueue:                  "automation-workflow-jobs",
-				TemporalExecutionType:      api.Workflow,
+            WorkflowJob: cfg.TemporalEndpointConfig{
+                ID: workflowJobEndpointID,
+                Name: "Workflow Job",
+                IdDataConnector: temporalConnectorID,
+                Enabled: true,
+                TaskQueue: "automation-workflow-jobs",
+				TemporalExecutionType: api.Workflow,
 				MaxConcurrentWorkflowTasks: 4,
-				Timezone:                   "UTC",
-				OverlapPolicy:              api.ScheduleOverlapPolicySkip,
-				MissedRunPolicy:            api.ScheduleMissedRunPolicyFireOnce,
-				WorkflowExecutionTimeout:   60000,
-				MaximumAttempts:            3,
-				FunctionName:               "WorkflowJobEndpoint",
-				FunctionPackage:            "workflow",
-			},
-		},
-		Pools: struct {
-			DefaultPool cfg.PoolConfig `yaml:"defaultPool" mapstructure:"defaultPool"`
-		}{
-			DefaultPool: cfg.PoolConfig{
-				Name:           "Default Pool",
-				ExecutorsCount: 2,
-			},
-		},
-		Links: struct {
-			CallSequentialActivityAToCallSequentialActivityB       cfg.LinkConfig `yaml:"callSequentialActivityAToCallSequentialActivityB" mapstructure:"callSequentialActivityAToCallSequentialActivityB"`
-			CallSequentialActivityBToProcessWorkflowJob            cfg.LinkConfig `yaml:"callSequentialActivityBToProcessWorkflowJob" mapstructure:"callSequentialActivityBToProcessWorkflowJob"`
-			ConsumeActivityJobToActivityPause                      cfg.LinkConfig `yaml:"consumeActivityJobToActivityPause" mapstructure:"consumeActivityJobToActivityPause"`
-			ConsumeFanOutActivityAToProcessFanOutActivityA         cfg.LinkConfig `yaml:"consumeFanOutActivityAToProcessFanOutActivityA" mapstructure:"consumeFanOutActivityAToProcessFanOutActivityA"`
-			ConsumeFanOutActivityBToProcessFanOutActivityB         cfg.LinkConfig `yaml:"consumeFanOutActivityBToProcessFanOutActivityB" mapstructure:"consumeFanOutActivityBToProcessFanOutActivityB"`
-			ConsumeFanOutActivityCToProcessFanOutActivityC         cfg.LinkConfig `yaml:"consumeFanOutActivityCToProcessFanOutActivityC" mapstructure:"consumeFanOutActivityCToProcessFanOutActivityC"`
-			ConsumeFanOutWorkflowJobToCallFanOutActivityA          cfg.LinkConfig `yaml:"consumeFanOutWorkflowJobToCallFanOutActivityA" mapstructure:"consumeFanOutWorkflowJobToCallFanOutActivityA"`
-			ConsumeSequentialActivityAToProcessSequentialActivityA cfg.LinkConfig `yaml:"consumeSequentialActivityAToProcessSequentialActivityA" mapstructure:"consumeSequentialActivityAToProcessSequentialActivityA"`
-			ConsumeSequentialActivityBToProcessSequentialActivityB cfg.LinkConfig `yaml:"consumeSequentialActivityBToProcessSequentialActivityB" mapstructure:"consumeSequentialActivityBToProcessSequentialActivityB"`
-			ConsumeWorkflowJobToWorkflowPause                      cfg.LinkConfig `yaml:"consumeWorkflowJobToWorkflowPause" mapstructure:"consumeWorkflowJobToWorkflowPause"`
-			SplitActivityAResultToCallFanOutActivityB              cfg.LinkConfig `yaml:"splitActivityAResultToCallFanOutActivityB" mapstructure:"splitActivityAResultToCallFanOutActivityB"`
-			SplitActivityAResultToCallFanOutActivityC              cfg.LinkConfig `yaml:"splitActivityAResultToCallFanOutActivityC" mapstructure:"splitActivityAResultToCallFanOutActivityC"`
-			WorkflowPauseToCallSequentialActivityA                 cfg.LinkConfig `yaml:"workflowPauseToCallSequentialActivityA" mapstructure:"workflowPauseToCallSequentialActivityA"`
-		}{
-			CallSequentialActivityAToCallSequentialActivityB: cfg.LinkConfig{
-				From: callSequentialActivityAStreamID,
-				To:   callSequentialActivityBStreamID,
-				CallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
-				},
-			},
-			CallSequentialActivityBToProcessWorkflowJob: cfg.LinkConfig{
-				From: callSequentialActivityBStreamID,
-				To:   processWorkflowJobStreamID,
-				CallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
-				},
-			},
-			ConsumeActivityJobToActivityPause: cfg.LinkConfig{
-				From: consumeActivityJobStreamID,
-				To:   activityPauseStreamID,
-				CallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
-				},
-			},
-			ConsumeFanOutActivityAToProcessFanOutActivityA: cfg.LinkConfig{
-				From: consumeFanOutActivityAStreamID,
-				To:   processFanOutActivityAStreamID,
-				CallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
-				},
-			},
-			ConsumeFanOutActivityBToProcessFanOutActivityB: cfg.LinkConfig{
-				From: consumeFanOutActivityBStreamID,
-				To:   processFanOutActivityBStreamID,
-				CallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
-				},
-			},
-			ConsumeFanOutActivityCToProcessFanOutActivityC: cfg.LinkConfig{
-				From: consumeFanOutActivityCStreamID,
-				To:   processFanOutActivityCStreamID,
-				CallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
-				},
-			},
-			ConsumeFanOutWorkflowJobToCallFanOutActivityA: cfg.LinkConfig{
-				From: consumeFanOutWorkflowJobStreamID,
-				To:   callFanOutActivityAStreamID,
-				CallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
-				},
-			},
-			ConsumeSequentialActivityAToProcessSequentialActivityA: cfg.LinkConfig{
-				From: consumeSequentialActivityAStreamID,
-				To:   processSequentialActivityAStreamID,
-				CallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
-				},
-			},
-			ConsumeSequentialActivityBToProcessSequentialActivityB: cfg.LinkConfig{
-				From: consumeSequentialActivityBStreamID,
-				To:   processSequentialActivityBStreamID,
-				CallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
-				},
-			},
-			ConsumeWorkflowJobToWorkflowPause: cfg.LinkConfig{
-				From: consumeWorkflowJobStreamID,
-				To:   workflowPauseStreamID,
-				CallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
-				},
-			},
-			SplitActivityAResultToCallFanOutActivityB: cfg.LinkConfig{
-				From: splitActivityAResultStreamID,
-				To:   callFanOutActivityBStreamID,
-				CallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
-				},
-			},
-			SplitActivityAResultToCallFanOutActivityC: cfg.LinkConfig{
-				From: splitActivityAResultStreamID,
-				To:   callFanOutActivityCStreamID,
-				CallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
-				},
-			},
-			WorkflowPauseToCallSequentialActivityA: cfg.LinkConfig{
-				From: workflowPauseStreamID,
-				To:   callSequentialActivityAStreamID,
-				CallSemantics: &cfg.CallSemanticsGroup{
-					FunctionCall: &cfg.FunctionCallSemanticsConfig{},
-				},
-			},
-		},
-		Modules: struct {
-			InventoryServiceApi cfg.ModuleConfig `yaml:"inventoryServiceApi" mapstructure:"inventoryServiceApi"`
-			Model               cfg.ModuleConfig `yaml:"model" mapstructure:"model"`
-			OrderServiceApi     cfg.ModuleConfig `yaml:"orderServiceApi" mapstructure:"orderServiceApi"`
-		}{
-			InventoryServiceApi: cfg.ModuleConfig{
-				Name: "inventory_service_api",
-				Path: "github.com/gorundebug/rustexample-inventory-service-api",
-			},
-			Model: cfg.ModuleConfig{
-				Name: "model",
-				Path: "github.com/gorundebug/rustexample/model_go",
-			},
-			OrderServiceApi: cfg.ModuleConfig{
-				Name: "order_service_api",
-				Path: "github.com/gorundebug/rustexample-order-service-api",
-			},
-		},
-		Types: struct {
-			AutomationJob cfg.TypeConfig `yaml:"automationJob" mapstructure:"automationJob"`
-		}{
-			AutomationJob: cfg.TypeConfig{
-				Name:       "AutomationJob",
-				Type:       api.DataTypeString,
-				Module:     "model",
-				PublicType: true,
-			},
-		},
-	}
+                Timezone: "UTC",
+                OverlapPolicy: api.ScheduleOverlapPolicySkip,
+                MissedRunPolicy: api.ScheduleMissedRunPolicyFireOnce,
+                WorkflowExecutionTimeout: 60000,
+                MaximumAttempts: 3,
+                FunctionName: "WorkflowJobEndpoint",
+                FunctionPackage: "workflow",
+                },
+
+        },
+        Pools: struct {
+            DefaultPool cfg.PoolConfig `yaml:"defaultPool" mapstructure:"defaultPool"`
+        }{
+            DefaultPool: cfg.PoolConfig{
+                Name: "Default Pool",
+                ExecutorsCount: 2,
+                },
+        },
+        Links: struct {
+            CallSequentialActivityAToCallSequentialActivityB cfg.LinkConfig `yaml:"callSequentialActivityAToCallSequentialActivityB" mapstructure:"callSequentialActivityAToCallSequentialActivityB"`
+            CallSequentialActivityBToProcessWorkflowJob cfg.LinkConfig `yaml:"callSequentialActivityBToProcessWorkflowJob" mapstructure:"callSequentialActivityBToProcessWorkflowJob"`
+            ConsumeActivityJobToActivityPause cfg.LinkConfig `yaml:"consumeActivityJobToActivityPause" mapstructure:"consumeActivityJobToActivityPause"`
+            ConsumeFanOutActivityAToProcessFanOutActivityA cfg.LinkConfig `yaml:"consumeFanOutActivityAToProcessFanOutActivityA" mapstructure:"consumeFanOutActivityAToProcessFanOutActivityA"`
+            ConsumeFanOutActivityBToProcessFanOutActivityB cfg.LinkConfig `yaml:"consumeFanOutActivityBToProcessFanOutActivityB" mapstructure:"consumeFanOutActivityBToProcessFanOutActivityB"`
+            ConsumeFanOutActivityCToProcessFanOutActivityC cfg.LinkConfig `yaml:"consumeFanOutActivityCToProcessFanOutActivityC" mapstructure:"consumeFanOutActivityCToProcessFanOutActivityC"`
+            ConsumeFanOutWorkflowJobToCallFanOutActivityA cfg.LinkConfig `yaml:"consumeFanOutWorkflowJobToCallFanOutActivityA" mapstructure:"consumeFanOutWorkflowJobToCallFanOutActivityA"`
+            ConsumeSequentialActivityAToProcessSequentialActivityA cfg.LinkConfig `yaml:"consumeSequentialActivityAToProcessSequentialActivityA" mapstructure:"consumeSequentialActivityAToProcessSequentialActivityA"`
+            ConsumeSequentialActivityBToProcessSequentialActivityB cfg.LinkConfig `yaml:"consumeSequentialActivityBToProcessSequentialActivityB" mapstructure:"consumeSequentialActivityBToProcessSequentialActivityB"`
+            ConsumeWorkflowJobToWorkflowPause cfg.LinkConfig `yaml:"consumeWorkflowJobToWorkflowPause" mapstructure:"consumeWorkflowJobToWorkflowPause"`
+            SplitActivityAResultToCallFanOutActivityB cfg.LinkConfig `yaml:"splitActivityAResultToCallFanOutActivityB" mapstructure:"splitActivityAResultToCallFanOutActivityB"`
+            SplitActivityAResultToCallFanOutActivityC cfg.LinkConfig `yaml:"splitActivityAResultToCallFanOutActivityC" mapstructure:"splitActivityAResultToCallFanOutActivityC"`
+            WorkflowPauseToCallSequentialActivityA cfg.LinkConfig `yaml:"workflowPauseToCallSequentialActivityA" mapstructure:"workflowPauseToCallSequentialActivityA"`
+        }{
+            CallSequentialActivityAToCallSequentialActivityB: cfg.LinkConfig{
+                From: callSequentialActivityAStreamID,
+                To: callSequentialActivityBStreamID,
+                CallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{
+                        
+                    },
+                    },
+                },
+            CallSequentialActivityBToProcessWorkflowJob: cfg.LinkConfig{
+                From: callSequentialActivityBStreamID,
+                To: processWorkflowJobStreamID,
+                CallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{
+                        
+                    },
+                    },
+                },
+            ConsumeActivityJobToActivityPause: cfg.LinkConfig{
+                From: consumeActivityJobStreamID,
+                To: activityPauseStreamID,
+                CallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{
+                        
+                    },
+                    },
+                },
+            ConsumeFanOutActivityAToProcessFanOutActivityA: cfg.LinkConfig{
+                From: consumeFanOutActivityAStreamID,
+                To: processFanOutActivityAStreamID,
+                CallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{
+                        
+                    },
+                    },
+                },
+            ConsumeFanOutActivityBToProcessFanOutActivityB: cfg.LinkConfig{
+                From: consumeFanOutActivityBStreamID,
+                To: processFanOutActivityBStreamID,
+                CallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{
+                        
+                    },
+                    },
+                },
+            ConsumeFanOutActivityCToProcessFanOutActivityC: cfg.LinkConfig{
+                From: consumeFanOutActivityCStreamID,
+                To: processFanOutActivityCStreamID,
+                CallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{
+                        
+                    },
+                    },
+                },
+            ConsumeFanOutWorkflowJobToCallFanOutActivityA: cfg.LinkConfig{
+                From: consumeFanOutWorkflowJobStreamID,
+                To: callFanOutActivityAStreamID,
+                CallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{
+                        
+                    },
+                    },
+                },
+            ConsumeSequentialActivityAToProcessSequentialActivityA: cfg.LinkConfig{
+                From: consumeSequentialActivityAStreamID,
+                To: processSequentialActivityAStreamID,
+                CallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{
+                        
+                    },
+                    },
+                },
+            ConsumeSequentialActivityBToProcessSequentialActivityB: cfg.LinkConfig{
+                From: consumeSequentialActivityBStreamID,
+                To: processSequentialActivityBStreamID,
+                CallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{
+                        
+                    },
+                    },
+                },
+            ConsumeWorkflowJobToWorkflowPause: cfg.LinkConfig{
+                From: consumeWorkflowJobStreamID,
+                To: workflowPauseStreamID,
+                CallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{
+                        
+                    },
+                    },
+                },
+            SplitActivityAResultToCallFanOutActivityB: cfg.LinkConfig{
+                From: splitActivityAResultStreamID,
+                To: callFanOutActivityBStreamID,
+                CallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{
+                        
+                    },
+                    },
+                },
+            SplitActivityAResultToCallFanOutActivityC: cfg.LinkConfig{
+                From: splitActivityAResultStreamID,
+                To: callFanOutActivityCStreamID,
+                CallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{
+                        
+                    },
+                    },
+                },
+            WorkflowPauseToCallSequentialActivityA: cfg.LinkConfig{
+                From: workflowPauseStreamID,
+                To: callSequentialActivityAStreamID,
+                CallSemantics: &cfg.CallSemanticsGroup{
+                    FunctionCall: &cfg.FunctionCallSemanticsConfig{
+                        
+                    },
+                    },
+                },
+        },
+        Modules: struct {
+            InventoryServiceApi cfg.ModuleConfig `yaml:"inventoryServiceApi" mapstructure:"inventoryServiceApi"`
+            Model cfg.ModuleConfig `yaml:"model" mapstructure:"model"`
+            OrderServiceApi cfg.ModuleConfig `yaml:"orderServiceApi" mapstructure:"orderServiceApi"`
+        }{
+            InventoryServiceApi: cfg.ModuleConfig{
+                Name: "inventory_service_api",
+                Path: "github.com/gorundebug/rustexample-inventory-service-api",
+                },
+            Model: cfg.ModuleConfig{
+                Name: "model",
+                Path: "github.com/gorundebug/rustexample/model_go",
+                },
+            OrderServiceApi: cfg.ModuleConfig{
+                Name: "order_service_api",
+                Path: "github.com/gorundebug/rustexample-order-service-api",
+                },
+        },
+        Types: struct {
+        
+            AutomationJob cfg.TypeConfig `yaml:"automationJob" mapstructure:"automationJob"`
+        }{
+            AutomationJob: cfg.TypeConfig{
+                Name: "AutomationJob",
+                Type: api.DataTypeString,
+                Module: "model",
+                PublicType: true,
+                },
+
+        },
+    }
 }

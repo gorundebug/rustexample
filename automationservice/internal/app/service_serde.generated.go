@@ -2,18 +2,18 @@
 package app
 
 import (
-	"reflect"
+    "reflect"
 
-	runtimeserde "github.com/gorundebug/servicelib/runtime/serde"
+    runtimeserde "github.com/gorundebug/servicelib/runtime/serde"
 )
 
 func (s *Service) GetSerde(valueType reflect.Type) (runtimeserde.Serializer, error) {
-	if serde, err := s.getCustomSerde(valueType); err != nil {
-		return nil, err
-	} else if serde != nil {
-		return serde, nil
-	}
-	switch valueType {
-	}
-	return nil, nil
+    if serde, err := s.getCustomSerde(valueType); err != nil {
+        return nil, err
+    } else if serde != nil {
+        return serde, nil
+    }
+    switch valueType {
+    }
+    return nil, nil
 }

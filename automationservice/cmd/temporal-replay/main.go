@@ -2,27 +2,27 @@
 package main
 
 import (
-	"fmt"
-	"os"
+    "fmt"
+    "os"
 
-	datasourcetemporal "github.com/gorundebug/servicelib/datasource/temporal"
+    datasourcetemporal "github.com/gorundebug/servicelib/datasource/temporal"
 
-	serviceapp "github.com/gorundebug/rustexample-automationservice/internal/app"
+    serviceapp "github.com/gorundebug/rustexample-automationservice/internal/app"
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "usage: %s <temporal-history.json>\n", os.Args[0])
-		os.Exit(2)
-	}
-	replayer, err := datasourcetemporal.NewWorkflowReplayer()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "create Temporal Workflow replayer: %v\n", err)
-		os.Exit(1)
-	}
-	serviceapp.RegisterTemporalWorkflowDefinitions(replayer)
-	if err = replayer.ReplayWorkflowHistoryFromJSONFile(nil, os.Args[1]); err != nil {
-		fmt.Fprintf(os.Stderr, "replay Temporal Workflow history: %v\n", err)
-		os.Exit(1)
-	}
+    if len(os.Args) != 2 {
+        fmt.Fprintf(os.Stderr, "usage: %s <temporal-history.json>\n", os.Args[0])
+        os.Exit(2)
+    }
+    replayer, err := datasourcetemporal.NewWorkflowReplayer()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "create Temporal Workflow replayer: %v\n", err)
+        os.Exit(1)
+    }
+    serviceapp.RegisterTemporalWorkflowDefinitions(replayer)
+    if err = replayer.ReplayWorkflowHistoryFromJSONFile(nil, os.Args[1]); err != nil {
+        fmt.Fprintf(os.Stderr, "replay Temporal Workflow history: %v\n", err)
+        os.Exit(1)
+    }
 }

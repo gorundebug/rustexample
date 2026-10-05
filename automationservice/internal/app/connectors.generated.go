@@ -2,21 +2,21 @@
 package app
 
 import (
-	"fmt"
+"fmt"
 
-	datasourcetemporal "github.com/gorundebug/servicelib/datasource/temporal"
-	"github.com/gorundebug/servicelib/runtime"
+"github.com/gorundebug/servicelib/runtime"
+datasourcetemporal "github.com/gorundebug/servicelib/datasource/temporal"
 
-	config "github.com/gorundebug/rustexample-automationservice/internal/config"
+config "github.com/gorundebug/rustexample-automationservice/internal/config"
 )
 
 // Connector resources are owned and registered by the runtime environment.
 // Do not keep a duplicate registry in the generated service.
 func initConnectors(cfg *config.Config, env runtime.RuntimeEnvironment) error {
 
-	if _, err := datasourcetemporal.MakeConnector(cfg.DataConnectors.Temporal.ID, env); err != nil {
-		return fmt.Errorf("init Temporal connector 'Temporal' failed: %w", err)
-	}
+    if _, err := datasourcetemporal.MakeConnector(cfg.DataConnectors.Temporal.ID, env); err != nil {
+        return fmt.Errorf("init Temporal connector 'Temporal' failed: %w", err)
+    }
 
-	return nil
+    return nil
 }

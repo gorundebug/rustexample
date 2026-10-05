@@ -2,147 +2,149 @@
 package app
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"reflect"
+    "context"
+    "encoding/json"
+    "fmt"
+    "reflect"
 
-	"go.temporal.io/sdk/workflow"
+    "go.temporal.io/sdk/workflow"
 
-	datasourcetemporal "github.com/gorundebug/servicelib/datasource/temporal"
-	"github.com/gorundebug/servicelib/runtime"
-	runtimecfg "github.com/gorundebug/servicelib/runtime/config"
-	runtimeserde "github.com/gorundebug/servicelib/runtime/serde"
+    datasourcetemporal "github.com/gorundebug/servicelib/datasource/temporal"
+    "github.com/gorundebug/servicelib/runtime"
+    runtimecfg "github.com/gorundebug/servicelib/runtime/config"
+    runtimeserde "github.com/gorundebug/servicelib/runtime/serde"
 
-	"github.com/gorundebug/rustexample-automationservice/internal/config"
+    "github.com/gorundebug/rustexample-automationservice/internal/config"
 )
 
 type workflowRuntimeEnvironment struct {
-	*datasourcetemporal.WorkflowEnvironment
-	graph *Service
+    *datasourcetemporal.WorkflowEnvironment
+    graph *Service
 }
 
 func (env *workflowRuntimeEnvironment) GetSerde(valueType reflect.Type) (runtimeserde.Serializer, error) {
-	return env.graph.GetSerde(valueType)
+    return env.graph.GetSerde(valueType)
 }
 
 func buildTemporalWorkflowGraph(
-	workflowCtx workflow.Context,
-	snapshot []byte,
-	telemetry datasourcetemporal.WorkflowTelemetryPolicy,
+    workflowCtx workflow.Context,
+    snapshot []byte,
+    telemetry datasourcetemporal.WorkflowTelemetryPolicy,
 ) (*workflowRuntimeEnvironment, *config.Config, error) {
-	var cfg config.Config
-	if err := json.Unmarshal(snapshot, &cfg); err != nil {
-		return nil, nil, fmt.Errorf("decode Temporal Workflow runtime config: %w", err)
-	}
-	runtimeConfig, err := runtimecfg.NewRuntimeConfig(&cfg)
-	if err != nil {
-		return nil, nil, fmt.Errorf("index Temporal Workflow runtime config: %w", err)
-	}
-	base, err := datasourcetemporal.NewWorkflowEnvironment(
-		workflowCtx, runtimeConfig, cfg.Services.AutomationService.ID,
-		telemetry,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	graph := &Service{}
-	env := &workflowRuntimeEnvironment{WorkflowEnvironment: base, graph: graph}
-	if err := base.BindRuntimeEnvironment(env); err != nil {
-		return nil, nil, err
-	}
-	if err := graph.ServiceApp.InitIsolatedGraphRuntime(
-		runtimeConfig, env, cfg.Services.AutomationService.ID,
-	); err != nil {
-		return nil, nil, err
-	}
-	if err := graph.buildWorkflowGraph(workflowCtx, context.Background(), &cfg, env); err != nil {
-		return nil, nil, err
-	}
-	if err := env.Start(context.Background()); err != nil {
-		return nil, nil, err
-	}
-	return env, &cfg, nil
+    var cfg config.Config
+    if err := json.Unmarshal(snapshot, &cfg); err != nil {
+        return nil, nil, fmt.Errorf("decode Temporal Workflow runtime config: %w", err)
+    }
+    runtimeConfig, err := runtimecfg.NewRuntimeConfig(&cfg)
+    if err != nil {
+        return nil, nil, fmt.Errorf("index Temporal Workflow runtime config: %w", err)
+    }
+    base, err := datasourcetemporal.NewWorkflowEnvironment(
+        workflowCtx, runtimeConfig, cfg.Services.AutomationService.ID,
+        telemetry,
+    )
+    if err != nil {
+        return nil, nil, err
+    }
+    graph := &Service{}
+    env := &workflowRuntimeEnvironment{WorkflowEnvironment: base, graph: graph}
+    if err := base.BindRuntimeEnvironment(env); err != nil {
+        return nil, nil, err
+    }
+    if err := graph.ServiceApp.InitIsolatedGraphRuntime(
+        runtimeConfig, env, cfg.Services.AutomationService.ID,
+    ); err != nil {
+        return nil, nil, err
+    }
+    if err := graph.buildWorkflowGraph(workflowCtx, context.Background(), &cfg, env); err != nil {
+        return nil, nil, err
+    }
+    if err := env.Start(context.Background()); err != nil {
+        return nil, nil, err
+    }
+    return env, &cfg, nil
 }
 
 func executeTemporalWorkflowEndpoint(
-	workflowCtx workflow.Context,
-	request datasourcetemporal.DirectEndpointWorkflowRequest,
-	endpointName string,
+    workflowCtx workflow.Context,
+    request datasourcetemporal.DirectEndpointWorkflowRequest,
+    endpointName string,
 ) (datasourcetemporal.EndpointResult, error) {
-	env, _, err := buildTemporalWorkflowGraph(
-		workflowCtx, request.RuntimeConfig, request.Telemetry,
-	)
-	if err != nil {
-		return datasourcetemporal.EndpointResult{}, err
-	}
-	defer env.Stop(context.Background())
-	endpoint := env.RuntimeConfig().GetEndpointConfigByName(endpointName)
-	if endpoint == nil {
-		return datasourcetemporal.EndpointResult{}, fmt.Errorf("Temporal Workflow endpoint %q is absent", endpointName)
-	}
-	managed := env.GetManagedDataConnector(endpoint.GetIdDataConnector())
-	connector, ok := managed.(*datasourcetemporal.Connector)
-	if !ok {
-		return datasourcetemporal.EndpointResult{}, fmt.Errorf("Temporal Workflow endpoint %q has no connector", endpointName)
-	}
-	return connector.ExecuteRegisteredWorkflowEndpoint(workflowCtx, request, endpoint.GetID())
+    env, _, err := buildTemporalWorkflowGraph(
+        workflowCtx, request.RuntimeConfig, request.Telemetry,
+    )
+    if err != nil {
+        return datasourcetemporal.EndpointResult{}, err
+    }
+    defer env.Stop(context.Background())
+    endpoint := env.RuntimeConfig().GetEndpointConfigByName(endpointName)
+    if endpoint == nil {
+        return datasourcetemporal.EndpointResult{}, fmt.Errorf("Temporal Workflow endpoint %q is absent", endpointName)
+    }
+    managed := env.GetManagedDataConnector(endpoint.GetIdDataConnector())
+    connector, ok := managed.(*datasourcetemporal.Connector)
+    if !ok {
+        return datasourcetemporal.EndpointResult{}, fmt.Errorf("Temporal Workflow endpoint %q has no connector", endpointName)
+    }
+    return connector.ExecuteRegisteredWorkflowEndpoint(workflowCtx, request, endpoint.GetID())
 }
 
+
 func temporalWorkflowFanOutWorkflowJob(
-	workflowCtx workflow.Context,
-	request datasourcetemporal.DirectEndpointWorkflowRequest,
+    workflowCtx workflow.Context,
+    request datasourcetemporal.DirectEndpointWorkflowRequest,
 ) (datasourcetemporal.EndpointResult, error) {
-	return executeTemporalWorkflowEndpoint(
-		workflowCtx, request, "Fan-Out Workflow Job",
-	)
+    return executeTemporalWorkflowEndpoint(
+        workflowCtx, request, "Fan-Out Workflow Job",
+    )
 }
 
 func temporalWorkflowTemporalWorkflowSchedule(
-	workflowCtx workflow.Context,
-	request datasourcetemporal.DirectEndpointWorkflowRequest,
+    workflowCtx workflow.Context,
+    request datasourcetemporal.DirectEndpointWorkflowRequest,
 ) (datasourcetemporal.EndpointResult, error) {
-	return executeTemporalWorkflowEndpoint(
-		workflowCtx, request, "Temporal Workflow Schedule",
-	)
+    return executeTemporalWorkflowEndpoint(
+        workflowCtx, request, "Temporal Workflow Schedule",
+    )
 }
 
 func temporalWorkflowWorkflowJob(
-	workflowCtx workflow.Context,
-	request datasourcetemporal.DirectEndpointWorkflowRequest,
+    workflowCtx workflow.Context,
+    request datasourcetemporal.DirectEndpointWorkflowRequest,
 ) (datasourcetemporal.EndpointResult, error) {
-	return executeTemporalWorkflowEndpoint(
-		workflowCtx, request, "Workflow Job",
-	)
+    return executeTemporalWorkflowEndpoint(
+        workflowCtx, request, "Workflow Job",
+    )
 }
+
 
 // RegisterTemporalWorkflowDefinitions registers the statically generated
 // Workflow functions under the same stable names used by the service Worker.
 // It is intentionally usable by the generated history-replay command.
 func RegisterTemporalWorkflowDefinitions(registrar interface {
-	RegisterWorkflowWithOptions(any, workflow.RegisterOptions)
+    RegisterWorkflowWithOptions(any, workflow.RegisterOptions)
 }) {
 
-	registrar.RegisterWorkflowWithOptions(
-		temporalWorkflowFanOutWorkflowJob,
-		workflow.RegisterOptions{
-			Name: "temporal.endpoint.fan_out_workflow_job.workflow.v1",
-		},
-	)
+    registrar.RegisterWorkflowWithOptions(
+        temporalWorkflowFanOutWorkflowJob,
+        workflow.RegisterOptions{
+            Name: "temporal.endpoint.fan_out_workflow_job.workflow.v1",
+        },
+    )
 
-	registrar.RegisterWorkflowWithOptions(
-		temporalWorkflowTemporalWorkflowSchedule,
-		workflow.RegisterOptions{
-			Name: "temporal.endpoint.temporal_workflow_schedule.workflow.v1",
-		},
-	)
+    registrar.RegisterWorkflowWithOptions(
+        temporalWorkflowTemporalWorkflowSchedule,
+        workflow.RegisterOptions{
+            Name: "temporal.endpoint.temporal_workflow_schedule.workflow.v1",
+        },
+    )
 
-	registrar.RegisterWorkflowWithOptions(
-		temporalWorkflowWorkflowJob,
-		workflow.RegisterOptions{
-			Name: "temporal.endpoint.workflow_job.workflow.v1",
-		},
-	)
+    registrar.RegisterWorkflowWithOptions(
+        temporalWorkflowWorkflowJob,
+        workflow.RegisterOptions{
+            Name: "temporal.endpoint.workflow_job.workflow.v1",
+        },
+    )
 
 }
 

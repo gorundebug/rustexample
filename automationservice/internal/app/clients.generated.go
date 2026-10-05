@@ -2,41 +2,43 @@
 package app
 
 import (
-	"context"
-	"sync"
+"context"
+"sync"
 
-	"github.com/gorundebug/servicelib/runtime"
-	log "github.com/gorundebug/servicelib/runtime/environment/log"
+"github.com/gorundebug/servicelib/runtime"
+log "github.com/gorundebug/servicelib/runtime/environment/log"
 
-	config "github.com/gorundebug/rustexample-automationservice/internal/config"
+    config "github.com/gorundebug/rustexample-automationservice/internal/config"
 )
 
 type serviceClients struct {
+
 }
 
 func (clients *serviceClients) initClients(ctx context.Context, cfg *config.Config, env runtime.RuntimeEnvironment, makers *serviceMakers) error {
 
-	return nil
+
+    return nil
 }
 
 func (clients *serviceClients) close(timeoutCtx context.Context, s *Service) {
-	// Outbound clients and user-owned resources are last: accepted handlers
-	// and graph shutdown callbacks may still need them in earlier phases.
-	cleanupWg := sync.WaitGroup{}
+    // Outbound clients and user-owned resources are last: accepted handlers
+    // and graph shutdown callbacks may still need them in earlier phases.
+    cleanupWg := sync.WaitGroup{}
 
-	cleanupWg.Add(1)
-	go func() {
-		defer cleanupWg.Done()
-		s.stop(timeoutCtx)
-	}()
-	cleanupDone := make(chan struct{})
-	go func() {
-		cleanupWg.Wait()
-		close(cleanupDone)
-	}()
-	select {
-	case <-cleanupDone:
-	case <-timeoutCtx.Done():
-		s.Log().Warn(timeoutCtx, "service cleanup timed out", log.Err(timeoutCtx.Err()))
-	}
+    cleanupWg.Add(1)
+    go func() {
+        defer cleanupWg.Done()
+        s.stop(timeoutCtx)
+    }()
+    cleanupDone := make(chan struct{})
+    go func() {
+        cleanupWg.Wait()
+        close(cleanupDone)
+    }()
+    select {
+    case <-cleanupDone:
+    case <-timeoutCtx.Done():
+        s.Log().Warn(timeoutCtx, "service cleanup timed out", log.Err(timeoutCtx.Err()))
+    }
 }

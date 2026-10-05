@@ -2,185 +2,158 @@
 package app
 
 import (
-	"context"
-	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+"context"
+"fmt"
+"os"
+"os/signal"
+"syscall"
+"time"
 
-	temporalworkflow "go.temporal.io/sdk/workflow"
+temporalworkflow "go.temporal.io/sdk/workflow"
 
-	"github.com/gorundebug/servicelib/runtime"
-	"github.com/gorundebug/servicelib/runtime/environment"
-	log "github.com/gorundebug/servicelib/runtime/environment/log"
+"github.com/gorundebug/servicelib/runtime"
+"github.com/gorundebug/servicelib/runtime/environment"
+log "github.com/gorundebug/servicelib/runtime/environment/log"
 
-	config "github.com/gorundebug/rustexample-automationservice/internal/config"
+config "github.com/gorundebug/rustexample-automationservice/internal/config"
 )
 
 type Service struct {
-	runtime.ServiceApp
-	makers    serviceMakers
-	functions serviceFunctions
-	streams   serviceStreams
-	endpoints serviceEndpoints
-	clients   serviceClients
-	servers   serviceServers
+    runtime.ServiceApp
+    makers serviceMakers
+    functions serviceFunctions
+    streams serviceStreams
+    endpoints serviceEndpoints
+    clients serviceClients
+    servers serviceServers
 }
 
 func (s *Service) Config() *config.Config { return s.ServiceApp.GetConfig().(*config.Config) }
 
 func (s *Service) buildRuntime(ctx context.Context) error {
-	cfg := s.Config()
-	if err := s.makers.initMakers(ctx); err != nil {
-		return fmt.Errorf("init makers failed: %w", err)
-	}
-	if err := s.customMakersInit(ctx); err != nil {
-		return fmt.Errorf("custom init makers failed: %w", err)
-	}
-	if err := initConnectors(cfg, s); err != nil {
-		return err
-	}
-	if s.makers.httpMuxMaker != nil {
-		mux, err := s.makers.httpMuxMaker(ctx, s)
-		if err != nil {
-			return fmt.Errorf("create http mux failed: %w", err)
-		}
-		s.servers.httpMux = mux
-	}
-	if err := s.clients.initClients(ctx, cfg, s, &s.makers); err != nil {
-		return err
-	}
-	if err := s.functions.initFunctions(ctx, s, &s.makers); err != nil {
-		return fmt.Errorf("init functions failed: %w", err)
-	}
-	if err := s.customFunctionsInit(ctx); err != nil {
-		return fmt.Errorf("custom functions init failed: %w", err)
-	}
-	return s.buildGraph(ctx, cfg, s)
+    cfg := s.Config()
+    if err := s.makers.initMakers(ctx); err != nil { return fmt.Errorf("init makers failed: %w", err) }
+    if err := s.customMakersInit(ctx); err != nil { return fmt.Errorf("custom init makers failed: %w", err) }
+    if err := initConnectors(cfg, s); err != nil { return err }
+    if s.makers.httpMuxMaker != nil {
+        mux, err := s.makers.httpMuxMaker(ctx, s)
+        if err != nil { return fmt.Errorf("create http mux failed: %w", err) }
+        s.servers.httpMux = mux
+    }
+    if err := s.clients.initClients(ctx, cfg, s, &s.makers); err != nil { return err }
+    if err := s.functions.initFunctions(ctx, s, &s.makers); err != nil { return fmt.Errorf("init functions failed: %w", err) }
+    if err := s.customFunctionsInit(ctx); err != nil { return fmt.Errorf("custom functions init failed: %w", err) }
+    return s.buildGraph(ctx, cfg, s)
 }
 
 func (s *Service) buildGraph(ctx context.Context, cfg *config.Config, env runtime.RuntimeEnvironment) error {
-	if err := s.streams.initStreams(ctx, cfg, env, &s.functions); err != nil {
-		return fmt.Errorf("init streams failed: %w", err)
-	}
-	if err := s.streams.build(); err != nil {
-		return err
-	}
-	if err := s.endpoints.initEndpoints(s); err != nil {
-		return err
-	}
-	return s.streams.finish()
+    if err := s.streams.initStreams(ctx, cfg, env, &s.functions); err != nil { return fmt.Errorf("init streams failed: %w", err) }
+    if err := s.streams.build(); err != nil { return err }
+    if err := s.endpoints.initEndpoints(s); err != nil { return err }
+    return s.streams.finish()
 }
-
 // buildWorkflowGraph constructs a fresh graph without creating process-owned
 // servers, clients, exporters, watchers or OS-backed executors.
 func (s *Service) buildWorkflowGraph(workflowCtx temporalworkflow.Context, ctx context.Context, cfg *config.Config, env runtime.RuntimeEnvironment) error {
-	if err := s.makers.initMakers(ctx); err != nil {
-		return fmt.Errorf("init Workflow makers failed: %w", err)
-	}
-	if err := s.customMakersInit(ctx); err != nil {
-		return fmt.Errorf("custom Workflow makers failed: %w", err)
-	}
-	if err := s.functions.initWorkflowFunctions(workflowCtx, ctx, env, &s.makers); err != nil {
-		return fmt.Errorf("init Workflow functions failed: %w", err)
-	}
-	if err := s.customFunctionsInit(ctx); err != nil {
-		return fmt.Errorf("custom Workflow functions failed: %w", err)
-	}
-	if err := s.buildGraph(ctx, cfg, env); err != nil {
-		return fmt.Errorf("init Workflow streams failed: %w", err)
-	}
-	return nil
+    if err := s.makers.initMakers(ctx); err != nil {
+        return fmt.Errorf("init Workflow makers failed: %w", err)
+    }
+    if err := s.customMakersInit(ctx); err != nil {
+        return fmt.Errorf("custom Workflow makers failed: %w", err)
+    }
+    if err := s.functions.initWorkflowFunctions(workflowCtx, ctx, env, &s.makers); err != nil {
+        return fmt.Errorf("init Workflow functions failed: %w", err)
+    }
+    if err := s.customFunctionsInit(ctx); err != nil {
+        return fmt.Errorf("custom Workflow functions failed: %w", err)
+    }
+    if err := s.buildGraph(ctx, cfg, env); err != nil {
+        return fmt.Errorf("init Workflow streams failed: %w", err)
+    }
+    return nil
 }
 
+
 func (s *Service) StartService(ctx context.Context) error {
-	if err := s.buildRuntime(ctx); err != nil {
-		return fmt.Errorf("build runtime failed: %w", err)
-	}
-	if err := s.start(ctx); err != nil {
-		return fmt.Errorf("service start failed: %w", err)
-	}
-	if err := s.ServiceApp.Start(ctx); err != nil {
-		return fmt.Errorf("service app start failed: %w", err)
-	}
-	return s.servers.start(ctx, s)
+    if err := s.buildRuntime(ctx); err != nil { return fmt.Errorf("build runtime failed: %w", err) }
+    if err := s.start(ctx); err != nil { return fmt.Errorf("service start failed: %w", err) }
+    if err := s.ServiceApp.Start(ctx); err != nil { return fmt.Errorf("service app start failed: %w", err) }
+    return s.servers.start(ctx, s)
 }
 
 func (s *Service) StopService(ctx context.Context) {
-	timeoutCtx, cancel := context.WithTimeout(ctx, time.Duration(s.ServiceConfig().ShutdownTimeout)*time.Millisecond)
-	defer cancel()
-	s.servers.stop(timeoutCtx, s)
-	runtimeDone := make(chan struct{})
-	go func() { defer close(runtimeDone); s.ServiceApp.Stop(timeoutCtx) }()
-	select {
-	case <-runtimeDone:
-	case <-timeoutCtx.Done():
-		s.Log().Warn(timeoutCtx, "graph runtime stop timed out", log.Err(timeoutCtx.Err()))
-	}
-	s.clients.close(timeoutCtx, s)
+    timeoutCtx, cancel := context.WithTimeout(ctx, time.Duration(s.ServiceConfig().ShutdownTimeout)*time.Millisecond)
+    defer cancel()
+    s.servers.stop(timeoutCtx, s)
+    runtimeDone := make(chan struct{})
+    go func() { defer close(runtimeDone); s.ServiceApp.Stop(timeoutCtx) }()
+    select {
+    case <-runtimeDone:
+    case <-timeoutCtx.Done(): s.Log().Warn(timeoutCtx, "graph runtime stop timed out", log.Err(timeoutCtx.Err()))
+    }
+    s.clients.close(timeoutCtx, s)
 }
 
 func Start(ctx context.Context,
-	dependency environment.ServiceDependencies,
-	done <-chan struct{},
-	configPath *string,
-	valuesPath *string,
-	version string,
-	commit string,
+    dependency environment.ServiceDependencies,
+    done <-chan struct{},
+    configPath *string,
+    valuesPath *string,
+    version string,
+    commit string,
 ) error {
-	if dependency == nil {
-		dependency = &serviceDependencies{}
-	}
+    if dependency == nil {
+        dependency = &serviceDependencies{}
+    }
 
-	service, err := runtime.MakeService[*Service,
-		*config.Config](
-		ctx,
-		"Automation Service",
-		dependency,
-		configPath,
-		valuesPath,
-		func() *Service { return &Service{} },
-		func() *config.Config { return config.MakeConfig() },
-	)
-	if err != nil {
-		return fmt.Errorf("service start failed: %w", err)
-	}
-	defer service.Release()
+    service, err := runtime.MakeService[*Service,
+        *config.Config](
+        ctx,
+        "Automation Service",
+        dependency,
+        configPath,
+        valuesPath,
+        func() *Service { return &Service{} },
+        func() *config.Config { return config.MakeConfig() },
+    )
+    if err != nil {
+        return fmt.Errorf("service start failed: %w", err)
+    }
+    defer service.Release()
 
-	service.Log().Info(ctx, "starting service", log.Str("service", service.ServiceConfig().Name), log.Str("version", version), log.Str("commit", commit))
+    service.Log().Info(ctx, "starting service", log.Str("service", service.ServiceConfig().Name), log.Str("version", version), log.Str("commit", commit))
 
-	var stop chan os.Signal
-	if done == nil {
-		stop = make(chan os.Signal, 2)
-		signal.Notify(stop, syscall.SIGINT)
-		signal.Notify(stop, syscall.SIGTERM)
-	}
+    var stop chan os.Signal
+    if done == nil {
+        stop = make(chan os.Signal, 2)
+        signal.Notify(stop, syscall.SIGINT)
+        signal.Notify(stop, syscall.SIGTERM)
+    }
 
-	if ctx == nil {
-		localCtx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+    if ctx == nil {
+        localCtx, cancel := context.WithCancel(context.Background())
+        defer cancel()
 
-		ctx = localCtx
-	}
+        ctx = localCtx
+    }
 
-	if err = service.StartService(ctx); err != nil {
-		return fmt.Errorf("start service failed: %w", err)
-	}
-	service.Log().Info(ctx, "service started", log.Str("service", service.ServiceConfig().Name))
-
-	if os.Getenv("GORUNDEBUG_TEST") != "" && stop != nil {
-		time.AfterFunc(1*time.Second, func() {
-			close(stop)
-		})
-	}
-	if stop != nil {
-		<-stop
-	} else if done != nil {
-		<-done
-	}
-	service.Log().Info(ctx, "service stop signal received", log.Str("service", service.ServiceConfig().Name))
-	service.StopService(context.WithoutCancel(ctx))
-	service.Log().Info(ctx, "service stopped", log.Str("service", service.ServiceConfig().Name))
-	return nil
+    if err = service.StartService(ctx); err != nil {
+        return fmt.Errorf("start service failed: %w", err)
+    }
+    service.Log().Info(ctx, "service started", log.Str("service", service.ServiceConfig().Name))
+    
+    if os.Getenv("GORUNDEBUG_TEST") != "" && stop != nil {
+        time.AfterFunc(1*time.Second, func() {
+            close(stop)
+        })
+    }
+    if stop != nil {
+        <-stop
+    } else if done != nil {
+        <-done
+    }
+    service.Log().Info(ctx, "service stop signal received", log.Str("service", service.ServiceConfig().Name))
+    service.StopService(context.WithoutCancel(ctx))
+    service.Log().Info(ctx, "service stopped", log.Str("service", service.ServiceConfig().Name))
+    return nil
 }
