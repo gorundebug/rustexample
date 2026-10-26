@@ -336,7 +336,7 @@ impl ServiceFunctions {
         let default_group = init_default_group(
             maker_group_context.clone(), environment.clone(), makers, maker_error_sender.clone(),
         ).await;
-        maker_group_context.cancel();
+        // Keep successful maker contexts alive with their service owner.
         drop(maker_error_sender);
         if let Ok(error) = maker_error_receiver.try_recv() {
             return Err(error);

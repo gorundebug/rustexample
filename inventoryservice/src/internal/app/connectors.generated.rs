@@ -69,7 +69,7 @@ pub async fn init_infrastructure(
         Box::pin(async { inventory_service_api_data_source = inventory_service_api_data_source_future.await; }),
     ];
     futures_util::future::join_all(maker_futures).await;
-    maker_group_context.cancel();
+    // Successful makers retain this scope until their owner is cancelled.
     drop(maker_error_sender);
     if let Ok(error) = maker_error_receiver.try_recv() {
         return Err(error);

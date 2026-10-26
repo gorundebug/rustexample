@@ -2,7 +2,6 @@
 package app
 
 import (
-    "context"
     "encoding/json"
     "fmt"
     "reflect"
@@ -46,6 +45,7 @@ func buildTemporalWorkflowGraph(
     if err != nil {
         return nil, nil, err
     }
+    graphCtx := datasourcetemporal.WorkflowGraphContext(workflowCtx)
     graph := &Service{}
     env := &workflowRuntimeEnvironment{WorkflowEnvironment: base, graph: graph}
     if err := base.BindRuntimeEnvironment(env); err != nil {
@@ -56,10 +56,10 @@ func buildTemporalWorkflowGraph(
     ); err != nil {
         return nil, nil, err
     }
-    if err := graph.buildWorkflowGraph(workflowCtx, context.Background(), &cfg, env); err != nil {
+    if err := graph.buildWorkflowGraph(workflowCtx, graphCtx, &cfg, env); err != nil {
         return nil, nil, err
     }
-    if err := env.Start(context.Background()); err != nil {
+    if err := env.Start(graphCtx); err != nil {
         return nil, nil, err
     }
     return env, &cfg, nil
@@ -76,7 +76,7 @@ func executeTemporalWorkflowEndpoint(
     if err != nil {
         return datasourcetemporal.EndpointResult{}, err
     }
-    defer env.Stop(context.Background())
+    defer env.Stop(datasourcetemporal.WorkflowGraphContext(workflowCtx))
     endpoint := env.RuntimeConfig().GetEndpointConfigByName(endpointName)
     if endpoint == nil {
         return datasourcetemporal.EndpointResult{}, fmt.Errorf("Temporal Workflow endpoint %q is absent", endpointName)

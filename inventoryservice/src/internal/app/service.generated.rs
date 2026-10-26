@@ -34,6 +34,7 @@ pub struct GeneratedService {
 
 impl GeneratedService {
     pub async fn new(
+        context: MessageContext,
         config: &Config,
         environment: RuntimeEnvironment,
         config_loader: ConfigLoader<Config>,
@@ -42,15 +43,14 @@ impl GeneratedService {
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let mut app = ServiceApp::new(environment, config.service())?;
         app.environment().set_serde_provider(super::serde_generated::get_serde)?;
-        let context = MessageContext::new();
         let mut makers = ServiceMakers::init_makers();
         custom_makers_init(context.clone(), &mut makers)?;
         let mut functions = ServiceFunctions::init_functions(
             context.clone(), app.environment().clone(), &makers,
         ).await?;
-        custom_functions_init(context, &mut functions)?;
+        custom_functions_init(context.clone(), &mut functions)?;
         let infrastructure = ServiceInfrastructure::init_infrastructure(
-            MessageContext::new(), app.environment().clone(), &makers,
+            context, app.environment().clone(), &makers,
         ).await?;
         let streams = ServiceStreams::init_streams(config, app.environment(), &functions)?;
         let runtime = ServiceBindings::build(config, streams, functions, infrastructure)?;
@@ -78,11 +78,11 @@ impl GeneratedService {
         Ok(service)
     }
 
-    pub async fn run(self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn run(self, context: MessageContext) -> Result<(), Box<dyn std::error::Error>> {
         let app = self.inner.app.get().ok_or_else(||
             "service application is not initialized".to_owned()
         )?;
-        app.start(MessageContext::new()).await?;
+        app.start(context.clone()).await?;
         #[cfg(unix)]
         {
             let mut terminate = tokio::signal::unix::signal(
@@ -95,7 +95,7 @@ impl GeneratedService {
         }
         #[cfg(not(unix))]
         tokio::signal::ctrl_c().await?;
-        app.stop(MessageContext::new()).await?;
+        app.stop(context).await?;
         Ok(())
     }
 }

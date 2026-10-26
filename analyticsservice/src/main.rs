@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use servicelib::MessageContext;
 
 use servicelib::runtime::{
     config::{CallSemantics, ConfigLoader},
@@ -95,7 +96,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     };
     environment.publish_runtime_config(loader.runtime_config());
     install_shutdown_deadline(loader.clone())?;
-    Service::new(&config, environment, loader).await?.run().await
+    let context = MessageContext::new();
+    Service::new(context.clone(), &config, environment, loader).await?.run(context).await
 }
 
 fn install_shutdown_deadline(loader: ConfigLoader<Config>) -> std::io::Result<()> {

@@ -3,7 +3,6 @@ package app
 
 import (
 "context"
-"time"
 
 "golang.org/x/sync/errgroup"
 temporalworkflow "go.temporal.io/sdk/workflow"
@@ -60,9 +59,31 @@ type serviceFunctions struct {
 
 type makerTaskGroup interface { Go(func() error) }
 
+// A successful join does not end the lifetime of resources made by this group.
+// The caller owns that lifetime; a construction failure cancels only this group.
+type serviceMakerGroup struct {
+    group errgroup.Group
+    cancel context.CancelCauseFunc
+}
+
+func newServiceMakerGroup(ctx context.Context) (*serviceMakerGroup, context.Context) {
+    makerCtx, cancel := context.WithCancelCause(ctx)
+    return &serviceMakerGroup{cancel: cancel}, makerCtx
+}
+
+func (g *serviceMakerGroup) Go(task func() error) {
+    g.group.Go(func() error {
+        err := task()
+        if err != nil { g.cancel(err) }
+        return err
+    })
+}
+
+func (g *serviceMakerGroup) Wait() error { return g.group.Wait() }
+
 func (functions *serviceFunctions) initFunctions(ctx context.Context, env runtime.RuntimeEnvironment, makers *serviceMakers) error {
 
-    eg, egCtx := errgroup.WithContext(ctx)
+    eg, egCtx := newServiceMakerGroup(ctx)
     functions.scheduleFunctions(eg, egCtx, env, makers)
     if err := eg.Wait(); err != nil { return err }
 
@@ -352,22 +373,20 @@ type workflowMakerGroup struct {
 // intentionally unavailable inside Workflow code; cooperative makers observe
 // cancellation through Err().
 type workflowMakerContext struct {
+    context.Context
     canceled bool
 }
 
-func (*workflowMakerContext) Deadline() (time.Time, bool) { return time.Time{}, false }
 func (*workflowMakerContext) Done() <-chan struct{} { return nil }
 func (c *workflowMakerContext) Err() error {
     if c.canceled {
         return context.Canceled
     }
-    return nil
+    return c.Context.Err()
 }
-func (*workflowMakerContext) Value(any) any { return nil }
 
 func newWorkflowMakerGroup(workflowCtx temporalworkflow.Context, parent context.Context) (*workflowMakerGroup, context.Context) {
-    _ = parent
-    makerCtx := &workflowMakerContext{}
+    makerCtx := &workflowMakerContext{Context: parent}
     return &workflowMakerGroup{
         workflowCtx: workflowCtx,
         waitGroup: temporalworkflow.NewWaitGroup(workflowCtx),
