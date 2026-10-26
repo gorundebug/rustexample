@@ -9,6 +9,6 @@ name = "example_model"
 
 
 [dependencies]
-servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.156" }
+servicelib-gorundebug = { git = "https://github.com/gorundebug/rustservicelib.git", tag = "v0.2.157" }
 
 serde = { version = "1", features = ["derive"] }
