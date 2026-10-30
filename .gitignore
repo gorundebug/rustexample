@@ -46,3 +46,6 @@ Thumbs.db
 # Go services (cloned separately via clone.generated.sh in all-Go projects)
 
 # Go modules (cloned separately via clone.generated.sh in all-Go projects)
+
+# Rust build artifacts
+/target/

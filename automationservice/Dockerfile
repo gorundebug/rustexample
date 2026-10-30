@@ -4,7 +4,7 @@ ARG DEPENDENCY_DOCKER_REGISTRY=docker.io
 FROM servicelib-source AS servicelib-source
 FROM module-model_go-source AS module-model_go-source
 
-FROM ${DEPENDENCY_DOCKER_REGISTRY}/library/golang:1.25.4-bookworm AS builder
+FROM ${DEPENDENCY_DOCKER_REGISTRY}/library/golang:1.26.4-bookworm AS builder
 
 ARG SERVICE_DIR=.
 ARG TARGETARCH

@@ -49,7 +49,7 @@ impl ServiceBindings {
     )?;
     make_rdkafka_kafka_endpoint_consumer(
         &publish_order_processed, Arc::clone(&infrastructure.order_events_data_sink), None,
-        functions.order_processed_endpoint_sink,
+        Arc::clone(&functions.order_processed_endpoint_sink),
     )?;
 
         Ok(ServiceRuntime {

@@ -38,12 +38,14 @@ impl Service {
     }
 
     pub async fn new(
+        context: MessageContext,
         config: &Config,
         environment: RuntimeEnvironment,
         config_loader: ConfigLoader<Config>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {
             generated: GeneratedService::new(
+                context,
                 config,
                 environment,
                 config_loader,
@@ -54,7 +56,7 @@ impl Service {
         })
     }
 
-    pub async fn run(self) -> Result<(), Box<dyn std::error::Error>> {
-        self.generated.run().await
+    pub async fn run(self, context: MessageContext) -> Result<(), Box<dyn std::error::Error>> {
+        self.generated.run(context).await
     }
 }

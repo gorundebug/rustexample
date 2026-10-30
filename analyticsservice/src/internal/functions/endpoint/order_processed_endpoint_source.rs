@@ -21,6 +21,15 @@ pub struct OrderProcessedEndpointSource;
 
 #[async_trait]
 impl EndpointHandler<(), OrderProcessed, OrderProcessed, String> for OrderProcessedEndpointSource {
+    async fn on_error(
+        &self,
+        context: MessageContext,
+        stream: StreamContext<OrderProcessed, OrderProcessed, String>,
+        error: HandlerError,
+    ) {
+        stream.error_collect(context, error.to_string()).await;
+    }
+
     fn concurrency(
         &self,
         _stream: &StreamContext<OrderProcessed, OrderProcessed, String>,

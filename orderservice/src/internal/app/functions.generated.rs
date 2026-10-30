@@ -9,7 +9,7 @@ pub struct ServiceFunctions {
     pub map_order_item_result_to_order_state: Arc<MapOrderItemResultToOrderState>,
     pub map_to_order_processed: Arc<MapToOrderProcessed>,
     pub map_to_order_state: Arc<MapToOrderState>,
-    pub order_processed_endpoint_sink: OrderProcessedEndpointSink,
+    pub order_processed_endpoint_sink: Arc<OrderProcessedEndpointSink>,
     pub process_order_item_sink: Arc<ProcessOrderItemSink>,
     pub process_order_items: Arc<ProcessOrderItems>,
     pub process_order_source: ProcessOrderSource,
@@ -21,7 +21,7 @@ struct ServiceFunctionsBuilder {
     map_order_item_result_to_order_state: Option<Arc<MapOrderItemResultToOrderState>>,
     map_to_order_processed: Option<Arc<MapToOrderProcessed>>,
     map_to_order_state: Option<Arc<MapToOrderState>>,
-    order_processed_endpoint_sink: Option<OrderProcessedEndpointSink>,
+    order_processed_endpoint_sink: Option<Arc<OrderProcessedEndpointSink>>,
     process_order_item_sink: Option<Arc<ProcessOrderItemSink>>,
     process_order_items: Option<Arc<ProcessOrderItems>>,
     process_order_source: Option<ProcessOrderSource>,
@@ -31,7 +31,7 @@ struct FunctionCompletionPart0 {
     map_order_item_result_to_order_state: Arc<MapOrderItemResultToOrderState>,
     map_to_order_processed: Arc<MapToOrderProcessed>,
     map_to_order_state: Arc<MapToOrderState>,
-    order_processed_endpoint_sink: OrderProcessedEndpointSink,
+    order_processed_endpoint_sink: Arc<OrderProcessedEndpointSink>,
     process_order_item_sink: Arc<ProcessOrderItemSink>,
     process_order_items: Arc<ProcessOrderItems>,
     process_order_source: ProcessOrderSource,
@@ -116,7 +116,7 @@ struct DefaultFunctionGroupResults {
     map_order_item_result_to_order_state: Option<Arc<MapOrderItemResultToOrderState>>,
     map_to_order_processed: Option<Arc<MapToOrderProcessed>>,
     map_to_order_state: Option<Arc<MapToOrderState>>,
-    order_processed_endpoint_sink: Option<OrderProcessedEndpointSink>,
+    order_processed_endpoint_sink: Option<Arc<OrderProcessedEndpointSink>>,
     process_order_item_sink: Option<Arc<ProcessOrderItemSink>>,
     process_order_items: Option<Arc<ProcessOrderItems>>,
     process_order_source: Option<ProcessOrderSource>,
@@ -209,7 +209,7 @@ fn init_default_group(
                 order_processed_endpoint_sink_environment,
             ).await;
             match result {
-                Ok(value) => Some(value),
+                Ok(value) => Some(Arc::new(value)),
                 Err(error) => {
                     order_processed_endpoint_sink_group_context.cancel();
                     order_processed_endpoint_sink_error_sender.send(error)
