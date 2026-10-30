@@ -1617,7 +1617,7 @@ services:
         startupHandler: health/startup
         statusHandler: status
 settings:
-    moduleVersion: v0.2.166
+    moduleVersion: v0.2.167
     name: Example
     repoPath: github.com/gorundebug/rustexample
 types:
