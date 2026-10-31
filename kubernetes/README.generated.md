@@ -15,6 +15,10 @@ make kubernetes-down     # stop the local cluster and preserve its volumes
 make kubernetes-clean    # remove the cluster, registry and all local volumes
 ```
 
+Set `KUBERNETES_API_PORT=0 KUBERNETES_REGISTRY_PORT=0` for Docker-assigned
+host ports. Image publication automatically discovers the assigned registry
+port; fixed ports and an explicit `KUBERNETES_REGISTRY_HOST` remain supported.
+
 When `DEPENDENCY_PROXY_DIR` is set, Helm repositories and all external OCI
 registries used by the generated infrastructure are routed through the shared
 Nexus instance. k3s disables direct registry fallback in this mode: a missing

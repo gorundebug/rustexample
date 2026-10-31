@@ -212,7 +212,25 @@ infra_up() {
   wait_for_cluster
 }
 
+resolve_host_registry() {
+  if [[ "${REGISTRY_PORT}" != 0 || -n "${KUBERNETES_REGISTRY_HOST:-}" ]]; then
+    return
+  fi
+  # Docker owns allocation: probing and releasing a host socket beforehand
+  # races other listeners and outgoing connections in the ephemeral range.
+  local mapping published_port
+  mapping="$("${COMPOSE[@]}" port registry 5000)"
+  mapping="${mapping%%$'\n'*}"
+  published_port="${mapping##*:}"
+  if [[ ! "${published_port}" =~ ^[1-9][0-9]*$ ]]; then
+    echo "cannot resolve the Docker-assigned registry port: ${mapping}" >&2
+    return 1
+  fi
+  HOST_REGISTRY="localhost:${published_port}"
+}
+
 build_images() {
+  resolve_host_registry
   progress "building existing minimal runtime images"
   make docker-build
   progress "publishing analyticsservice image"
