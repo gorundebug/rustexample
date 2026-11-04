@@ -25,7 +25,7 @@ dependencies = [
 
 [[package]]
 name = "analytics_service"
-version = "0.2.171"
+version = "0.2.172"
 dependencies = [
  "async-trait",
  "croner",
@@ -303,9 +303,9 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
 name = "cc"
-version = "1.10.0"
+version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86e055fa6e3e40ad6187ba25b6855eeb635d5271f8e0f0e1e9a5826b8d75bea0"
+checksum = "375989decec1a0fa424442bed520fa12ede43a48475ce8c7417d2c69b32b5f6b"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -648,7 +648,7 @@ dependencies = [
 
 [[package]]
 name = "example-model"
-version = "0.2.171"
+version = "0.2.172"
 dependencies = [
  "serde",
  "servicelib-gorundebug",
@@ -1197,7 +1197,7 @@ dependencies = [
 
 [[package]]
 name = "inventory-service-api"
-version = "0.2.171"
+version = "0.2.172"
 dependencies = [
  "prost 0.13.5",
  "protoc-bin-vendored",
@@ -1208,7 +1208,7 @@ dependencies = [
 
 [[package]]
 name = "inventory_service"
-version = "0.2.171"
+version = "0.2.172"
 dependencies = [
  "async-trait",
  "axum 0.8.9",
@@ -1624,9 +1624,9 @@ dependencies = [
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.117"
+version = "0.9.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b47e7e6bb2c38cd930d25a23b40fa52e068c10e85f3e03a7f5ba5aaca5713695"
+checksum = "19c413d6ec9ebaf5e1c829d355cb3e9f783778d700f135be0921d52fce3c60ae"
 dependencies = [
  "cc",
  "libc",
@@ -1721,7 +1721,7 @@ dependencies = [
 
 [[package]]
 name = "order-service-api"
-version = "0.2.171"
+version = "0.2.172"
 dependencies = [
  "ammonia",
  "async-trait",
@@ -1746,7 +1746,7 @@ dependencies = [
 
 [[package]]
 name = "order_service"
-version = "0.2.171"
+version = "0.2.172"
 dependencies = [
  "async-trait",
  "axum 0.8.9",
@@ -2681,7 +2681,7 @@ dependencies = [
 
 [[package]]
 name = "servicelib-gorundebug"
-version = "0.2.171"
+version = "0.2.172"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -3110,9 +3110,9 @@ dependencies = [
 
 [[package]]
 name = "toml_edit"
-version = "0.25.17+spec-1.1.0"
+version = "0.25.18+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3641d5bbb5349a79e1020a242d251efbc546ad8048d133958323ce9c40a9c9c"
+checksum = "1ec6e78bd70db9420d8d212fa9dc97f116448a1ceff5d00eabb991d407e21396"
 dependencies = [
  "indexmap 2.14.2",
  "toml_datetime",
