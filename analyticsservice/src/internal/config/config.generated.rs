@@ -730,42 +730,52 @@ impl Default for Endpoints {
     fn default() -> Self {
         Self {
             analytics_orders: CustomEndpointConfig {
+                enabled: true,
                 id: ANALYTICS_ORDERS_ENDPOINT_ID, name: "Analytics Orders".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             analytics_payments: CustomEndpointConfig {
+                enabled: true,
                 id: ANALYTICS_PAYMENTS_ENDPOINT_ID, name: "Analytics Payments".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             analytics_shipments: CustomEndpointConfig {
+                enabled: true,
                 id: ANALYTICS_SHIPMENTS_ENDPOINT_ID, name: "Analytics Shipments".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             cycle_analytics_input: CustomEndpointConfig {
+                enabled: true,
                 id: CYCLE_ANALYTICS_INPUT_ENDPOINT_ID, name: "Cycle Analytics Input".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             cycle_analytics_result: CustomEndpointConfig {
+                enabled: true,
                 id: CYCLE_ANALYTICS_RESULT_ENDPOINT_ID, name: "Cycle Analytics Result".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             high_value_analytics: CustomEndpointConfig {
+                enabled: true,
                 id: HIGH_VALUE_ANALYTICS_ENDPOINT_ID, name: "High Value Analytics".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             joined_analytics: CustomEndpointConfig {
+                enabled: true,
                 id: JOINED_ANALYTICS_ENDPOINT_ID, name: "Joined Analytics".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             standard_analytics: CustomEndpointConfig {
+                enabled: true,
                 id: STANDARD_ANALYTICS_ENDPOINT_ID, name: "Standard Analytics".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             substream_analytics_input: CustomEndpointConfig {
+                enabled: true,
                 id: SUBSTREAM_ANALYTICS_INPUT_ENDPOINT_ID, name: "Substream Analytics Input".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
             substream_analytics_result: CustomEndpointConfig {
+                enabled: true,
                 id: SUBSTREAM_ANALYTICS_RESULT_ENDPOINT_ID, name: "Substream Analytics Result".to_owned(), id_data_connector: ANALYTICS_FUNCTIONS_CONNECTOR_ID,
                 tracing_enabled: false,
             },
@@ -810,6 +820,8 @@ impl Endpoints {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Config {
+    pub analytics_orders_enabled: bool,
+    pub analytics_payments_enabled: bool,
     pub analytics_schedule_enabled: bool,
     pub analytics_schedule_missed_run_policy: String,
     pub analytics_schedule_overlap_policy: String,
@@ -822,12 +834,20 @@ pub struct Config {
     pub grpc_port: u16,
     pub http_host: String,
     pub http_port: u16,
+    pub analytics_shipments_enabled: bool,
+    pub cycle_analytics_input_enabled: bool,
+    pub cycle_analytics_result_enabled: bool,
+    pub high_value_analytics_enabled: bool,
+    pub joined_analytics_enabled: bool,
     pub order_events_brokers: String,
     pub order_events_password: String,
     pub order_events_sasl_mechanism: String,
     pub order_events_security_protocol: String,
     pub order_events_username: String,
     pub order_processed_enabled: bool,
+    pub standard_analytics_enabled: bool,
+    pub substream_analytics_input_enabled: bool,
+    pub substream_analytics_result_enabled: bool,
     pub streams: Streams,
     pub endpoints: Endpoints,
     #[serde(flatten)]
@@ -837,6 +857,8 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            analytics_orders_enabled: true,
+            analytics_payments_enabled: true,
             analytics_schedule_enabled: true,
             analytics_schedule_missed_run_policy: "FireOnce".to_owned(),
             analytics_schedule_overlap_policy: "Skip".to_owned(),
@@ -849,12 +871,20 @@ impl Default for Config {
             grpc_port: 9203,
             http_host: "0.0.0.0".to_owned(),
             http_port: 9093,
+            analytics_shipments_enabled: true,
+            cycle_analytics_input_enabled: true,
+            cycle_analytics_result_enabled: true,
+            high_value_analytics_enabled: true,
+            joined_analytics_enabled: true,
             order_events_brokers: "redpanda:9092".to_owned(),
             order_events_password: "".to_owned(),
             order_events_sasl_mechanism: "SCRAM-SHA-512".to_owned(),
             order_events_security_protocol: "PLAINTEXT".to_owned(),
             order_events_username: "".to_owned(),
             order_processed_enabled: true,
+            standard_analytics_enabled: true,
+            substream_analytics_input_enabled: true,
+            substream_analytics_result_enabled: true,
             streams: Streams::default(),
             endpoints: Endpoints::default(),
             custom: CustomConfig::default(),
@@ -892,6 +922,10 @@ impl Config {
 
 impl ServiceConfigContract for Config {
     fn apply_environment(&mut self) -> Result<(), String> {
+        apply_bool("ANALYTICS_ORDERS_ENABLED", &mut self.analytics_orders_enabled)?;
+        self.endpoints.analytics_orders.enabled = self.analytics_orders_enabled;
+        apply_bool("ANALYTICS_PAYMENTS_ENABLED", &mut self.analytics_payments_enabled)?;
+        self.endpoints.analytics_payments.enabled = self.analytics_payments_enabled;
         apply_bool("ANALYTICS_SCHEDULE_ENABLED", &mut self.analytics_schedule_enabled)?;
         self.endpoints.analytics_schedule.enabled = self.analytics_schedule_enabled;
         apply_string("ANALYTICS_SCHEDULE_MISSED_RUN_POLICY", &mut self.analytics_schedule_missed_run_policy);
@@ -910,6 +944,16 @@ impl ServiceConfigContract for Config {
         apply_port("ANALYTICS_SERVICE_GRPC_PORT", &mut self.grpc_port)?;
         apply_string("ANALYTICS_SERVICE_HTTP_HOST", &mut self.http_host);
         apply_port("ANALYTICS_SERVICE_HTTP_PORT", &mut self.http_port)?;
+        apply_bool("ANALYTICS_SHIPMENTS_ENABLED", &mut self.analytics_shipments_enabled)?;
+        self.endpoints.analytics_shipments.enabled = self.analytics_shipments_enabled;
+        apply_bool("CYCLE_ANALYTICS_INPUT_ENABLED", &mut self.cycle_analytics_input_enabled)?;
+        self.endpoints.cycle_analytics_input.enabled = self.cycle_analytics_input_enabled;
+        apply_bool("CYCLE_ANALYTICS_RESULT_ENABLED", &mut self.cycle_analytics_result_enabled)?;
+        self.endpoints.cycle_analytics_result.enabled = self.cycle_analytics_result_enabled;
+        apply_bool("HIGH_VALUE_ANALYTICS_ENABLED", &mut self.high_value_analytics_enabled)?;
+        self.endpoints.high_value_analytics.enabled = self.high_value_analytics_enabled;
+        apply_bool("JOINED_ANALYTICS_ENABLED", &mut self.joined_analytics_enabled)?;
+        self.endpoints.joined_analytics.enabled = self.joined_analytics_enabled;
         apply_string("ORDER_EVENTS_BROKERS", &mut self.order_events_brokers);
         apply_string("ORDER_EVENTS_PASSWORD", &mut self.order_events_password);
         apply_string("ORDER_EVENTS_SASL_MECHANISM", &mut self.order_events_sasl_mechanism);
@@ -917,6 +961,12 @@ impl ServiceConfigContract for Config {
         apply_string("ORDER_EVENTS_USERNAME", &mut self.order_events_username);
         apply_bool("ORDER_PROCESSED_ENABLED", &mut self.order_processed_enabled)?;
         self.endpoints.order_processed.enabled = self.order_processed_enabled;
+        apply_bool("STANDARD_ANALYTICS_ENABLED", &mut self.standard_analytics_enabled)?;
+        self.endpoints.standard_analytics.enabled = self.standard_analytics_enabled;
+        apply_bool("SUBSTREAM_ANALYTICS_INPUT_ENABLED", &mut self.substream_analytics_input_enabled)?;
+        self.endpoints.substream_analytics_input.enabled = self.substream_analytics_input_enabled;
+        apply_bool("SUBSTREAM_ANALYTICS_RESULT_ENABLED", &mut self.substream_analytics_result_enabled)?;
+        self.endpoints.substream_analytics_result.enabled = self.substream_analytics_result_enabled;
         self.custom.apply_environment()
     }
     fn validate(&self) -> Result<(), String> {

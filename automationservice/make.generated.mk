@@ -7,9 +7,6 @@ SERVICE_NAME=automationservice
 SERVICE_NAME_UPPER=AUTOMATION_SERVICE
 MODULE_DIR := $(abspath .)
 PROJECT_DIR ?= $(MODULE_DIR)
-GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-BUILD_VERSION := $(shell git describe --tags --always 2>/dev/null || echo "v0.0.0")
-LDFLAGS := -X main.build_version=$(BUILD_VERSION) -X main.build_commit=$(GIT_COMMIT)
 BIN_DIR := $(PROJECT_DIR)/bin
 COMPOSE := docker compose -f $(if $(wildcard docker-compose.yml),docker-compose.yml,docker-compose.generated.yml)
 COMPOSE_DEV := $(COMPOSE) -f docker-compose.dev.generated.yml
@@ -68,12 +65,12 @@ build: gen-proto service_build ## [host] Generate owned bindings and build the s
 service_build:
 	@echo "Building $(SERVICE_NAME)..."
 	mkdir -p "$(BIN_DIR)"
-	go build -ldflags="$(LDFLAGS)" -o "$(BIN_DIR)/$(SERVICE_NAME)" "./cmd/service/main.go"
+	go build -o "$(BIN_DIR)/$(SERVICE_NAME)" "./cmd/service/main.go"
 
 service_build_linux:
 	@echo "Building $(SERVICE_NAME) for linux/$(shell go env GOARCH)..."
 	mkdir -p "$(BIN_DIR)"
-	CGO_ENABLED=0 GOOS=linux go build -ldflags="$(LDFLAGS)" -o "$(BIN_DIR)/$(SERVICE_NAME)" "./cmd/service/main.go"
+	CGO_ENABLED=0 GOOS=linux go build -o "$(BIN_DIR)/$(SERVICE_NAME)" "./cmd/service/main.go"
 
 clean: ## [host] Remove Go build artifacts
 	@echo "Cleaning $(SERVICE_NAME)..."

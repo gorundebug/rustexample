@@ -6,6 +6,10 @@ dataConnectors:
     securityProtocol: PLAINTEXT
     username: ""
 endpoints:
+  analyticsOrders:
+    enabled: true
+  analyticsPayments:
+    enabled: true
   analyticsSchedule:
     enabled: true
     missedRunPolicy: FireOnce
@@ -13,7 +17,23 @@ endpoints:
     schedule: '*/5 * * * *'
     timezone: UTC
     tracingEnabled: false
+  analyticsShipments:
+    enabled: true
+  cycleAnalyticsInput:
+    enabled: true
+  cycleAnalyticsResult:
+    enabled: true
+  highValueAnalytics:
+    enabled: true
+  joinedAnalytics:
+    enabled: true
   orderProcessed:
+    enabled: true
+  standardAnalytics:
+    enabled: true
+  substreamAnalyticsInput:
+    enabled: true
+  substreamAnalyticsResult:
     enabled: true
 services:
   analyticsService:

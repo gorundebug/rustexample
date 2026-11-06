@@ -2,6 +2,7 @@ dataConnectors:
     analyticsFunctions:
         endpoints:
             analyticsOrders:
+                enabled: true
                 functionDescription: Produce a deterministic order analytics event for the canonical join examples.
                 functionInitializerGroup: ""
                 functionName: AnalyticsOrders
@@ -9,6 +10,7 @@ dataConnectors:
                 name: Analytics Orders
                 publicFunction: false
             analyticsPayments:
+                enabled: true
                 functionDescription: Produce a deterministic payment analytics event for the canonical join examples.
                 functionInitializerGroup: ""
                 functionName: AnalyticsPayments
@@ -16,6 +18,7 @@ dataConnectors:
                 name: Analytics Payments
                 publicFunction: false
             analyticsShipments:
+                enabled: true
                 functionDescription: Produce a deterministic shipment analytics event for the canonical multi-way join example.
                 functionInitializerGroup: ""
                 functionName: AnalyticsShipments
@@ -23,6 +26,7 @@ dataConnectors:
                 name: Analytics Shipments
                 publicFunction: false
             cycleAnalyticsInput:
+                enabled: true
                 functionDescription: Produce one deterministic analytics event that exercises the finite feedback cycle.
                 functionInitializerGroup: ""
                 functionName: CycleAnalyticsInput
@@ -30,6 +34,7 @@ dataConnectors:
                 name: Cycle Analytics Input
                 publicFunction: false
             cycleAnalyticsResult:
+                enabled: true
                 functionDescription: Validate the terminal event emitted after three passes through the feedback cycle.
                 functionInitializerGroup: ""
                 functionName: CycleAnalyticsResult
@@ -37,6 +42,7 @@ dataConnectors:
                 name: Cycle Analytics Result
                 publicFunction: false
             highValueAnalytics:
+                enabled: true
                 functionDescription: Validate and record analytics results routed to the high-value Case branch.
                 functionInitializerGroup: ""
                 functionName: HighValueAnalytics
@@ -44,6 +50,7 @@ dataConnectors:
                 name: High Value Analytics
                 publicFunction: false
             joinedAnalytics:
+                enabled: true
                 functionDescription: Validate and record the result of the two-way analytics join.
                 functionInitializerGroup: ""
                 functionName: JoinedAnalytics
@@ -51,6 +58,7 @@ dataConnectors:
                 name: Joined Analytics
                 publicFunction: false
             standardAnalytics:
+                enabled: true
                 functionDescription: Validate and record analytics results routed to the standard Case branch.
                 functionInitializerGroup: ""
                 functionName: StandardAnalytics
@@ -58,6 +66,7 @@ dataConnectors:
                 name: Standard Analytics
                 publicFunction: false
             substreamAnalyticsInput:
+                enabled: true
                 functionDescription: Produce one deterministic analytics event that invokes the service-local SubStream example.
                 functionInitializerGroup: ""
                 functionName: SubstreamAnalyticsInput
@@ -65,6 +74,7 @@ dataConnectors:
                 name: Substream Analytics Input
                 publicFunction: false
             substreamAnalyticsResult:
+                enabled: true
                 functionDescription: Validate and record the result returned by the service-local SubStream example.
                 functionInitializerGroup: ""
                 functionName: SubstreamAnalyticsResult

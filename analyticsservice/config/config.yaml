@@ -6,6 +6,10 @@ dataConnectors:
     securityProtocol: $orderEventsSecurityProtocol
     username: $orderEventsUsername
 endpoints:
+  analyticsOrders:
+    enabled: $analyticsOrdersEnabled
+  analyticsPayments:
+    enabled: $analyticsPaymentsEnabled
   analyticsSchedule:
     enabled: $analyticsScheduleEnabled
     missedRunPolicy: $analyticsScheduleMissedRunPolicy
@@ -13,8 +17,24 @@ endpoints:
     schedule: $analyticsScheduleSchedule
     timezone: $analyticsScheduleTimezone
     tracingEnabled: $analyticsScheduleTracingEnabled
+  analyticsShipments:
+    enabled: $analyticsShipmentsEnabled
+  cycleAnalyticsInput:
+    enabled: $cycleAnalyticsInputEnabled
+  cycleAnalyticsResult:
+    enabled: $cycleAnalyticsResultEnabled
+  highValueAnalytics:
+    enabled: $highValueAnalyticsEnabled
+  joinedAnalytics:
+    enabled: $joinedAnalyticsEnabled
   orderProcessed:
     enabled: $orderProcessedEnabled
+  standardAnalytics:
+    enabled: $standardAnalyticsEnabled
+  substreamAnalyticsInput:
+    enabled: $substreamAnalyticsInputEnabled
+  substreamAnalyticsResult:
+    enabled: $substreamAnalyticsResultEnabled
 services:
   analyticsService:
     defaultGrpcTimeout: $analyticsServiceDefaultGrpcTimeout
