@@ -6,7 +6,7 @@ use tokio::sync::Mutex;
 use servicelib::{
     MessageContext,
     datasource::kafka::{
-        ConsumerMessage, EndpointHandler, HandlerError, HandlerResult, ResultCallback,
+        CheckpointOffsets, ConsumerMessage, EndpointHandler, HandlerError, HandlerResult, ResultCallback,
         ResultContext, StreamContext,
     },
     runtime::{
@@ -21,6 +21,15 @@ pub struct OrderProcessedEndpointSource;
 
 #[async_trait]
 impl EndpointHandler<(), OrderProcessed, OrderProcessed, String> for OrderProcessedEndpointSource {
+    fn restore_checkpoint(
+        &self,
+        _context: &MessageContext,
+        _stream: &StreamContext<OrderProcessed, OrderProcessed, String>,
+    ) -> HandlerResult<Option<CheckpointOffsets>> {
+        // No externally restored durable state: retain broker-managed positions.
+        Ok(None)
+    }
+
     async fn on_error(
         &self,
         context: MessageContext,
