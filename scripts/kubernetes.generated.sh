@@ -20,8 +20,6 @@ HELM_CONFIG_VOLUME="${KUBERNETES_HELM_CONFIG_VOLUME:-servicegen-kubernetes-helm-
 DOCKER_ARCH="${KUBERNETES_IMAGE_CACHE_ARCH:-$(docker info --format '{{.Architecture}}')}"
 IMAGE_CACHE_VOLUME="${KUBERNETES_IMAGE_CACHE_VOLUME:-servicegen-kubernetes-image-cache-v1-${DOCKER_ARCH}}"
 export KUBERNETES_IMAGE_CACHE_VOLUME="${IMAGE_CACHE_VOLUME}"
-GRAFANA_ADMIN_PASSWORD="${KUBERNETES_GRAFANA_ADMIN_PASSWORD:-admin}"
-TEMPORAL_POSTGRES_PASSWORD="${KUBERNETES_TEMPORAL_POSTGRES_PASSWORD:-temporal}"
 
 progress() { printf '==> [kubernetes] %s\n' "$*"; }
 
@@ -51,6 +49,11 @@ EOF
   "docker.redpanda.com":
     endpoint:
       - "http://${proxy_host}:${DEPENDENCY_PROXY_REDPANDA_PORT:-18087}"
+EOF
+  cat >>"${runtime_file}" <<EOF
+  "ecr-public.aws.com":
+    endpoint:
+      - "http://${proxy_host}:${DEPENDENCY_PROXY_ECR_PUBLIC_PORT:-18089}"
 EOF
   cat >>"${runtime_file}" <<EOF
   "ghcr.io":
@@ -100,7 +103,7 @@ if [[ -n "${DEPENDENCY_PROXY_DIR:-}" ]]; then
     DEPENDENCY_HELM_OPENTELEMETRY_URL \
     DEPENDENCY_HELM_JAEGER_URL \
     DEPENDENCY_HELM_REDPANDA_URL \
-    DEPENDENCY_HELM_TEMPORAL_URL; do
+    DEPENDENCY_HELM_TEMPORAL_URL DEPENDENCY_HELM_ARGO_URL DEPENDENCY_HELM_HASHICORP_URL; do
     if [[ -n "${!proxy_url_name:-}" ]]; then
       printf -v "${proxy_url_name}" '%s' \
         "$(container_proxy_url "${!proxy_url_name}")"
@@ -186,9 +189,8 @@ configure_kafka_secrets() {
     esac
 
     progress "creating idempotent Kubernetes Secrets for Kafka SASL"
-    kubectl --namespace "${NAMESPACE}" create secret generic "${KAFKA_SUPERUSERS_SECRET}" \
-      --from-literal="superusers.txt=${KUBERNETES_KAFKA_USERNAME}:${KUBERNETES_KAFKA_PASSWORD}:${KAFKA_SASL_MECHANISM}" \
-      --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+    printf '%s\0' "superusers.txt=${KUBERNETES_KAFKA_USERNAME}:${KUBERNETES_KAFKA_PASSWORD}:${KAFKA_SASL_MECHANISM}" |
+      python3 scripts/kubernetes-vault.generated.py seed-literals "${NAMESPACE}" "${KAFKA_SUPERUSERS_SECRET}"
     set -- "$@" \
       --from-literal="ORDER_EVENTS_USERNAME=${KUBERNETES_KAFKA_USERNAME}" \
       --from-literal="ORDER_EVENTS_PASSWORD=${KUBERNETES_KAFKA_PASSWORD}" \
@@ -199,9 +201,8 @@ configure_kafka_secrets() {
     return 0
   fi
   progress "creating idempotent service configuration Secret"
-  kubectl --namespace "${NAMESPACE}" create secret generic "${KAFKA_SERVICE_SECRET}" \
-    "$@" \
-    --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  printf '%s\0' "$@" |
+    python3 scripts/kubernetes-vault.generated.py seed-literals "${NAMESPACE}" "${KAFKA_SERVICE_SECRET}"
 }
 
 infra_up() {
@@ -210,6 +211,8 @@ infra_up() {
   progress "starting project registry and k3s"
   "${COMPOSE[@]}" up -d registry kubernetes
   wait_for_cluster
+  platform_up
+  ensure_namespace
 }
 
 resolve_host_registry() {
@@ -327,6 +330,7 @@ configure_grafana_dashboards() {
 }
 
 deploy_observability() {
+  python3 scripts/kubernetes-vault.generated.py seed-infrastructure "${NAMESPACE}" grafana-admin
   progress "generating Grafana dashboards"
   make grafana-dashboards
   progress "installing pinned Prometheus and Grafana stack"
@@ -339,7 +343,9 @@ deploy_observability() {
     --version 88.5.3 \
     --namespace "${NAMESPACE}" --create-namespace \
     --values kubernetes/monitoring-values.generated.yaml \
-    --set-string grafana.adminPassword="${GRAFANA_ADMIN_PASSWORD}" \
+    --set-string grafana.admin.existingSecret=grafana-admin \
+    --set-string grafana.admin.userKey=admin-user \
+    --set-string grafana.admin.passwordKey=admin-password \
     --wait --timeout "${TIMEOUT}"
   helm upgrade --install loki grafana/loki \
     --version 7.3.0 \
@@ -378,11 +384,7 @@ deploy_infrastructure() {
     --values kubernetes/redpanda-values.generated.yaml \
     "$@" \
     --wait --timeout "${TIMEOUT}"
-  progress "creating the local Temporal persistence Secret"
-  kubectl --namespace "${NAMESPACE}" create secret generic \
-    temporal-postgresql \
-    --from-literal=password="${TEMPORAL_POSTGRES_PASSWORD}" \
-    --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  python3 scripts/kubernetes-vault.generated.py seed-infrastructure "${NAMESPACE}" temporal-postgresql
   progress "starting pinned PostgreSQL for Temporal"
   kubectl --namespace "${NAMESPACE}" apply -f - \
     < kubernetes/temporal-postgresql.generated.yaml >/dev/null
@@ -405,6 +407,12 @@ deploy_services() {
     set -- --set-string "secretEnvFrom[0]=${KAFKA_SERVICE_SECRET}"
   fi
   progress "installing service Helm releases"
+  printf '%s' '{}' | python3 scripts/kubernetes-vault.generated.py seed "${NAMESPACE}" analyticsservice-env
+  if [[ "$#" -eq 0 ]]; then
+    set -- --set-string "secretEnvFrom[0]=analyticsservice-env"
+  else
+    set -- "$@" --set-string "secretEnvFrom[1]=analyticsservice-env"
+  fi
   set -- "$@" \
     --set-string env.ANALYTICS_SERVICE_ENVIRONMENT=staging \
     --set-string env.OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 \
@@ -421,6 +429,12 @@ deploy_services() {
   set --
   if [[ "${KAFKA_SASL_ENABLED}" == "true" ]]; then
     set -- --set-string "secretEnvFrom[0]=${KAFKA_SERVICE_SECRET}"
+  fi
+  printf '%s' '{}' | python3 scripts/kubernetes-vault.generated.py seed "${NAMESPACE}" automationservice-env
+  if [[ "$#" -eq 0 ]]; then
+    set -- --set-string "secretEnvFrom[0]=automationservice-env"
+  else
+    set -- "$@" --set-string "secretEnvFrom[1]=automationservice-env"
   fi
   set -- "$@" \
     --set-string env.AUTOMATION_SERVICE_ENVIRONMENT=staging \
@@ -439,6 +453,12 @@ deploy_services() {
   if [[ "${KAFKA_SASL_ENABLED}" == "true" ]]; then
     set -- --set-string "secretEnvFrom[0]=${KAFKA_SERVICE_SECRET}"
   fi
+  printf '%s' '{}' | python3 scripts/kubernetes-vault.generated.py seed "${NAMESPACE}" inventoryservice-env
+  if [[ "$#" -eq 0 ]]; then
+    set -- --set-string "secretEnvFrom[0]=inventoryservice-env"
+  else
+    set -- "$@" --set-string "secretEnvFrom[1]=inventoryservice-env"
+  fi
   set -- "$@" \
     --set-string env.INVENTORY_SERVICE_ENVIRONMENT=staging \
     --set-string env.OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 \
@@ -455,6 +475,12 @@ deploy_services() {
   set --
   if [[ "${KAFKA_SASL_ENABLED}" == "true" ]]; then
     set -- --set-string "secretEnvFrom[0]=${KAFKA_SERVICE_SECRET}"
+  fi
+  printf '%s' '{}' | python3 scripts/kubernetes-vault.generated.py seed "${NAMESPACE}" orderservice-env
+  if [[ "$#" -eq 0 ]]; then
+    set -- --set-string "secretEnvFrom[0]=orderservice-env"
+  else
+    set -- "$@" --set-string "secretEnvFrom[1]=orderservice-env"
   fi
   set -- "$@" \
     --set-string env.ORDER_SERVICE_ENVIRONMENT=staging \
@@ -566,6 +592,8 @@ verify() {
   printf '  PASS  generated Grafana dashboards (%s ConfigMaps)\n' "${dashboard_count}"
 }
 
+source "${ROOT}/scripts/kubernetes-platform.generated.sh"
+
 case "${1:-up}" in
   infra-up)
     infra_up
@@ -576,6 +604,7 @@ case "${1:-up}" in
     ;;
   services-up)
     wait_for_cluster
+    platform_up
     ensure_namespace
     configure_kafka_secrets
     build_images

@@ -2,6 +2,8 @@
 
 > Rules: [`spec/rules.md`](../rules.md)
 
+Paths and commands below are relative to the generated project root.
+
 | Field | Value |
 |-------|-------|
 | Language | `Go` |
@@ -19,7 +21,8 @@ Create a job message identifying the local scheduled firing.
 
 
 ## Stream types
-- Input: `AutomationJob`
+- Emits into graph: `string`
+- Error: `error`
 
 ## Checklist
 

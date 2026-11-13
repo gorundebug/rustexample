@@ -1,0 +1,33 @@
+# Vault Community, persistent local single-node storage. Never dev mode.
+# The local cluster owns the network boundary; no public service or ingress.
+global:
+  tlsDisable: true
+injector:
+  enabled: false
+server:
+  dev:
+    enabled: false
+  standalone:
+    enabled: true
+    config: |
+      ui = true
+      disable_mlock = true
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+      storage "file" {
+        path = "/vault/data"
+      }
+  dataStorage:
+    enabled: true
+    size: 1Gi
+  authDelegator:
+    enabled: true
+  resources:
+    requests: {cpu: 25m, memory: 128Mi}
+    limits: {cpu: '1', memory: 512Mi}
+ui:
+  enabled: true
+  serviceType: ClusterIP

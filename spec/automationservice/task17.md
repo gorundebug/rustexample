@@ -2,6 +2,8 @@
 
 > Rules: [`spec/rules.md`](../rules.md)
 
+Paths and commands below are relative to the generated project root.
+
 | Field | Value |
 |-------|-------|
 | Language | `Go` |
@@ -20,8 +22,8 @@ Observe the typed result returned by the Activity C fan-out branch.
 
 
 ## Stream types
-- Input: `AutomationJob`
-- Output: `AutomationJob`
+- Input: `string`
+- Output: `string`
 
 ## Checklist
 

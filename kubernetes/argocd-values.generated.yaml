@@ -1,0 +1,34 @@
+# Local single-cluster installation; access through a loopback port-forward.
+global:
+  domain: localhost
+dex:
+  enabled: false
+notifications:
+  enabled: false
+server:
+  service:
+    type: ClusterIP
+  resources:
+    requests: {cpu: 25m, memory: 64Mi}
+    limits: {cpu: '1', memory: 256Mi}
+repoServer:
+  resources:
+    requests: {cpu: 25m, memory: 128Mi}
+    limits: {cpu: '1', memory: 512Mi}
+controller:
+  resources:
+    requests: {cpu: 25m, memory: 128Mi}
+    limits: {cpu: '1', memory: 512Mi}
+applicationSet:
+  resources:
+    requests: {cpu: 25m, memory: 64Mi}
+    limits: {cpu: '1', memory: 256Mi}
+configs:
+  cm:
+    exec.enabled: 'false'
+
+# Bootstrap credentials are supplied by Vault Secrets Operator.
+redisSecretInit:
+  enabled: false
+redis:
+  existingSecret: argocd-redis

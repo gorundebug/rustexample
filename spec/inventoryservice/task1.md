@@ -2,6 +2,8 @@
 
 > Rules: [`spec/rules.md`](../rules.md)
 
+Paths and commands below are relative to the generated project root.
+
 | Field | Value |
 |-------|-------|
 | Language | `Rust` |
@@ -30,16 +32,16 @@ If the inventory call fails, the caller returns a non-reserved PROCESSING_ERROR 
 
 
 ## Stream types
-- Input: `OrderItem` — `model_rust/src/types/order_item.rs`
-- Output: `OrderItemResult` — `model_rust/src/types/order_item_result.rs`
+- Emits into graph: `OrderItem` — `model_rust/src/types/order_item.rs`
+- Receives graph result: `OrderItemResult` — `model_rust/src/types/order_item_result.rs`
 
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
 - [ ] Open `inventoryservice/src/internal/functions/endpoint/process_order_item_source.rs` and preserve its generated contract
 - [ ] Read `inventory_service_api/proto/inventoryserviceapi/processorderitem/processorderitem.proto`; change the source contract rather than generated bindings
-- [ ] Inspect input type `OrderItem` in `model_rust/src/types/order_item.rs`
-- [ ] Inspect output type `OrderItemResult` in `model_rust/src/types/order_item_result.rs`
+- [ ] Inspect emitted message type `OrderItem` in `model_rust/src/types/order_item.rs`
+- [ ] Inspect graph result type `OrderItemResult` in `model_rust/src/types/order_item_result.rs`
 - [ ] Implement the Rust function without changing its generated trait contract
 - [ ] Preserve `MessageContext` and await collector, sender and result operations
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module

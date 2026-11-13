@@ -2,10 +2,12 @@
 
 > Rules: [`spec/rules.md`](../rules.md)
 
+Paths and commands below are relative to the generated project root.
+
 | Field | Value |
 |-------|-------|
 | Language | `Go` |
-| Kind | `schedule-source` |
+| Kind | `temporal-source` |
 | File | `automationservice/internal/functions/activity/temporalactivityschedulesource.go` |
 | Service | `Automation Service` |
 
@@ -19,8 +21,9 @@ Create an Activity job message identifying the durable scheduled firing.
 
 
 ## Stream types
-- Input: `AutomationJob`
-- Output: `AutomationJob`
+- Emits into graph: `string`
+- Receives graph result: `string`
+- Error: `error`
 
 ## Checklist
 

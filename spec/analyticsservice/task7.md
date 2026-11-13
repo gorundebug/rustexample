@@ -2,6 +2,8 @@
 
 > Rules: [`spec/rules.md`](../rules.md)
 
+Paths and commands below are relative to the generated project root.
+
 | Field | Value |
 |-------|-------|
 | Language | `Rust` |
@@ -18,13 +20,13 @@ Produce one deterministic analytics event that exercises the finite feedback cyc
 
 
 ## Stream types
-- Input: `AnalyticsEvent` — `analyticsservice/src/internal/types/analytics_event.rs`
+- Emits into graph: `AnalyticsEvent` — `analyticsservice/src/internal/types/analytics_event.rs`
 
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
 - [ ] Open `analyticsservice/src/internal/functions/endpoint/cycle_analytics_input_source.rs` and preserve its generated contract
-- [ ] Inspect input type `AnalyticsEvent` in `analyticsservice/src/internal/types/analytics_event.rs`
+- [ ] Inspect emitted message type `AnalyticsEvent` in `analyticsservice/src/internal/types/analytics_event.rs`
 - [ ] Implement the Rust function without changing its generated trait contract
 - [ ] Preserve `MessageContext` and await collector, sender and result operations
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module

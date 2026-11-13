@@ -59,6 +59,8 @@ services:
       DEPENDENCY_HELM_JAEGER_URL: ${DEPENDENCY_HELM_JAEGER_URL:-https://jaegertracing.github.io/helm-charts}
       DEPENDENCY_HELM_REDPANDA_URL: ${DEPENDENCY_HELM_REDPANDA_URL:-https://charts.redpanda.com}
       DEPENDENCY_HELM_TEMPORAL_URL: ${DEPENDENCY_HELM_TEMPORAL_URL:-https://go.temporal.io/helm-charts}
+      DEPENDENCY_HELM_ARGO_URL: ${DEPENDENCY_HELM_ARGO_URL:-https://argoproj.github.io/argo-helm}
+      DEPENDENCY_HELM_HASHICORP_URL: ${DEPENDENCY_HELM_HASHICORP_URL:-https://helm.releases.hashicorp.com}
     volumes:
       - .:/workspace:ro
       - kubernetes-kubeconfig:/output:ro

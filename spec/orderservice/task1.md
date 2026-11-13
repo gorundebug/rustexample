@@ -2,6 +2,8 @@
 
 > Rules: [`spec/rules.md`](../rules.md)
 
+Paths and commands below are relative to the generated project root.
+
 | Field | Value |
 |-------|-------|
 | Language | `Rust` |
@@ -31,16 +33,16 @@ Calculate the total from processed item prices, falling back to the submitted to
 
 
 ## Stream types
-- Input: `Order` — `orderservice/src/internal/types/order.rs`
-- Output: `OrderState` — `orderservice/src/internal/types/order_state.rs`
+- Emits into graph: `Order` — `orderservice/src/internal/types/order.rs`
+- Receives graph result: `OrderState` — `orderservice/src/internal/types/order_state.rs`
 
 ## Checklist
 
 - [ ] Read [`spec/rules.md`](../rules.md), especially the `Rust` section
 - [ ] Open `orderservice/src/internal/functions/endpoint/process_order_source.rs` and preserve its generated contract
 - [ ] Read `order_service_api/openapi/orderserviceapi/processorder/processorder.yaml`; change the source contract rather than generated bindings
-- [ ] Inspect input type `Order` in `orderservice/src/internal/types/order.rs`
-- [ ] Inspect output type `OrderState` in `orderservice/src/internal/types/order_state.rs`
+- [ ] Inspect emitted message type `Order` in `orderservice/src/internal/types/order.rs`
+- [ ] Inspect graph result type `OrderState` in `orderservice/src/internal/types/order_state.rs`
 - [ ] Implement the Rust function without changing its generated trait contract
 - [ ] Preserve `MessageContext` and await collector, sender and result operations
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module

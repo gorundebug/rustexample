@@ -9,6 +9,14 @@ other Git-based fetchers, which a package proxy cannot cache. Nexus also keeps
 Conan binary packages built locally for package IDs absent from ConanCenter;
 ordinary application compilation remains in BuildKit/CMake/ccache.
 
+The GitHub raw asset repository accepts opaque binary formats such as ONNX by
+disabling Nexus MIME inference validation for `github-raw` only, following the
+[documented raw repository setting](https://help.sonatype.com/en/raw-repositories.html).
+Typed package repositories and other raw repositories retain strict content-type
+validation. Download consumers must still verify their pinned checksums; MIME
+detection is not artifact authenticity verification. No direct-network fallback
+or disabled TLS verification is needed for these assets.
+
 ```bash
 # Configure one global data directory in your shell:
 export DEPENDENCY_PROXY_DIR="$HOME/.servicegen/dependency-proxy"

@@ -1,0 +1,12 @@
+# KV polling and rollout restarts work with Vault Community.
+# Authentication is defined per application, not a shared root token.
+defaultVaultConnection:
+  enabled: true
+  address: http://vault.vault-system.svc.cluster.local:8200
+defaultAuthMethod:
+  enabled: false
+controller:
+  manager:
+    resources:
+      requests: {cpu: 25m, memory: 64Mi}
+      limits: {cpu: '1', memory: 256Mi}

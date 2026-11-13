@@ -2,10 +2,12 @@
 
 > Rules: [`spec/rules.md`](../rules.md)
 
+Paths and commands below are relative to the generated project root.
+
 | Field | Value |
 |-------|-------|
 | Language | `Go` |
-| Kind | `custom-sink` |
+| Kind | `temporal-sink` |
 | File | `automationservice/internal/functions/activity/fanoutactivitycendpointsink.go` |
 | Service | `Automation Service` |
 
@@ -14,8 +16,9 @@
 
 
 ## Stream types
-- Input: `AutomationJob`
-- Output: `AutomationJob`
+- Input: `string`
+- Output: `string`
+- Error: `error`
 
 ## Checklist
 

@@ -2,10 +2,12 @@
 
 > Rules: [`spec/rules.md`](../rules.md)
 
+Paths and commands below are relative to the generated project root.
+
 | Field | Value |
 |-------|-------|
 | Language | `Go` |
-| Kind | `schedule-source` |
+| Kind | `temporal-source` |
 | File | `automationservice/internal/functions/workflow/fanoutworkflowjobendpointsource.go` |
 | Service | `Automation Service` |
 
@@ -14,7 +16,8 @@
 
 
 ## Stream types
-- Input: `AutomationJob`
+- Emits into graph: `string`
+- Error: `error`
 
 ## Checklist
 

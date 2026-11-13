@@ -75,6 +75,10 @@ def repositories() -> list[tuple[str, str, str, dict]]:
         "excludedQueryParameters": [],
     }
     github = common("github-raw", "https://github.com")
+    # Raw GitHub assets include model formats (e.g. ONNX) that Nexus cannot
+    # infer. Use Sonatype's supported per-raw-repository setting; keep typed
+    # package repositories strict and retain client-side checksum verification.
+    github["storage"]["strictContentTypeValidation"] = False
     github["proxy"]["contentMaxAge"] = -1
     github["proxy"]["metadataMaxAge"] = -1
     github["raw"] = {
@@ -101,6 +105,8 @@ def repositories() -> list[tuple[str, str, str, dict]]:
         ("helm", "proxy", "helm-jaeger", common("helm-jaeger", "https://jaegertracing.github.io/helm-charts")),
         ("helm", "proxy", "helm-redpanda", common("helm-redpanda", "https://charts.redpanda.com")),
         ("helm", "proxy", "helm-temporal", common("helm-temporal", "https://go.temporal.io/helm-charts")),
+        ("helm", "proxy", "helm-argo", common("helm-argo", "https://argoproj.github.io/argo-helm")),
+        ("helm", "proxy", "helm-hashicorp", common("helm-hashicorp", "https://helm.releases.hashicorp.com")),
         ("raw", "proxy", "maven-central", maven),
         ("raw", "proxy", "github-raw", github),
         ("raw", "proxy", "gitlab-raw", gitlab),
@@ -168,6 +174,7 @@ def repositories() -> list[tuple[str, str, str, dict]]:
     for name, remote_url, connector_port, index_type in (
         ("docker-hub", "https://registry-1.docker.io", 8082, "HUB"),
         ("docker-redpanda", "https://docker.redpanda.com", 8085, "REGISTRY"),
+        ("docker-ecr-public", "https://ecr-public.aws.com", 8087, "REGISTRY"),
         ("docker-ghcr", "https://ghcr.io", 8083, "REGISTRY"),
         ("docker-quay", "https://quay.io", 8084, "REGISTRY"),
         ("docker-kubernetes", "https://registry.k8s.io", 8086, "REGISTRY"),
