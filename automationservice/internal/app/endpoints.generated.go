@@ -4,6 +4,7 @@ package app
 import (
 "github.com/gorundebug/servicelib/runtime"
     datasink "github.com/gorundebug/servicelib/datasink"
+    datasinktemporal "github.com/gorundebug/servicelib/datasink/temporal"
     datasource "github.com/gorundebug/servicelib/datasource"
 
     activity "github.com/gorundebug/rustexample-automationservice/internal/functions/activity"
@@ -11,6 +12,28 @@ import (
 )
 
 type serviceHandlers struct {
+
+}
+
+// Each Sink has its own optional typed submission policy. Set these through
+// customMakersInit; the same initialization runs in isolated Workflow graphs.
+type serviceTemporalSubmissionOptions struct {
+
+    callFanOutActivityAFanOutActivityA datasinktemporal.SubmissionOptionsProvider[string]
+
+    callFanOutActivityBFanOutActivityB datasinktemporal.SubmissionOptionsProvider[string]
+
+    callFanOutActivityCFanOutActivityC datasinktemporal.SubmissionOptionsProvider[string]
+
+    callSequentialActivityASequentialActivityA datasinktemporal.SubmissionOptionsProvider[string]
+
+    callSequentialActivityBSequentialActivityB datasinktemporal.SubmissionOptionsProvider[string]
+
+    submitActivityJobActivityJob datasinktemporal.SubmissionOptionsProvider[string]
+
+    submitFanOutWorkflowJobFanOutWorkflowJob datasinktemporal.SubmissionOptionsProvider[string]
+
+    submitWorkflowJobWorkflowJob datasinktemporal.SubmissionOptionsProvider[string]
 
 }
 
@@ -76,28 +99,28 @@ func (endpoints *serviceEndpoints) initEndpoints(s *Service) error {
         return err
     }
 
-    if endpoints.callFanOutActivityAFanOutActivityA, err = datasink.TemporalEndpointConsumerWithResultAndHandler(s.streams.callFanOutActivityA, s.functions.activityFanoutActivityAEndpointSink); err != nil {
+    if endpoints.callFanOutActivityAFanOutActivityA, err = datasink.TemporalEndpointConsumerWithResultAndHandlerAndOptions(s.streams.callFanOutActivityA, s.functions.activityFanoutActivityAEndpointSink, s.makers.temporalSubmissionOptions.callFanOutActivityAFanOutActivityA); err != nil {
         return err
     }
-    if endpoints.callFanOutActivityBFanOutActivityB, err = datasink.TemporalEndpointConsumerWithResultAndHandler(s.streams.callFanOutActivityB, s.functions.activityFanoutActivityBEndpointSink); err != nil {
+    if endpoints.callFanOutActivityBFanOutActivityB, err = datasink.TemporalEndpointConsumerWithResultAndHandlerAndOptions(s.streams.callFanOutActivityB, s.functions.activityFanoutActivityBEndpointSink, s.makers.temporalSubmissionOptions.callFanOutActivityBFanOutActivityB); err != nil {
         return err
     }
-    if endpoints.callFanOutActivityCFanOutActivityC, err = datasink.TemporalEndpointConsumerWithResultAndHandler(s.streams.callFanOutActivityC, s.functions.activityFanoutActivityCEndpointSink); err != nil {
+    if endpoints.callFanOutActivityCFanOutActivityC, err = datasink.TemporalEndpointConsumerWithResultAndHandlerAndOptions(s.streams.callFanOutActivityC, s.functions.activityFanoutActivityCEndpointSink, s.makers.temporalSubmissionOptions.callFanOutActivityCFanOutActivityC); err != nil {
         return err
     }
-    if endpoints.callSequentialActivityASequentialActivityA, err = datasink.TemporalEndpointConsumerWithResultAndHandler(s.streams.callSequentialActivityA, s.functions.activitySequentialActivityAEndpointSink); err != nil {
+    if endpoints.callSequentialActivityASequentialActivityA, err = datasink.TemporalEndpointConsumerWithResultAndHandlerAndOptions(s.streams.callSequentialActivityA, s.functions.activitySequentialActivityAEndpointSink, s.makers.temporalSubmissionOptions.callSequentialActivityASequentialActivityA); err != nil {
         return err
     }
-    if endpoints.callSequentialActivityBSequentialActivityB, err = datasink.TemporalEndpointConsumerWithResultAndHandler(s.streams.callSequentialActivityB, s.functions.activitySequentialActivityBEndpointSink); err != nil {
+    if endpoints.callSequentialActivityBSequentialActivityB, err = datasink.TemporalEndpointConsumerWithResultAndHandlerAndOptions(s.streams.callSequentialActivityB, s.functions.activitySequentialActivityBEndpointSink, s.makers.temporalSubmissionOptions.callSequentialActivityBSequentialActivityB); err != nil {
         return err
     }
-    if endpoints.submitActivityJobActivityJob, err = datasink.TemporalEndpointConsumerWithResultAndHandler(s.streams.submitActivityJob, s.functions.activityActivityJobEndpointSink); err != nil {
+    if endpoints.submitActivityJobActivityJob, err = datasink.TemporalEndpointConsumerWithResultAndHandlerAndOptions(s.streams.submitActivityJob, s.functions.activityActivityJobEndpointSink, s.makers.temporalSubmissionOptions.submitActivityJobActivityJob); err != nil {
         return err
     }
-    if endpoints.submitFanOutWorkflowJobFanOutWorkflowJob, err = datasink.TemporalEndpointConsumerWithHandler(s.streams.submitFanOutWorkflowJob, s.functions.workflowFanoutWorkflowJobEndpointSink); err != nil {
+    if endpoints.submitFanOutWorkflowJobFanOutWorkflowJob, err = datasink.TemporalEndpointConsumerWithHandlerAndOptions(s.streams.submitFanOutWorkflowJob, s.functions.workflowFanoutWorkflowJobEndpointSink, s.makers.temporalSubmissionOptions.submitFanOutWorkflowJobFanOutWorkflowJob); err != nil {
         return err
     }
-    if endpoints.submitWorkflowJobWorkflowJob, err = datasink.TemporalEndpointConsumerWithResultAndHandler(s.streams.submitWorkflowJob, s.functions.workflowWorkflowJobEndpointSink); err != nil {
+    if endpoints.submitWorkflowJobWorkflowJob, err = datasink.TemporalEndpointConsumerWithResultAndHandlerAndOptions(s.streams.submitWorkflowJob, s.functions.workflowWorkflowJobEndpointSink, s.makers.temporalSubmissionOptions.submitWorkflowJobWorkflowJob); err != nil {
         return err
     }
     return err

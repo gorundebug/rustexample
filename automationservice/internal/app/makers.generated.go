@@ -15,6 +15,7 @@ import (
 )
 
 type serviceMakers struct {
+temporalSubmissionOptions serviceTemporalSubmissionOptions
 
 httpServerMaker func(context.Context, runtime.RuntimeEnvironment) (*http.Server, error)
 httpMuxMaker func(context.Context, runtime.RuntimeEnvironment) (*http.ServeMux, error)
