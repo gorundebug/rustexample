@@ -31,6 +31,7 @@ Return sequential Activity B's typed result to its Temporal sink.
 - [ ] Open `automationservice/internal/functions/automation/processsequentialactivityb.go` and preserve its generated contract
 - [ ] Implement the Go function and propagate the received `context.Context`
 - [ ] Run `make test`
+
 - [ ] Implement meaningful assertions in `automationservice/internal/functions/automation/processsequentialactivityb_test.go`
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] automationservice/task26.md — ProcessSequentialActivityB — Go — done`

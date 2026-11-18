@@ -35,5 +35,6 @@ Preserve the order ID, status, and processing time. Count all item results and r
 - [ ] Preserve `MessageContext` and await collector, sender and result operations
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
 - [ ] Run `cargo test --workspace --all-targets`
+
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] orderservice/task7.md — MapToOrderProcessed — Rust — done`

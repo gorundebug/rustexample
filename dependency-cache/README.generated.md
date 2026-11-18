@@ -138,3 +138,20 @@ The command removes the project's prepared C++ source cache and its CMake build
 volumes. It deliberately preserves compiler `ccache` data and the Nexus proxy.
 The next build reconstructs the complete dependency tree; immutable archives
 already downloaded by Nexus are reused.
+
+The official NATS chart repository is cached by `helm-nats`
+(`https://nats-io.github.io/k8s/helm/charts/`). `DEPENDENCY_HELM_NATS_URL` is
+exported for host tools and translated for container-based Helm commands.
+
+The Redis operator chart uses `helm-redis-operator`
+(`https://ot-container-kit.github.io/helm-charts`) and
+`DEPENDENCY_HELM_REDIS_OPERATOR_URL`. The same host/container URL mapping applies.
+After adding chart repositories to an existing proxy installation, run its
+standard bootstrap before installing Kubernetes infrastructure.
+
+Apache Pulsar's Node native binding uses Apache Archive instead of GitHub.
+The generated catalog sets `npm_config_pulsar_binary_host_mirror` from
+`DEPENDENCY_APACHE_ARCHIVE_URL`; the dependency proxy routes this base to its
+`apache-archive` raw repository. Without a proxy it defaults to
+`https://archive.apache.org`. Run the standard proxy bootstrap to provision the
+repository before using an existing proxy with newly generated projects.

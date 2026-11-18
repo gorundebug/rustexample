@@ -28,7 +28,10 @@ endpoints:
   joinedAnalytics:
     enabled: $joinedAnalyticsEnabled
   orderProcessed:
+    createTopic: $orderProcessedCreateTopic
     enabled: $orderProcessedEnabled
+    partitions: $orderProcessedPartitions
+    topic: $orderProcessedTopic
   standardAnalytics:
     enabled: $standardAnalyticsEnabled
   substreamAnalyticsInput:

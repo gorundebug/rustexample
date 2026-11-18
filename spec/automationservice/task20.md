@@ -31,6 +31,7 @@ Return Activity A's typed result before the Workflow Split.
 - [ ] Open `automationservice/internal/functions/automation/processfanoutactivitya.go` and preserve its generated contract
 - [ ] Implement the Go function and propagate the received `context.Context`
 - [ ] Run `make test`
+
 - [ ] Implement meaningful assertions in `automationservice/internal/functions/automation/processfanoutactivitya_test.go`
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] automationservice/task20.md — ProcessFanoutActivityA — Go — done`

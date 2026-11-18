@@ -1,5 +1,7 @@
 """Local Vault bootstrap. Private recovery state stays outside generated source."""
 import json
+import hashlib
+import hmac
 import os
 import base64
 import re
@@ -122,14 +124,73 @@ def synchronize(namespace, name, payload, replace=False, targets=()):
         time.sleep(2)
     raise RuntimeError(f'Vault Secret synchronization timed out: {namespace}/{name}')
 
+def rabbitmq_namespace(namespace):
+    if not re.fullmatch(r'[a-z0-9]([-a-z0-9]*[a-z0-9])?', namespace) or len(namespace) > 63:
+        raise ValueError('RabbitMQ namespace must be a DNS label')
+    return namespace
+
+def render_rabbitmq_manifest(namespace):
+    namespace = rabbitmq_namespace(namespace)
+    manifest = (ROOT / 'kubernetes/rabbitmq-cluster.generated.yaml').read_text()
+    if '__RABBITMQ_NAMESPACE__' not in manifest:
+        raise ValueError('RabbitMQ manifest lacks namespace placeholder')
+    return manifest.replace('__RABBITMQ_NAMESPACE__', namespace)
+
+def seed_rabbitmq(namespace):
+    namespace = rabbitmq_namespace(namespace)
+    location = f'local/{namespace}/rabbitmq-admin'
+    role = f'{namespace}.rabbitmq-server'
+    # Preserve existing Vault values, including a rotated password. CAS=0 also
+    # prevents a concurrent initializer from overwriting credentials.
+    try:
+        vault('kv', 'get', '-mount=secret', location)
+    except RuntimeError:
+        previous = existing_secret(namespace, 'rabbitmq-admin')
+        values = ({key: previous[key] for key in ('username', 'password')} if previous is not None
+                  else {'username': 'servicegen', 'password': secrets.token_urlsafe(32)})
+        vault('kv', 'put', '-cas=0', '-mount=secret', location, '-', data=json.dumps(values).encode())
+    policy = 'path "secret/data/' + location + '" { capabilities = ["read"] }'
+    vault('policy', 'write', role, '-', data=policy.encode())
+    # Cluster Operator owns/creates rabbitmq-server. No wildcard SA, namespace,
+    # metadata listing, write privilege, or VSO copy of the admin secret needed.
+    vault('write', f'auth/kubernetes/role/{role}',
+          'bound_service_account_names=rabbitmq-server',
+          f'bound_service_account_namespaces={namespace}',
+          f'policies={role}', 'ttl=1h')
+
+def seed_pulsar(namespace):
+    # ASCII signing material is also valid binary HMAC key material. Keeping it
+    # textual lets the existing Vault/VSO contract carry the exact mounted bytes.
+    targets = [{'kind': 'Deployment', 'name': 'pulsar-standalone'}]
+    synchronize(namespace, 'pulsar-token-symmetric-key',
+                json.dumps({'SECRETKEY': secrets.token_urlsafe(48)}), targets=targets)
+    key = existing_secret(namespace, 'pulsar-token-symmetric-key')['SECRETKEY']
+    def b64(payload):
+        return base64.urlsafe_b64encode(payload).decode().rstrip('=')
+    signing_input = '.'.join(b64(json.dumps(value, separators=(',', ':')).encode())
+                             for value in ({'alg': 'HS256', 'typ': 'JWT'}, {'sub': 'admin'}))
+    token = signing_input + '.' + b64(hmac.new(key.encode(), signing_input.encode(), hashlib.sha256).digest())
+    synchronize(namespace, 'pulsar-token-admin', json.dumps({'TOKEN': token}), targets=targets)
+
 if __name__ == '__main__':
     try:
         if sys.argv[1:] == ['bootstrap']:
             bootstrap()
+        elif len(sys.argv) == 3 and sys.argv[1] == 'seed-rabbitmq':
+            seed_rabbitmq(sys.argv[2])
+        elif len(sys.argv) == 3 and sys.argv[1] == 'rabbitmq-manifest':
+            print(render_rabbitmq_manifest(sys.argv[2]), end='')
+        elif len(sys.argv) == 3 and sys.argv[1] == 'seed-pulsar':
+            seed_pulsar(sys.argv[2])
         elif len(sys.argv) == 4 and sys.argv[1] == 'seed-infrastructure':
             namespace, name = sys.argv[2:]
             if name == 'grafana-admin':
                 values = existing_secret(namespace, 'monitoring-grafana') or {'admin-user': 'admin', 'admin-password': os.environ.get('KUBERNETES_GRAFANA_ADMIN_PASSWORD') or secrets.token_urlsafe(32)}
+            elif name == 'rabbitmq-admin':
+                seed_rabbitmq(namespace)
+                raise SystemExit(0)
+            elif name == 'redis-streams-auth':
+                values = {'password': os.environ.get('KUBERNETES_REDIS_STREAMS_PASSWORD') or secrets.token_urlsafe(32)}
             elif name == 'argocd-redis':
                 values = {'auth': secrets.token_urlsafe(32)}
             elif name == 'temporal-postgresql':
@@ -137,6 +198,8 @@ if __name__ == '__main__':
             else:
                 raise ValueError('Unknown infrastructure secret')
             targets = []
+            if name == 'redis-streams-auth':
+                targets = [{'kind': 'StatefulSet', 'name': 'redis-streams'}]
             if name == 'argocd-redis':
                 targets = [{'kind': 'Deployment', 'name': n} for n in ('argocd-redis', 'argocd-server', 'argocd-repo-server')]
                 targets.append({'kind': 'StatefulSet', 'name': 'argocd-application-controller'})

@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use servicelib::api::{DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType, KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy, ScheduleOverlapPolicy, TypeDefinitionFormat};
+use servicelib::api::{DataConnectorType, DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType, KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy, ScheduleOverlapPolicy, TypeDefinitionFormat};
 use servicelib::runtime::config::{
     CallSemantics, Config as ServiceConfigContract, CycleLinkStreamConfig,
     DelayStreamConfig, FilterStreamConfig, FlatMapIterableStreamConfig,
@@ -16,7 +16,7 @@ use servicelib::runtime::config::{
     RuntimeEndpointConfig, RuntimeStreamConfig, ServiceConfig, SinkStreamConfig,
     SplitStreamConfig, StreamConfig, WhenStreamConfig, CaseStreamConfig, SubStreamConfig,
     TypeConfig, HttpDataConnectorConfig, GrpcDataConnectorConfig, KafkaDataConnectorConfig,
-    CronDataConnectorConfig,
+    CronDataConnectorConfig, NatsDataConnectorConfig, NatsEndpointConfig,
     CustomDataConnectorConfig, HttpEndpointConfig, GrpcEndpointConfig, KafkaEndpointConfig,
     CustomEndpointConfig, CronEndpointConfig,
 };
@@ -337,6 +337,11 @@ impl ServiceConfigContract for Config {
             return Err("httpPort and grpcPort must be positive".to_owned());
         }
         parse_environment(&self.environment)?;
+        for connector in self.data_connectors() {
+            if let RuntimeDataConnectorConfig::Nats(connector) = connector {
+                connector.validate().map_err(|e| e.to_string())?;
+            }
+        }
         if self.inventory_service_api_connections_count == 0 {
             return Err("inventory_service_api_connections_count must be at least 1".to_owned());
         }
@@ -499,6 +504,13 @@ fn parse_environment(value: &str) -> Result<Environment, String> {
         "production" => Ok(Environment::Production),
         _ => Err(format!("invalid environment: {value}")),
     }
+}
+
+fn apply_servers(name: &str, value: &mut Vec<String>) -> Result<(), String> {
+    if let Ok(raw) = std::env::var(name) {
+        *value = serde_json::from_str(&raw).map_err(|_| format!("{name} must be a JSON string array"))?;
+    }
+    Ok(())
 }
 
 fn parse_kafka_security_protocol(value: &str) -> Result<KafkaSecurityProtocol, String> {

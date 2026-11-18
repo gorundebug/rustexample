@@ -28,7 +28,10 @@ endpoints:
   joinedAnalytics:
     enabled: true
   orderProcessed:
+    createTopic: true
     enabled: true
+    partitions: 1
+    topic: order-processed
   standardAnalytics:
     enabled: true
   substreamAnalyticsInput:

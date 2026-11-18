@@ -25,5 +25,6 @@ Paths and commands below are relative to the generated project root.
 - [ ] Open `automationservice/internal/functions/workflow/fanoutworkflowjobendpointsource.go` and preserve its generated contract
 - [ ] Implement the Go function and propagate the received `context.Context`
 - [ ] Run `make test`
+
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] automationservice/task33.md — FanoutWorkflowJobEndpointSource — Go — done`

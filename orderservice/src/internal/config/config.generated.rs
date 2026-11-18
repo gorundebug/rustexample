@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use servicelib::api::{DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType, KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy, ScheduleOverlapPolicy, TypeDefinitionFormat};
+use servicelib::api::{DataConnectorType, DataType, Environment, GrpcMethodType, HTTPMethodType, JoinStorageType, JoinType, KafkaSaslMechanism, KafkaSecurityProtocol, LogLevel, ProcessPattern, ScheduleMissedRunPolicy, ScheduleOverlapPolicy, TypeDefinitionFormat};
 use servicelib::runtime::config::{
     CallSemantics, Config as ServiceConfigContract, CycleLinkStreamConfig,
     DelayStreamConfig, FilterStreamConfig, FlatMapIterableStreamConfig,
@@ -16,7 +16,7 @@ use servicelib::runtime::config::{
     RuntimeEndpointConfig, RuntimeStreamConfig, ServiceConfig, SinkStreamConfig,
     SplitStreamConfig, StreamConfig, WhenStreamConfig, CaseStreamConfig, SubStreamConfig,
     TypeConfig, HttpDataConnectorConfig, GrpcDataConnectorConfig, KafkaDataConnectorConfig,
-    CronDataConnectorConfig,
+    CronDataConnectorConfig, NatsDataConnectorConfig, NatsEndpointConfig,
     CustomDataConnectorConfig, HttpEndpointConfig, GrpcEndpointConfig, KafkaEndpointConfig,
     CustomEndpointConfig, CronEndpointConfig,
 };
@@ -390,7 +390,10 @@ pub struct Config {
     pub order_events_sasl_mechanism: String,
     pub order_events_security_protocol: String,
     pub order_events_username: String,
+    pub order_processed_create_topic: bool,
     pub order_processed_enabled: bool,
+    pub order_processed_partitions: i32,
+    pub order_processed_topic: String,
     pub request_timeout_ms: u64,
     pub environment: String,
     pub grpc_host: String,
@@ -415,7 +418,10 @@ impl Default for Config {
             order_events_sasl_mechanism: "SCRAM-SHA-512".to_owned(),
             order_events_security_protocol: "PLAINTEXT".to_owned(),
             order_events_username: "".to_owned(),
+            order_processed_create_topic: true,
             order_processed_enabled: true,
+            order_processed_partitions: 1,
+            order_processed_topic: "order-processed".to_owned(),
             request_timeout_ms: 0,
             environment: "".to_owned(),
             grpc_host: "0.0.0.0".to_owned(),
@@ -468,8 +474,14 @@ impl ServiceConfigContract for Config {
         apply_string("ORDER_EVENTS_SASL_MECHANISM", &mut self.order_events_sasl_mechanism);
         apply_string("ORDER_EVENTS_SECURITY_PROTOCOL", &mut self.order_events_security_protocol);
         apply_string("ORDER_EVENTS_USERNAME", &mut self.order_events_username);
+        apply_bool("ORDER_PROCESSED_CREATE_TOPIC", &mut self.order_processed_create_topic)?;
+        self.endpoints.order_processed.create_topic = self.order_processed_create_topic;
         apply_bool("ORDER_PROCESSED_ENABLED", &mut self.order_processed_enabled)?;
         self.endpoints.order_processed.enabled = self.order_processed_enabled;
+        apply_i32("ORDER_PROCESSED_PARTITIONS", &mut self.order_processed_partitions)?;
+        self.endpoints.order_processed.partitions = self.order_processed_partitions;
+        apply_string("ORDER_PROCESSED_TOPIC", &mut self.order_processed_topic);
+        self.endpoints.order_processed.topic = self.order_processed_topic.clone();
         apply_u64("ORDER_SERVICE_DEFAULT_GRPC_TIMEOUT", &mut self.request_timeout_ms)?;
         apply_string("ORDER_SERVICE_ENVIRONMENT", &mut self.environment);
         apply_string("ORDER_SERVICE_GRPC_HOST", &mut self.grpc_host);
@@ -485,6 +497,11 @@ impl ServiceConfigContract for Config {
             return Err("httpPort and grpcPort must be positive".to_owned());
         }
         parse_environment(&self.environment)?;
+        for connector in self.data_connectors() {
+            if let RuntimeDataConnectorConfig::Nats(connector) = connector {
+                connector.validate().map_err(|e| e.to_string())?;
+            }
+        }
         if self.inventory_address.is_empty() {
             return Err("inventory_address must not be empty".to_owned());
         }
@@ -693,6 +710,13 @@ fn parse_environment(value: &str) -> Result<Environment, String> {
         "production" => Ok(Environment::Production),
         _ => Err(format!("invalid environment: {value}")),
     }
+}
+
+fn apply_servers(name: &str, value: &mut Vec<String>) -> Result<(), String> {
+    if let Ok(raw) = std::env::var(name) {
+        *value = serde_json::from_str(&raw).map_err(|_| format!("{name} must be a JSON string array"))?;
+    }
+    Ok(())
 }
 
 fn parse_kafka_security_protocol(value: &str) -> Result<KafkaSecurityProtocol, String> {

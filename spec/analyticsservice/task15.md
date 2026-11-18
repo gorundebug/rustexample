@@ -33,5 +33,6 @@ Validate and record the result of the two-way analytics join.
 - [ ] Preserve `MessageContext` and await collector, sender and result operations
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
 - [ ] Run `cargo test --workspace --all-targets`
+
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] analyticsservice/task15.md — JoinedAnalyticsSink — Rust — done`

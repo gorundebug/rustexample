@@ -4,7 +4,10 @@ platform_up() {
   ensure_helm_repo argo "${DEPENDENCY_HELM_ARGO_URL:-https://argoproj.github.io/argo-helm}"
   ensure_helm_repo hashicorp "${DEPENDENCY_HELM_HASHICORP_URL:-https://helm.releases.hashicorp.com}"
   # A newly installed Vault is intentionally sealed. Initialize/unseal before wait.
+  # The injector owns webhook caBundle; Helm 4 SSA conflicts with its live updates.
+  # Keep client-side three-way patching rather than forcing controller ownership.
   helm upgrade --install vault hashicorp/vault --version 0.34.1 \
+    --server-side=false \
     --namespace vault-system --create-namespace \
     --values kubernetes/vault-values.generated.yaml
   kubectl --namespace vault-system wait --for=create pod/vault-0 --timeout="${TIMEOUT}"

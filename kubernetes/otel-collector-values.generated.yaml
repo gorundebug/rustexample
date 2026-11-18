@@ -45,7 +45,7 @@ serviceMonitor:
   metricsEndpoints:
     - port: metrics
       interval: 5s
-  # The Kubernetes scrape target also defines `service` and `job`. Prometheus
+  # The Kubernetes scrape target also defines `service`, `job` and `endpoint`. Prometheus
   # initially preserves the application values as `exported_*`; normalize them
   # back to the canonical dashboard label contract after target discovery.
   metricRelabelings:
@@ -63,6 +63,13 @@ serviceMonitor:
       replacement: $1
     - action: labeldrop
       regex: exported_job
+    - action: replace
+      sourceLabels: [exported_endpoint]
+      regex: (.+)
+      targetLabel: endpoint
+      replacement: $1
+    - action: labeldrop
+      regex: exported_endpoint
 
 resources:
   requests:

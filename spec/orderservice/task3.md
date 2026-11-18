@@ -46,6 +46,7 @@ If the inventory call fails, the caller returns a non-reserved PROCESSING_ERROR 
 - [ ] Preserve `MessageContext` and await collector, sender and result operations
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
 - [ ] Run `cargo test --workspace --all-targets`
+
 - [ ] Verify the endpoint/result lifecycle, including completion and error paths
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] orderservice/task3.md — ProcessOrderItemSink — Rust — done`

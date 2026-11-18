@@ -104,6 +104,9 @@ def repositories() -> list[tuple[str, str, str, dict]]:
         ("helm", "proxy", "helm-opentelemetry", common("helm-opentelemetry", "https://open-telemetry.github.io/opentelemetry-helm-charts")),
         ("helm", "proxy", "helm-jaeger", common("helm-jaeger", "https://jaegertracing.github.io/helm-charts")),
         ("helm", "proxy", "helm-redpanda", common("helm-redpanda", "https://charts.redpanda.com")),
+        ("helm", "proxy", "helm-nats", common("helm-nats", "https://nats-io.github.io/k8s/helm/charts/")),
+        ("helm", "proxy", "helm-pulsar", common("helm-pulsar", "https://pulsar.apache.org/charts")),
+        ("helm", "proxy", "helm-redis-operator", common("helm-redis-operator", "https://ot-container-kit.github.io/helm-charts")),
         ("helm", "proxy", "helm-temporal", common("helm-temporal", "https://go.temporal.io/helm-charts")),
         ("helm", "proxy", "helm-argo", common("helm-argo", "https://argoproj.github.io/argo-helm")),
         ("helm", "proxy", "helm-hashicorp", common("helm-hashicorp", "https://helm.releases.hashicorp.com")),
@@ -112,6 +115,7 @@ def repositories() -> list[tuple[str, str, str, dict]]:
         ("raw", "proxy", "gitlab-raw", gitlab),
     ]
     for name, remote_url in (
+        ("apache-archive", "https://archive.apache.org"),
         ("conan-source-archives-boost", "https://archives.boost.io"),
         ("conan-source-cmake", "https://cmake.org"),
         ("conan-source-curl", "https://curl.se"),

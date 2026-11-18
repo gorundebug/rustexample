@@ -35,5 +35,6 @@ Preserve the order and item identity and requested quantity, and record the fail
 - [ ] Preserve `MessageContext` and await collector, sender and result operations
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
 - [ ] Run `cargo test --workspace --all-targets`
+
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] inventoryservice/task3.md — GetInventoryItemError — Rust — done`

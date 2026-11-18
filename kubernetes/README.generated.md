@@ -158,3 +158,50 @@ Access Argo CD and Vault through loopback port forwarding using the generated
 kubeconfig. They are ClusterIP services, not public endpoints. Vault uses HTTP
 inside this local cluster; production transport and unseal policies belong to the
 production deployment.
+
+## Local NATS and JetStream
+
+NATS declarations select one shared local broker. Only a JetStream declaration
+turns on JetStream and its persistent volume. The official image and chart are
+pinned in the dependency manifest. Service charts remain independent of the
+broker release. This script uses only the generated local Kubernetes environment.
+
+No stream or consumer is created by the deployment templates. Existing resources
+remain required unless an endpoint explicitly enables `createStream` or
+`createConsumer`; those endpoint settings are handled by the service runtime.
+
+Server URLs are not inferred or rewritten. For local use, explicitly set the
+connector's `servers` to `["nats://nats:4222"]`. To override it through the declared
+`envServers` binding, use the encoding required by the generated service language.
+In these shell examples, replace `EVENTS_SERVERS` with that binding's actual name:
+
+| Generated service | Environment value example |
+| --- | --- |
+| Go | `export EVENTS_SERVERS='nats://first:4222,nats://second:4222'` |
+| C++ Coro | `export EVENTS_SERVERS='nats://first:4222,nats://second:4222'` |
+| C++ userver | `export EVENTS_SERVERS='nats://first:4222,nats://second:4222'` |
+| Python | `export EVENTS_SERVERS='nats://first:4222,nats://second:4222'` |
+| TypeScript | `export EVENTS_SERVERS='nats://first:4222,nats://second:4222'` |
+| Rust | `export EVENTS_SERVERS='["nats://first:4222","nats://second:4222"]'` |
+
+Go and both C++ backends split on commas without trimming; omit whitespace and
+empty entries. Python and TypeScript trim comma-separated entries and discard
+empty entries. Rust requires a JSON array of strings, even for a single URL;
+a comma-separated list or a bare URL is not valid for Rust. Keep the shell quotes
+shown above so the JSON double quotes reach the process unchanged.
+
+Compose passes the binding's exact string through; the local Kubernetes script
+applies a supplied binding as a Helm env override.
+An unset binding preserves the authored runtime configuration. User values.yaml
+can also override `env`. Use `KUBERNETES_NATS_ENABLED=false` for an external-only
+Kubernetes deployment. Compose can start individual application services without
+the local broker: NATS endpoints have no dependency on a local broker or peers.
+
+Credentials stay in the existing Vault/environment secret system; server URLs
+must not embed credentials. No local NATS password is generated. The local client
+port is bound to loopback on the host; monitoring is internal. Do not use these
+unauthenticated local-development settings as a production deployment profile.
+
+`DEPENDENCY_HELM_NATS_URL` selects the chart repository override, including the
+`helm-nats` Nexus proxy. The dependency-cache env output and Make targets propagate
+it in the same way as the Redpanda repository override.

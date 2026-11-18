@@ -31,6 +31,7 @@ Preserve the result returned through the on-demand Activity endpoint.
 - [ ] Open `automationservice/internal/functions/automation/observeactivityresult.go` and preserve its generated contract
 - [ ] Implement the Go function and propagate the received `context.Context`
 - [ ] Run `make test`
+
 - [ ] Implement meaningful assertions in `automationservice/internal/functions/automation/observeactivityresult_test.go`
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] automationservice/task15.md — ObserveActivityResult — Go — done`
