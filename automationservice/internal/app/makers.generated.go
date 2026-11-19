@@ -15,6 +15,7 @@ import (
 )
 
 type serviceMakers struct {
+
 temporalSubmissionOptions serviceTemporalSubmissionOptions
 
 httpServerMaker func(context.Context, runtime.RuntimeEnvironment) (*http.Server, error)
@@ -59,9 +60,11 @@ httpMuxMaker func(context.Context, runtime.RuntimeEnvironment) (*http.ServeMux, 
     activityActivityJobEndpointSinkMaker func(ctx context.Context, env environment.ServiceEnvironment) (*activity.ActivityJobEndpointSink, error)
     workflowFanoutWorkflowJobEndpointSinkMaker func(ctx context.Context, env environment.ServiceEnvironment) (*workflow.FanoutWorkflowJobEndpointSink, error)
     workflowWorkflowJobEndpointSinkMaker func(ctx context.Context, env environment.ServiceEnvironment) (*workflow.WorkflowJobEndpointSink, error)
+
 }
 
 func (makers *serviceMakers) initMakers(ctx context.Context) error {
+
 
     if makers.automationActivityPauseMaker == nil {
         makers.automationActivityPauseMaker = func(ctx context.Context, env environment.ServiceEnvironment) (*automation.ActivityPause, error) { return automation.MakeActivityPause(ctx, env) }
@@ -173,6 +176,7 @@ func (makers *serviceMakers) initMakers(ctx context.Context) error {
     if makers.workflowWorkflowJobEndpointSinkMaker == nil {
         makers.workflowWorkflowJobEndpointSinkMaker = func(ctx context.Context, env environment.ServiceEnvironment) (*workflow.WorkflowJobEndpointSink, error) { return workflow.MakeWorkflowJobEndpointSink(ctx, env) }
     }
+
 
     return nil
 }

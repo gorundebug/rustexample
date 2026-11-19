@@ -31,6 +31,5 @@ Create a Workflow job message identifying the durable scheduled firing.
 - [ ] Open `automationservice/internal/functions/workflow/temporalworkflowschedulesource.go` and preserve its generated contract
 - [ ] Implement the Go function and propagate the received `context.Context`
 - [ ] Run `make test`
-
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] automationservice/task34.md — TemporalWorkflowScheduleSource — Go — done`

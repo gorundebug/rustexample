@@ -13,12 +13,12 @@ use servicelib::runtime::config::{
     FlatMapStreamConfig, InputStreamConfig, JoinStreamConfig, KeyByStreamConfig,
     LinkConfig, MapStreamConfig, MergeStreamConfig, MultiJoinStreamConfig,
     ModuleConfig, PoolConfig, ProcessStreamConfig, RuntimeDataConnectorConfig,
-    RuntimeEndpointConfig, RuntimeStreamConfig, ServiceConfig, SinkStreamConfig,
+    RuntimeEndpointConfig, RuntimeStreamConfig, ServiceConfig, SinkStreamConfig, QueryStreamConfig,
     SplitStreamConfig, StreamConfig, WhenStreamConfig, CaseStreamConfig, SubStreamConfig,
     TypeConfig, HttpDataConnectorConfig, GrpcDataConnectorConfig, KafkaDataConnectorConfig,
     CronDataConnectorConfig, NatsDataConnectorConfig, NatsEndpointConfig,
     CustomDataConnectorConfig, HttpEndpointConfig, GrpcEndpointConfig, KafkaEndpointConfig,
-    CustomEndpointConfig, CronEndpointConfig,
+    S3AWSDataConnectorConfig, S3QueryEndpointConfig, S3QueryOperation, CustomEndpointConfig, CronEndpointConfig, QueryEndpointConfig, PostgreSQLQueryOperation, PostgreSQLSQLxDataConnectorConfig,
 };
 
 use super::custom::CustomConfig;
@@ -253,7 +253,6 @@ impl Endpoints {
         ]
     }
 }
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Config {

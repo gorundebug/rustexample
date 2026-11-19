@@ -37,6 +37,5 @@ The example starts with SKU-001: 100, SKU-002: 50, and SKU-003: 25.
 - [ ] Preserve `MessageContext` and await collector, sender and result operations
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
 - [ ] Run `cargo test --workspace --all-targets`
-
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] inventoryservice/task2.md — GetInventoryItemData — Rust — done`

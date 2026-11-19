@@ -26,6 +26,5 @@ Paths and commands below are relative to the generated project root.
 - [ ] Open `automationservice/internal/functions/activity/fanoutactivityaendpointsink.go` and preserve its generated contract
 - [ ] Implement the Go function and propagate the received `context.Context`
 - [ ] Run `make test`
-
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] automationservice/task3.md — FanoutActivityAEndpointSink — Go — done`

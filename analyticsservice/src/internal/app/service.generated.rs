@@ -59,6 +59,7 @@ impl GeneratedService {
         makers.substreams.bind(&runtime.streams)?;
         let endpoints = ServiceEndpoints::init_endpoints(config, &runtime)?;
         runtime.data_connectors.register(&mut app)?;
+        runtime.register_query_requests(&mut app)?;
         let service = Self {
             inner: Arc::new(GeneratedServiceInner {
                 runtime, endpoints,

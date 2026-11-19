@@ -17,6 +17,13 @@ pub struct ServiceRuntime {
     pub clients: ServiceClients,
 }
 
+impl ServiceRuntime {
+    pub fn register_query_requests(&self, app: &mut ServiceApp) -> RuntimeResult<()> {
+        let _ = app;
+        Ok(())
+    }
+}
+
 pub struct ServiceBindings;
 
 impl ServiceBindings {

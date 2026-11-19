@@ -31,7 +31,6 @@ Continue the Workflow as new once, then return its final result.
 - [ ] Open `automationservice/internal/functions/automation/processworkflowjob.go` and preserve its generated contract
 - [ ] Implement the Go function and propagate the received `context.Context`
 - [ ] Run `make test`
-
 - [ ] Implement meaningful assertions in `automationservice/internal/functions/automation/processworkflowjob_test.go`
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] automationservice/task27.md — ProcessWorkflowJob — Go — done`

@@ -33,6 +33,5 @@ Keep the terminal analytics event once its cycle counter reaches three.
 - [ ] Preserve `MessageContext` and await collector, sender and result operations
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
 - [ ] Run `cargo test --workspace --all-targets`
-
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] analyticsservice/task9.md — CompleteCycleAnalytics — Rust — done`

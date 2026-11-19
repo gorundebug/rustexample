@@ -47,7 +47,6 @@ Calculate the total from processed item prices, falling back to the submitted to
 - [ ] Preserve `MessageContext` and await collector, sender and result operations
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
 - [ ] Run `cargo test --workspace --all-targets`
-
 - [ ] Verify the endpoint/result lifecycle, including completion and error paths
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] orderservice/task1.md — ProcessOrderSource — Rust — done`

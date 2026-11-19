@@ -30,6 +30,5 @@ Create a job message identifying the local scheduled firing.
 - [ ] Open `automationservice/internal/functions/cron/localschedulesource.go` and preserve its generated contract
 - [ ] Implement the Go function and propagate the received `context.Context`
 - [ ] Run `make test`
-
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] automationservice/task31.md — LocalScheduleSource — Go — done`

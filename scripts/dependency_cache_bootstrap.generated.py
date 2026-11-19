@@ -122,6 +122,7 @@ def repositories() -> list[tuple[str, str, str, dict]]:
         ("conan-source-schmorp", "http://dist.schmorp.de"),
         ("conan-source-ariadne", "https://distfiles.ariadne.space"),
         ("conan-source-gnu-ftp", "https://ftp.gnu.org"),
+        ("conan-source-postgresql", "https://ftp.postgresql.org"),
         ("conan-source-gnu-mirror", "https://ftpmirror.gnu.org"),
         ("github-raw", "https://github.com"),
         ("conan-source-savannah-git", "https://https.git.savannah.gnu.org"),

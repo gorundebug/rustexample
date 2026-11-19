@@ -31,7 +31,6 @@ Use the same Delay contract backed by the Temporal Workflow timer.
 - [ ] Open `automationservice/internal/functions/automation/workflowpause.go` and preserve its generated contract
 - [ ] Implement the Go function and propagate the received `context.Context`
 - [ ] Run `make test`
-
 - [ ] Implement meaningful assertions in `automationservice/internal/functions/automation/workflowpause_test.go`
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] automationservice/task30.md — WorkflowPause — Go — done`

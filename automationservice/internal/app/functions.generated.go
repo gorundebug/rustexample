@@ -55,6 +55,7 @@ type serviceFunctions struct {
     activityActivityJobEndpointSink *activity.ActivityJobEndpointSink
     workflowFanoutWorkflowJobEndpointSink *workflow.FanoutWorkflowJobEndpointSink
     workflowWorkflowJobEndpointSink *workflow.WorkflowJobEndpointSink
+
 }
 
 type makerTaskGroup interface { Go(func() error) }
@@ -350,6 +351,7 @@ func (functions *serviceFunctions) scheduleFunctions(tasks makerTaskGroup, ctx c
             return err
         })
     }
+
 }
 
 func (functions *serviceFunctions) initWorkflowFunctions(workflowCtx temporalworkflow.Context, ctx context.Context, env runtime.RuntimeEnvironment, makers *serviceMakers) error {

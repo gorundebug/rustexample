@@ -34,7 +34,7 @@ func (s *Service) buildRuntime(ctx context.Context) error {
     cfg := s.Config()
     if err := s.makers.initMakers(ctx); err != nil { return fmt.Errorf("init makers failed: %w", err) }
     if err := s.customMakersInit(ctx); err != nil { return fmt.Errorf("custom init makers failed: %w", err) }
-    if err := initConnectors(cfg, s); err != nil { return err }
+    if err := initConnectors(ctx, cfg, s, &s.makers); err != nil { return err }
     if s.makers.httpMuxMaker != nil {
         mux, err := s.makers.httpMuxMaker(ctx, s)
         if err != nil { return fmt.Errorf("create http mux failed: %w", err) }

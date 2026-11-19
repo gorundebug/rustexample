@@ -33,6 +33,5 @@ Validate and record analytics results routed to the standard Case branch.
 - [ ] Preserve `MessageContext` and await collector, sender and result operations
 - [ ] Add meaningful `#[cfg(test)]` coverage in the user-owned function module
 - [ ] Run `cargo test --workspace --all-targets`
-
 - [ ] Re-read this checklist
 - [ ] Append to `spec/progress.md`: `- [x] analyticsservice/task22.md — StandardAnalyticsSink — Rust — done`
